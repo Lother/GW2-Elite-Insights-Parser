@@ -58,9 +58,9 @@ namespace GW2EIParser.Logic
             }
             switch (mapID.MapID)
             {
-                // EB
+                // EB 8958, 12798, 12030, 15870
                 case 38:
-                    return new CombatReplayMap("https://i.imgur.com/7DnLZ7G.png", (3100,3250),(-36864, -36864, 36864, 36864), (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870));
+                    return new CombatReplayMap("https://i.imgur.com/7DnLZ7G.png", (3100,3250),(-35364, -37800, 36864, 41000), (0, 0, 0, 0), (0,0,0,0));
                 // Green Alpine
                 case 95:
                     return new CombatReplayMap("https://i.imgur.com/s4wMYgZ.png", (2492, 3574), (-30720, -43008, 30720, 43008), (-30720, -43008, 30720, 43008), (5630, 11518, 8190, 15102));
