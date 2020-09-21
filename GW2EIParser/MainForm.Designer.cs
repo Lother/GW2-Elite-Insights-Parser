@@ -30,25 +30,28 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            this.MinimumSize = new System.Drawing.Size(600, 300);
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.lblHeader = new System.Windows.Forms.Label();
             this.btnParse = new System.Windows.Forms.Button();
             this.btnPopulate = new System.Windows.Forms.Button();
-            this.btnCancel = new System.Windows.Forms.Button();
+            this.btnCancelAll = new System.Windows.Forms.Button();
             this.btnSettings = new System.Windows.Forms.Button();
-            this.btnClear = new System.Windows.Forms.Button();
+            this.btnClearAll = new System.Windows.Forms.Button();
             this.dgvFiles = new System.Windows.Forms.DataGridView();
-            this.locationDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.statusDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.ButtonState = new System.Windows.Forms.DataGridViewButtonColumn();
-            this.operatorBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.ParseButtonState = new System.Windows.Forms.DataGridViewButtonColumn();
+            this.TlpMainWindow = new System.Windows.Forms.ToolTip(this.components);
+            this.btnClearFailed = new System.Windows.Forms.Button();
             this.logFileWatcher = new System.IO.FileSystemWatcher();
             this.VersionLabel = new System.Windows.Forms.Label();
             this.labWatchingDir = new System.Windows.Forms.Label();
+            this.locationDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.statusDataGridViewTextBoxColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.operatorBindingSource = new System.Windows.Forms.BindingSource(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.dgvFiles)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.operatorBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.logFileWatcher)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.operatorBindingSource)).BeginInit();
             this.SuspendLayout();
             // 
             // openFileDialog1
@@ -69,9 +72,9 @@
             // btnParse
             // 
             this.btnParse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnParse.Location = new System.Drawing.Point(525, 307);
+            this.btnParse.Location = new System.Drawing.Point(444, 307);
             this.btnParse.Name = "btnParse";
-            this.btnParse.Size = new System.Drawing.Size(154, 23);
+            this.btnParse.Size = new System.Drawing.Size(235, 23);
             this.btnParse.TabIndex = 10;
             this.btnParse.Text = "Parse All";
             this.btnParse.UseVisualStyleBackColor = true;
@@ -79,7 +82,7 @@
             // 
             // btnPopulate
             // 
-            this.btnPopulate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnPopulate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnPopulate.Location = new System.Drawing.Point(97, 331);
             this.btnPopulate.Name = "btnPopulate";
             this.btnPopulate.Size = new System.Drawing.Size(154, 23);
@@ -88,16 +91,16 @@
             this.btnPopulate.UseVisualStyleBackColor = true;
             this.btnPopulate.Click += new System.EventHandler(this.BtnPopulateFromDirectory);
             // 
-            // btnCancel
+            // btnCancelAll
             // 
-            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCancel.Location = new System.Drawing.Point(525, 333);
-            this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(75, 23);
-            this.btnCancel.TabIndex = 11;
-            this.btnCancel.Text = "Cancel All";
-            this.btnCancel.UseVisualStyleBackColor = true;
-            this.btnCancel.Click += new System.EventHandler(this.BtnCancelClick);
+            this.btnCancelAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCancelAll.Location = new System.Drawing.Point(444, 333);
+            this.btnCancelAll.Name = "btnCancelAll";
+            this.btnCancelAll.Size = new System.Drawing.Size(75, 23);
+            this.btnCancelAll.TabIndex = 11;
+            this.btnCancelAll.Text = "Cancel All";
+            this.btnCancelAll.UseVisualStyleBackColor = true;
+            this.btnCancelAll.Click += new System.EventHandler(this.BtnCancelAllClick);
             // 
             // btnSettings
             // 
@@ -110,16 +113,16 @@
             this.btnSettings.UseVisualStyleBackColor = true;
             this.btnSettings.Click += new System.EventHandler(this.BtnSettingsClick);
             // 
-            // btnClear
+            // btnClearAll
             // 
-            this.btnClear.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClear.Location = new System.Drawing.Point(604, 333);
-            this.btnClear.Name = "btnClear";
-            this.btnClear.Size = new System.Drawing.Size(75, 23);
-            this.btnClear.TabIndex = 16;
-            this.btnClear.Text = "Clear";
-            this.btnClear.UseVisualStyleBackColor = true;
-            this.btnClear.Click += new System.EventHandler(this.BtnClearClick);
+            this.btnClearAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnClearAll.Location = new System.Drawing.Point(604, 333);
+            this.btnClearAll.Name = "btnClearAll";
+            this.btnClearAll.Size = new System.Drawing.Size(75, 23);
+            this.btnClearAll.TabIndex = 16;
+            this.btnClearAll.Text = "Clear All";
+            this.btnClearAll.UseVisualStyleBackColor = true;
+            this.btnClearAll.Click += new System.EventHandler(this.BtnClearAllClick);
             // 
             // dgvFiles
             // 
@@ -132,9 +135,11 @@
             this.dgvFiles.BackgroundColor = System.Drawing.SystemColors.Control;
             this.dgvFiles.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvFiles.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
-            this.locationDataGridViewTextBoxColumn,
-            this.statusDataGridViewTextBoxColumn,
-            this.ButtonState});
+                this.locationDataGridViewTextBoxColumn,
+                this.statusDataGridViewTextBoxColumn,
+                this.ParseButtonState
+                }
+            );
             this.dgvFiles.DataSource = this.operatorBindingSource;
             this.dgvFiles.GridColor = System.Drawing.SystemColors.Control;
             this.dgvFiles.Location = new System.Drawing.Point(16, 46);
@@ -143,36 +148,35 @@
             this.dgvFiles.ReadOnly = true;
             this.dgvFiles.Size = new System.Drawing.Size(663, 255);
             this.dgvFiles.TabIndex = 17;
-            this.dgvFiles.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.DgvFilesCellContentClick);
+            this.dgvFiles.CellMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.DgvFilesCellContentClick);
+            this.dgvFiles.CellMouseDoubleClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.DgvFilesCellContentDoubleClick);
             this.dgvFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this.DgvFilesDragDrop);
             this.dgvFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this.DgvFilesDragEnter);
             // 
-            // locationDataGridViewTextBoxColumn
+            // ParseButtonState
             // 
-            this.locationDataGridViewTextBoxColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.locationDataGridViewTextBoxColumn.DataPropertyName = "Location";
-            this.locationDataGridViewTextBoxColumn.HeaderText = "Location";
-            this.locationDataGridViewTextBoxColumn.Name = "locationDataGridViewTextBoxColumn";
-            this.locationDataGridViewTextBoxColumn.ReadOnly = true;
+            this.ParseButtonState.DataPropertyName = "ButtonText";
+            this.ParseButtonState.HeaderText = "Action";
+            this.ParseButtonState.Name = "ParseButtonState";
+            this.ParseButtonState.ReadOnly = true;
+            this.ParseButtonState.ToolTipText =
+                "Left click open files and output location" + 
+                System.Environment.NewLine +
+                "Right click to copy dps.report link to clipboard, if applicable" + 
+                System.Environment.NewLine + 
+                "Middle click to only open output location";
             // 
-            // statusDataGridViewTextBoxColumn
+            // btnClearFailed
             // 
-            this.statusDataGridViewTextBoxColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.statusDataGridViewTextBoxColumn.DataPropertyName = "Status";
-            this.statusDataGridViewTextBoxColumn.HeaderText = "Status";
-            this.statusDataGridViewTextBoxColumn.Name = "statusDataGridViewTextBoxColumn";
-            this.statusDataGridViewTextBoxColumn.ReadOnly = true;
-            // 
-            // ButtonState
-            // 
-            this.ButtonState.DataPropertyName = "ButtonText";
-            this.ButtonState.HeaderText = "";
-            this.ButtonState.Name = "ButtonState";
-            this.ButtonState.ReadOnly = true;
-            // 
-            // operatorBindingSource
-            // 
-            this.operatorBindingSource.DataSource = typeof(GW2EIParser.FormOperationController);
+            this.btnClearFailed.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnClearFailed.Location = new System.Drawing.Point(523, 333);
+            this.btnClearFailed.Name = "btnClearFailed";
+            this.btnClearFailed.Size = new System.Drawing.Size(75, 23);
+            this.btnClearFailed.TabIndex = 19;
+            this.btnClearFailed.Text = "Clear Failed";
+            this.TlpMainWindow.SetToolTip(this.btnClearFailed, "Removes from the list logs that could not be parsed");
+            this.btnClearFailed.UseVisualStyleBackColor = true;
+            this.btnClearFailed.Click += new System.EventHandler(this.BtnClearFailedClick);
             // 
             // logFileWatcher
             // 
@@ -199,9 +203,30 @@
             this.labWatchingDir.AutoEllipsis = true;
             this.labWatchingDir.Location = new System.Drawing.Point(16, 312);
             this.labWatchingDir.Name = "labWatchingDir";
-            this.labWatchingDir.Size = new System.Drawing.Size(504, 13);
+            this.labWatchingDir.Size = new System.Drawing.Size(412, 13);
             this.labWatchingDir.TabIndex = 18;
             this.labWatchingDir.Text = "Watching log dir";
+            // 
+            // locationDataGridViewTextBoxColumn
+            // 
+            this.locationDataGridViewTextBoxColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.locationDataGridViewTextBoxColumn.DataPropertyName = "InputFile";
+            this.locationDataGridViewTextBoxColumn.HeaderText = "Input File";
+            this.locationDataGridViewTextBoxColumn.Name = "locationDataGridViewTextBoxColumn";
+            this.locationDataGridViewTextBoxColumn.ReadOnly = true;
+            this.locationDataGridViewTextBoxColumn.ToolTipText = "Double left click to open input location";
+            // 
+            // statusDataGridViewTextBoxColumn
+            // 
+            this.statusDataGridViewTextBoxColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
+            this.statusDataGridViewTextBoxColumn.DataPropertyName = "Status";
+            this.statusDataGridViewTextBoxColumn.HeaderText = "Status";
+            this.statusDataGridViewTextBoxColumn.Name = "statusDataGridViewTextBoxColumn";
+            this.statusDataGridViewTextBoxColumn.ReadOnly = true;
+            // 
+            // operatorBindingSource
+            // 
+            this.operatorBindingSource.DataSource = typeof(GW2EIParser.FormOperationController);
             // 
             // MainForm
             // 
@@ -209,12 +234,13 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.Menu;
             this.ClientSize = new System.Drawing.Size(696, 375);
+            this.Controls.Add(this.btnClearFailed);
             this.Controls.Add(this.labWatchingDir);
             this.Controls.Add(this.dgvFiles);
             this.Controls.Add(this.VersionLabel);
-            this.Controls.Add(this.btnClear);
+            this.Controls.Add(this.btnClearAll);
             this.Controls.Add(this.btnSettings);
-            this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.btnCancelAll);
             this.Controls.Add(this.btnParse);
             this.Controls.Add(this.btnPopulate);
             this.Controls.Add(this.lblHeader);
@@ -223,8 +249,8 @@
             this.Text = "GW2 Elite Insights Parser";
             this.TransparencyKey = System.Drawing.Color.OrangeRed;
             ((System.ComponentModel.ISupportInitialize)(this.dgvFiles)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.operatorBindingSource)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.logFileWatcher)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.operatorBindingSource)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -235,17 +261,19 @@
         private System.Windows.Forms.Label lblHeader;
         private System.Windows.Forms.Button btnParse;
         private System.Windows.Forms.Button btnPopulate;
-        private System.Windows.Forms.Button btnCancel;
+        private System.Windows.Forms.Button btnCancelAll;
         private System.Windows.Forms.Button btnSettings;
-        private System.Windows.Forms.Button btnClear;
+        private System.Windows.Forms.Button btnClearAll;
         private System.Windows.Forms.DataGridView dgvFiles;
         private System.Windows.Forms.BindingSource operatorBindingSource;
         private System.Windows.Forms.DataGridViewTextBoxColumn locationDataGridViewTextBoxColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn statusDataGridViewTextBoxColumn;
-        private System.Windows.Forms.DataGridViewButtonColumn ButtonState;
+        private System.Windows.Forms.DataGridViewButtonColumn ParseButtonState;
         private System.Windows.Forms.Label VersionLabel;
         private System.IO.FileSystemWatcher logFileWatcher;
         private System.Windows.Forms.Label labWatchingDir;
+        private System.Windows.Forms.Button btnClearFailed;
+        private System.Windows.Forms.ToolTip TlpMainWindow;
     }
 }
 

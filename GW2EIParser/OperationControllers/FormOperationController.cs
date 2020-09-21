@@ -1,13 +1,23 @@
 ﻿using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using GW2EIParser.Exceptions;
 
 namespace GW2EIParser
 {
-    public class FormOperationController : OperationController
+    internal enum OperationState
+    {
+        Ready = 0,
+        Parsing = 1,
+        Cancelling = 2,
+        Complete = 3,
+        Pending = 4,
+        ClearOnCancel = 5,
+        Queued = 6,
+        UnComplete = 7,
+    }
+    internal class FormOperationController : OperationController
     {
 
         private CancellationTokenSource _cancelTokenSource;
@@ -15,9 +25,19 @@ namespace GW2EIParser
         private Task _task;
 
         private readonly DataGridView _dgv;
+        /// <summary>
+        /// State of the button
+        /// </summary>
+        public string ButtonText { get; protected set; }
+        /// <summary>
+        /// Operation state
+        /// </summary>
+        public OperationState State { get; protected set; }
 
-        public FormOperationController(string location, string status, DataGridView dgv) : base(location, status)
+        public FormOperationController(Version parserVersion, string location, string status, DataGridView dgv) : base(parserVersion, location, status)
         {
+            ButtonText = "Parse";
+            State = OperationState.Ready;
             _dgv = dgv;
         }
 
@@ -104,7 +124,7 @@ namespace GW2EIParser
 
         public void ToUnCompleteState()
         {
-            State = OperationState.Ready;
+            State = OperationState.UnComplete;
             ButtonText = "Parse";
             FinalizeStatus("Parsing Failure - ");
             InvalidateDataView();

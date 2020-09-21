@@ -5,10 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using GW2EIEvtcParser;
+using GW2EIEvtcParser.Exceptions;
+using GW2EIGW2API;
 using GW2EIParser.Exceptions;
-using GW2EIParser.Parser.ParsedData;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 
@@ -21,12 +22,12 @@ namespace GW2EIParser.tst
         {
             try
             {
-                ParsedLog log = TestHelper.ParseLog(file);
+                ParsedEvtcLog log = TestHelper.ParseLog(file);
                 TestHelper.JsonString(log);
                 TestHelper.HtmlString(log);
                 TestHelper.CsvString(log);
             }
-            catch (ExceptionEncompass canc)
+            catch (EncompassException canc)
             {
                 if (canc.InnerException == null || !(canc.InnerException is TooShortException || canc.InnerException is SkipException))
                 {
@@ -55,7 +56,7 @@ namespace GW2EIParser.tst
 
         private void GenerateCrashData(BlockingCollection<string> failed, BlockingCollection<string> messages, string type, bool copy)
         {
-            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "../../../EvtcLogs/Crashes/";
+            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/../../GW2EIParser.tst/EvtcLogs/Crashes/";
 
             Directory.CreateDirectory(testLocation + "/Logs");
 
@@ -80,17 +81,12 @@ namespace GW2EIParser.tst
 
             using (var fs = new FileStream(logName, FileMode.Create, FileAccess.Write))
             {
-                using (var sw = new StreamWriter(fs, GeneralHelper.NoBOMEncodingUTF8))
+                using (var sw = new StreamWriter(fs, TestHelper.NoBOMEncodingUTF8))
                 {
-                    var contractResolver = new DefaultContractResolver
-                    {
-                        NamingStrategy = new CamelCaseNamingStrategy()
-                    };
-
                     var serializer = new JsonSerializer
                     {
                         NullValueHandling = NullValueHandling.Ignore,
-                        ContractResolver = contractResolver
+                        ContractResolver = TestHelper.DefaultJsonContractResolver
                     };
                     var writer = new JsonTextWriter(sw)
                     {
@@ -104,7 +100,8 @@ namespace GW2EIParser.tst
         [Test]
         public void TestEvtc()
         {
-            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "../../../EvtcLogs/StabilityTest";
+            GW2APIController.InitAPICache();
+            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/../../GW2EIParser.tst/EvtcLogs/StabilityTest";
             if (!Directory.Exists(testLocation))
             {
                 Directory.CreateDirectory(testLocation);
@@ -124,7 +121,8 @@ namespace GW2EIParser.tst
         [Test]
         public void TestEvtcZip()
         {
-            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "../../../EvtcLogs/StabilityTest";
+            GW2APIController.InitAPICache();
+            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/../../GW2EIParser.tst/EvtcLogs/StabilityTest";
             if (!Directory.Exists(testLocation))
             {
                 Directory.CreateDirectory(testLocation);
@@ -143,7 +141,8 @@ namespace GW2EIParser.tst
         [Test]
         public void TestZevtc()
         {
-            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "../../../EvtcLogs/StabilityTest";
+            GW2APIController.InitAPICache();
+            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/../../GW2EIParser.tst/EvtcLogs/StabilityTest";
             if (!Directory.Exists(testLocation))
             {
                 Directory.CreateDirectory(testLocation);
@@ -163,7 +162,8 @@ namespace GW2EIParser.tst
         [Test]
         public void TestCrashed()
         {
-            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "../../../EvtcLogs/Crashes/Logs";
+            GW2APIController.InitAPICache();
+            string testLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/../../GW2EIParser.tst/EvtcLogs/Crashes/Logs";
             if (!Directory.Exists(testLocation))
             {
                 Directory.CreateDirectory(testLocation);

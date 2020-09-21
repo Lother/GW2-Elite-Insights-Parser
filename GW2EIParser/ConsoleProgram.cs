@@ -5,7 +5,7 @@ using GW2EIParser.Exceptions;
 
 namespace GW2EIParser
 {
-    public class ConsoleProgram
+    internal class ConsoleProgram
     {
         public ConsoleProgram(IEnumerable<string> logFiles)
         {
@@ -22,15 +22,15 @@ namespace GW2EIParser
             }
         }
 
-        private void ParseLog(string logFile)
+        private static void ParseLog(string logFile)
         {
-            var operation = new ConsoleOperationController(logFile, "Ready to parse");
+            var operation = new ConsoleOperationController(ProgramHelper.ParserVersion, logFile, "Ready to parse");
             try
             {
                 ProgramHelper.DoWork(operation);
                 operation.FinalizeStatus("Parsing Successful - ");
             }
-            catch (ExceptionEncompass ex)
+            catch (EncompassException ex)
             {
                 operation.UpdateProgress(ex.GetFinalException().Message);
                 operation.FinalizeStatus("Parsing Failure - ");
@@ -42,7 +42,7 @@ namespace GW2EIParser
             }
             finally
             {
-                ProgramHelper.GenerateLogFile(operation);
+                ProgramHelper.GenerateTraceFile(operation);
             }
         }
     }

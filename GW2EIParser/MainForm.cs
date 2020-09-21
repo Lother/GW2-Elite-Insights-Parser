@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using GW2EIEvtcParser;
 using GW2EIParser.Exceptions;
 using GW2EIParser.Setting;
 
 namespace GW2EIParser
 {
-    public partial class MainForm : Form
+    internal partial class MainForm : Form
     {
         private readonly SettingsForm _settingsForm;
         private readonly List<string> _logsFiles;
@@ -25,7 +24,7 @@ namespace GW2EIParser
             string version = Application.ProductVersion;
             VersionLabel.Text = version;
             _logsFiles = new List<string>();
-            btnCancel.Enabled = false;
+            btnCancelAll.Enabled = false;
             btnParse.Enabled = false;
             UpdateWatchDirectory();
             _settingsForm = new SettingsForm();
@@ -54,7 +53,7 @@ namespace GW2EIParser
 
                 _logsFiles.Add(file);
 
-                var operation = new FormOperationController(file, "Ready to parse", dgvFiles);
+                var operation = new FormOperationController(ProgramHelper.ParserVersion, file, "Ready to parse", dgvFiles);
                 operatorBindingSource.Add(operation);
 
                 if (Properties.Settings.Default.AutoParse)
@@ -64,7 +63,7 @@ namespace GW2EIParser
             }
 
             btnParse.Enabled = !Properties.Settings.Default.AutoParse;
-            btnCancel.Enabled = Properties.Settings.Default.AutoParse;
+            btnCancelAll.Enabled = Properties.Settings.Default.AutoParse;
         }
 
         private void EnableSettingsWatcher(object sender, EventArgs e)
@@ -75,6 +74,7 @@ namespace GW2EIParser
         private void _RunOperation(FormOperationController operation)
         {
             _runningCount++;
+            _settingsForm.ConditionalSettingDisable(_anyRunning);
             operation.ToQueuedState();
             var cancelTokenSource = new CancellationTokenSource();// Prepare task
             Task task = Task.Run(() =>
@@ -97,7 +97,7 @@ namespace GW2EIParser
                         else
                         {
                             Exception ex = t.Exception.InnerExceptions[0];
-                            if (!(ex is ExceptionEncompass))
+                            if (!(ex is EncompassException))
                             {
                                 operation.UpdateProgress("Something terrible has happened");
                             }
@@ -141,7 +141,7 @@ namespace GW2EIParser
                         operation.ToUnCompleteState();
                     }
                 }
-                ProgramHelper.GenerateLogFile(operation);
+                ProgramHelper.GenerateTraceFile(operation);
                 RunNextOperation();
             }, TaskScheduler.FromCurrentSynchronizationContext());
             operation.SetContext(cancelTokenSource, task);
@@ -153,9 +153,9 @@ namespace GW2EIParser
         /// <param name="operation"></param>
         private void QueueOrRunOperation(FormOperationController operation)
         {
-            btnClear.Enabled = false;
+            btnClearAll.Enabled = false;
             btnParse.Enabled = false;
-            btnCancel.Enabled = true;
+            btnCancelAll.Enabled = true;
             if (Properties.Settings.Default.ParseMultipleLogs)
             {
                 _RunOperation(operation);
@@ -186,11 +186,12 @@ namespace GW2EIParser
             }
             else
             {
-                if (_runningCount == 0)
+                if (!_anyRunning)
                 {
                     btnParse.Enabled = true;
-                    btnClear.Enabled = true;
-                    btnCancel.Enabled = false;
+                    btnClearAll.Enabled = true;
+                    btnCancelAll.Enabled = false;
+                    _settingsForm.ConditionalSettingDisable(_anyRunning);
                 }
             }
         }
@@ -208,7 +209,7 @@ namespace GW2EIParser
             if (_logsFiles.Count > 0)
             {
                 btnParse.Enabled = false;
-                btnCancel.Enabled = true;
+                btnCancelAll.Enabled = true;
 
                 foreach (FormOperationController operation in operatorBindingSource)
                 {
@@ -225,7 +226,7 @@ namespace GW2EIParser
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void BtnCancelClick(object sender, EventArgs e)
+        private void BtnCancelAllClick(object sender, EventArgs e)
         {
             //Clear queue so queued workers don't get started by any cancellations
             var operations = new HashSet<FormOperationController>(_logQueue);
@@ -244,9 +245,9 @@ namespace GW2EIParser
                 }
             }
 
-            btnClear.Enabled = true;
+            btnClearAll.Enabled = true;
             btnParse.Enabled = true;
-            btnCancel.Enabled = false;
+            btnCancelAll.Enabled = false;
         }
 
         /// <summary>
@@ -265,9 +266,9 @@ namespace GW2EIParser
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void BtnClearClick(object sender, EventArgs e)
+        private void BtnClearAllClick(object sender, EventArgs e)
         {
-            btnCancel.Enabled = false;
+            btnCancelAll.Enabled = false;
             btnParse.Enabled = false;
 
             //Clear the queue so that cancelled workers don't invoke queued workers
@@ -282,6 +283,18 @@ namespace GW2EIParser
                     operation.ToCancelAndClearState();
                 }
                 else
+                {
+                    operatorBindingSource.RemoveAt(i);
+                }
+            }
+        }
+
+        private void BtnClearFailedClick(object sender, EventArgs e)
+        {
+            for (int i = operatorBindingSource.Count - 1; i >= 0; i--)
+            {
+                var operation = operatorBindingSource[i] as FormOperationController;
+                if (!operation.IsBusy() && operation.State == OperationState.UnComplete)
                 {
                     operatorBindingSource.RemoveAt(i);
                 }
@@ -309,53 +322,103 @@ namespace GW2EIParser
             e.Effect = DragDropEffects.All;
         }
 
-        /// <summary>
-        /// Invoked when a the content of a datagridview cell is clicked
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void DgvFilesCellContentClick(object sender, DataGridViewCellEventArgs e)
+        private void DgvFilesCellContentClick(object sender, DataGridViewCellMouseEventArgs e)
         {
-            if (e.ColumnIndex == 2)
+            if (e.RowIndex < 0)
             {
-                var operation = (FormOperationController)operatorBindingSource[e.RowIndex];
-
-                switch (operation.State)
-                {
-                    case OperationState.Ready:
-                        QueueOrRunOperation(operation);
-                        btnCancel.Enabled = true;
-                        break;
-
-                    case OperationState.Parsing:
-                        operation.ToCancelState();
-                        break;
-
-                    case OperationState.Pending:
-                        var operations = new HashSet<FormOperationController>(_logQueue);
-                        _logQueue.Clear();
-                        operations.Remove(operation);
-                        foreach (FormOperationController op in operations)
+                return;
+            }
+            var operation = (FormOperationController)operatorBindingSource[e.RowIndex];
+            switch (e.ColumnIndex)
+            {
+                case 2:
+                    if (operation.State == OperationState.Complete && e.Button == MouseButtons.Right && operation.DPSReportLink != null)
+                    {
+                        Clipboard.SetText(operation.DPSReportLink);
+                        MessageBox.Show("dps.report link copied to clipbloard");
+                    }
+                    else if (e.Button == MouseButtons.Left)
+                    {
+                        switch (operation.State)
                         {
-                            _logQueue.Enqueue(op);
-                        }
-                        operation.ToReadyState();
-                        break;
-                    case OperationState.Queued:
-                        operation.ToRemovalFromQueueState();
-                        break;
+                            case OperationState.Ready:
+                            case OperationState.UnComplete:
+                                QueueOrRunOperation(operation);
+                                btnCancelAll.Enabled = true;
+                                break;
 
-                    case OperationState.Complete:
-                        foreach (string path in operation.PathsToOpen)
+                            case OperationState.Parsing:
+                                operation.ToCancelState();
+                                break;
+
+                            case OperationState.Pending:
+                                var operations = new HashSet<FormOperationController>(_logQueue);
+                                _logQueue.Clear();
+                                operations.Remove(operation);
+                                foreach (FormOperationController op in operations)
+                                {
+                                    _logQueue.Enqueue(op);
+                                }
+                                operation.ToReadyState();
+                                break;
+                            case OperationState.Queued:
+                                operation.ToRemovalFromQueueState();
+                                break;
+
+                            case OperationState.Complete:
+                                foreach (string path in operation.OpenableFiles)
+                                {
+                                    if (File.Exists(path))
+                                    {
+                                        System.Diagnostics.Process.Start(path);
+                                    }
+                                }
+                                if (operation.OutLocation != null && Directory.Exists(operation.OutLocation))
+                                {
+                                    System.Diagnostics.Process.Start(operation.OutLocation);
+                                }
+                                break;
+                        }
+                    }
+                    else if (e.Button == MouseButtons.Middle)
+                    {
+                        switch (operation.State)
                         {
-                            if (File.Exists(path) || Directory.Exists(path))
-                            {
-                                System.Diagnostics.Process.Start(path);
-                            }
-                        }
-                        break;
 
-                }
+                            case OperationState.Complete:
+                                if (operation.OutLocation != null && Directory.Exists(operation.OutLocation))
+                                {
+                                    System.Diagnostics.Process.Start(operation.OutLocation);
+                                }
+                                break;
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void DgvFilesCellContentDoubleClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.RowIndex < 0)
+            {
+                return;
+            }
+            var operation = (FormOperationController)operatorBindingSource[e.RowIndex];
+            switch (e.ColumnIndex)
+            {
+                case 0:
+                    if (e.Button == MouseButtons.Left)
+                    {
+                        if (File.Exists(operation.InputFile))
+                        {
+                            System.Diagnostics.Process.Start(new FileInfo(operation.InputFile).DirectoryName);
+                        }
+                    }
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -380,9 +443,16 @@ namespace GW2EIParser
             if (path != null)
             {
                 var toAdd = new List<string>();
-                foreach (string format in ProgramHelper.GetSupportedFormats())
+                foreach (string format in ParserHelper.GetSupportedFormats())
                 {
-                    toAdd.AddRange(Directory.EnumerateFiles(path, "*" + format, SearchOption.AllDirectories));
+                    try
+                    {
+                        toAdd.AddRange(Directory.EnumerateFiles(path, "*" + format, SearchOption.AllDirectories));
+                    }
+                    catch
+                    {
+                        // nothing to do
+                    }
                 }
                 AddLogFiles(toAdd);
             }
@@ -432,7 +502,7 @@ namespace GW2EIParser
 
         private void LogFileWatcher_Created(object sender, FileSystemEventArgs e)
         {
-            if (ProgramHelper.IsSupportedFormat(e.FullPath))
+            if (ParserHelper.IsSupportedFormat(e.FullPath))
             {
                 AddDelayed(e.FullPath);
             }
@@ -440,7 +510,7 @@ namespace GW2EIParser
 
         private void LogFileWatcher_Renamed(object sender, RenamedEventArgs e)
         {
-            if (ProgramHelper.IsTemporaryFormat(e.OldFullPath) && ProgramHelper.IsCompressedFormat(e.FullPath))
+            if (ParserHelper.IsTemporaryFormat(e.OldFullPath) && ParserHelper.IsCompressedFormat(e.FullPath))
             {
                 AddDelayed(e.FullPath);
             }
