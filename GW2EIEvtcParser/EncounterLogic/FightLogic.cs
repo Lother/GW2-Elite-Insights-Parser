@@ -273,6 +273,11 @@ namespace GW2EIEvtcParser.EncounterLogic
             return phases;
         }
 
+        internal virtual List<ErrorEvent> GetCustomWarningMessages()
+        {
+            return new List<ErrorEvent>();
+        }
+
         protected void AddTargetsToPhase(PhaseData phase, List<int> ids, ParsedEvtcLog log)
         {
             foreach (NPC target in Targets)

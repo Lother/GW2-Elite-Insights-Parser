@@ -5,16 +5,16 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIBuilders.HtmlModels
 {
-    public class SkillDto
+    internal class SkillDto
     {
-        public long Id { get; internal set; }
-        public string Name { get; internal set; }
-        public string Icon { get; internal set; }
-        public bool Aa { get; internal set; }
-        public bool IsSwap { get; internal set; }
-        public bool NotAccurate { get; internal set; }
+        public long Id { get; set; }
+        public string Name { get; set; }
+        public string Icon { get; set; }
+        public bool Aa { get; set; }
+        public bool IsSwap { get; set; }
+        public bool NotAccurate { get; set; }
 
-        internal static void AssembleSkills(ICollection<SkillItem> skills, Dictionary<string, SkillDto> dict, SkillData skillData)
+        public static void AssembleSkills(ICollection<SkillItem> skills, Dictionary<string, SkillDto> dict, SkillData skillData)
         {
             foreach (SkillItem skill in skills)
             {
@@ -42,7 +42,7 @@ namespace GW2EIBuilders.HtmlModels
             return rotEntry;
         }
 
-        internal static List<object[]> BuildRotationData(ParsedEvtcLog log, AbstractActor p, int phaseIndex, Dictionary<long, SkillItem> usedSkills)
+        public static List<object[]> BuildRotationData(ParsedEvtcLog log, AbstractActor p, int phaseIndex, Dictionary<long, SkillItem> usedSkills)
         {
             var list = new List<object[]>();
 

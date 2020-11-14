@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.EncounterLogic;
 
 namespace GW2EIEvtcParser.ParsedData
 {
@@ -229,7 +230,7 @@ namespace GW2EIEvtcParser.ParsedData
             }
         }
 
-        private void EIStatusParse()
+        private void EIMetaAndStatusParse(FightData fightData)
         {
             foreach (KeyValuePair<AgentItem, List<AbstractDamageEvent>> pair in _damageTakenData)
             {
@@ -276,6 +277,7 @@ namespace GW2EIEvtcParser.ParsedData
                     _statusEvents.DownEvents[pair.Key] = agentDowns;
                 }
             }
+            _metaDataEvents.ErrorEvents.AddRange(fightData.Logic.GetCustomWarningMessages());
         }
 
         private void EIExtraEventProcess(List<Player> players, SkillData skillData, AgentData agentData, FightData fightData, ParserController operation)
@@ -287,7 +289,7 @@ namespace GW2EIEvtcParser.ParsedData
             operation.UpdateProgressWithCancellationCheck("Creating Custom Cast Events");
             EICastParse(players, skillData, agentData);
             operation.UpdateProgressWithCancellationCheck("Creating Custom Status Events");
-            EIStatusParse();
+            EIMetaAndStatusParse(fightData);
             // master attachements
             operation.UpdateProgressWithCancellationCheck("Attaching Banners to Warriors");
             WarriorHelper.AttachMasterToWarriorBanners(players, _buffData, _castDataById);

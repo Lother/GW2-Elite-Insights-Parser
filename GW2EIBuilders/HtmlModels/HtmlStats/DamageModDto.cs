@@ -3,16 +3,16 @@ using GW2EIEvtcParser.EIData;
 
 namespace GW2EIBuilders.HtmlModels
 {
-    public class DamageModDto
+    internal class DamageModDto
     {
-        public long Id { get; internal set; }
-        public string Name { get; internal set; }
-        public string Icon { get; internal set; }
-        public string Tooltip { get; internal set; }
-        public bool NonMultiplier { get; internal set; }
-        public bool SkillBased { get; internal set; }
+        public long Id { get; set; }
+        public string Name { get; set; }
+        public string Icon { get; set; }
+        public string Tooltip { get; set; }
+        public bool NonMultiplier { get; set; }
+        public bool SkillBased { get; set; }
 
-        internal static void AssembleDamageModifiers(ICollection<DamageModifier> damageMods, Dictionary<string, DamageModDto> dict)
+        public static void AssembleDamageModifiers(ICollection<DamageModifier> damageMods, Dictionary<string, DamageModDto> dict)
         {
             foreach (DamageModifier mod in damageMods)
             {

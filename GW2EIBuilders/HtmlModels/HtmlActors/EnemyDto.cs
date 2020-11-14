@@ -1,7 +1,7 @@
 ﻿namespace GW2EIBuilders.HtmlModels
 {
-    public class EnemyDto
+    internal class EnemyDto
     {
-        public string Name { get; internal set; }
+        public string Name { get; set; }
     }
 }

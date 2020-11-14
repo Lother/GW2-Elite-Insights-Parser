@@ -4,13 +4,13 @@ using GW2EIEvtcParser.EIData;
 
 namespace GW2EIBuilders.HtmlModels
 {
-    public class TargetChartDataDto
+    internal class TargetChartDataDto
     {
-        public List<int> Total { get; internal set; }
-        public List<object[]> HealthStates { get; internal set; }
-        public List<object[]> BreakbarPercentStates { get; internal set; }
+        public List<int> Total { get; set; }
+        public List<object[]> HealthStates { get; set; }
+        public List<object[]> BreakbarPercentStates { get; set; }
 
-        internal static TargetChartDataDto BuildTargetGraphData(ParsedEvtcLog log, int phaseIndex, NPC target)
+        public static TargetChartDataDto BuildTargetGraphData(ParsedEvtcLog log, int phaseIndex, NPC target)
         {
             PhaseData phase = log.FightData.GetPhases(log)[phaseIndex];
             return new TargetChartDataDto

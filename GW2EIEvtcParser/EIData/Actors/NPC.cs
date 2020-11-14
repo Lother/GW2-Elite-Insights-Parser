@@ -92,7 +92,7 @@ namespace GW2EIEvtcParser.EIData
 
                 foreach (Buff buff in TrackedBuffs)
                 {
-                    if (buffDistribution.ContainsKey(buff.ID))
+                    if (buffDistribution.HasBuffID(buff.ID))
                     {
                         rates[buff.ID] = new FinalBuffs(buff, buffDistribution, buffPresence, phaseDuration);
                     }
@@ -130,7 +130,7 @@ namespace GW2EIEvtcParser.EIData
                 return;
             }
             SetMovements(log);
-            CombatReplay.PollingRate(log.FightData.FightEnd, log.FightData.GetMainTargets(log).Contains(this));
+            CombatReplay.PollingRate(log.FightData.FightEnd);
             TrimCombatReplay(log);
         }
     }

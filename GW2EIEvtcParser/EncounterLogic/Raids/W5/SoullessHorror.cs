@@ -54,6 +54,14 @@ namespace GW2EIEvtcParser.EncounterLogic
             };
         }
 
+        internal override List<ErrorEvent> GetCustomWarningMessages()
+        {
+            return new List<ErrorEvent>()
+            {
+                new ErrorEvent("Missing confusion damage")
+            };
+        }
+
         internal override void CheckSuccess(CombatData combatData, AgentData agentData, FightData fightData, HashSet<AgentItem> playerAgents)
         {
             base.CheckSuccess(combatData, agentData, fightData, playerAgents);

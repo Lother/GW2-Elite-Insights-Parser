@@ -5,16 +5,16 @@ using GW2EIEvtcParser.EIData;
 
 namespace GW2EIBuilders.HtmlModels
 {
-    public class CombatReplayDto
+    internal class CombatReplayDto
     {
-        public List<object> Actors { get; internal set; }
-        public int[] Sizes { get; internal set; }
-        public int MaxTime { get; internal set; }
-        public float Inch { get; internal set; }
-        public int PollingRate { get; internal set; }
-        public List<CombatReplayMap.MapItem> Maps { get; internal set; }
+        public List<object> Actors { get; set; }
+        public int[] Sizes { get; set; }
+        public long MaxTime { get; set; }
+        public float Inch { get; set; }
+        public int PollingRate { get; set; }
+        public List<CombatReplayMap.MapItem> Maps { get; set; }
 
-        internal CombatReplayDto(ParsedEvtcLog log)
+        public CombatReplayDto(ParsedEvtcLog log)
         {
             CombatReplayMap map = log.FightData.Logic.GetCombatMap(log);
             Actors = GetCombatReplayActors(log, map);
@@ -22,7 +22,7 @@ namespace GW2EIBuilders.HtmlModels
             (int width, int height) = map.GetPixelMapSize();
             Sizes = new int[2] { width, height };
             Inch = map.GetInch();
-            MaxTime = log.PlayerList.First().GetCombatReplayTimes(log).Last();
+            MaxTime = log.PlayerList.First().GetCombatReplayPolledPositions(log).Last().Time;
         }
 
 

@@ -4,7 +4,7 @@ using GW2EIEvtcParser.EIData;
 
 namespace GW2EIBuilders.HtmlModels
 {
-    public class DamageModData
+    internal class DamageModData
     {
         public List<object[]> Data { get; } = new List<object[]>();
         public List<List<object[]>> DataTarget { get; } = new List<List<object[]>>();
@@ -69,7 +69,7 @@ namespace GW2EIBuilders.HtmlModels
                 }
             }
         }
-        internal static List<DamageModData> BuildDmgModifiersData(ParsedEvtcLog log, int phaseIndex, List<DamageModifier> damageModsToUse)
+        public static List<DamageModData> BuildDmgModifiersData(ParsedEvtcLog log, int phaseIndex, List<DamageModifier> damageModsToUse)
         {
             var pData = new List<DamageModData>();
             foreach (Player player in log.PlayerList)
@@ -79,7 +79,7 @@ namespace GW2EIBuilders.HtmlModels
             return pData;
         }
 
-        internal static List<DamageModData> BuildPersonalDmgModifiersData(ParsedEvtcLog log, int phaseIndex, Dictionary<string, List<DamageModifier>> damageModsToUse)
+        public static List<DamageModData> BuildPersonalDmgModifiersData(ParsedEvtcLog log, int phaseIndex, Dictionary<string, List<DamageModifier>> damageModsToUse)
         {
             var pData = new List<DamageModData>();
             foreach (Player player in log.PlayerList)

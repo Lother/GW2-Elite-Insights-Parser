@@ -33,6 +33,8 @@
             this.LblSettingsInfoMsg = new System.Windows.Forms.Label();
             this.ChkDefaultOutputLoc = new System.Windows.Forms.CheckBox();
             this.TxtCustomSaveLoc = new System.Windows.Forms.TextBox();
+            this.NumericCustomTooShort = new System.Windows.Forms.NumericUpDown();
+            this.LblCustomTooShort = new System.Windows.Forms.Label();
             this.BtnFolderSelect = new System.Windows.Forms.Button();
             this.LblCustomSaveLoc = new System.Windows.Forms.Label();
             this.BtnResetSkillList = new System.Windows.Forms.Button();
@@ -94,6 +96,7 @@
             this.BtnClose = new System.Windows.Forms.Button();
             this.BtnDumpSettings = new System.Windows.Forms.Button();
             this.BtnLoadSettings = new System.Windows.Forms.Button();
+            ((System.ComponentModel.ISupportInitialize)(this.NumericCustomTooShort)).BeginInit();
             this.GroupWebhookSettings.SuspendLayout();
             this.TabControl.SuspendLayout();
             this.TabGeneral.SuspendLayout();
@@ -117,7 +120,7 @@
             // 
             this.LblSettingsInfoMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.LblSettingsInfoMsg.AutoSize = true;
-            this.LblSettingsInfoMsg.Location = new System.Drawing.Point(9, 350);
+            this.LblSettingsInfoMsg.Location = new System.Drawing.Point(9, 354);
             this.LblSettingsInfoMsg.Name = "LblSettingsInfoMsg";
             this.LblSettingsInfoMsg.Size = new System.Drawing.Size(251, 13);
             this.LblSettingsInfoMsg.TabIndex = 12;
@@ -144,6 +147,39 @@
             this.TxtCustomSaveLoc.TabIndex = 15;
             this.TxtCustomSaveLoc.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.TxtCustomSaveLoc.TextChanged += new System.EventHandler(this.TxtCustomSaveLocationTextChanged);
+            // 
+            // NumericCustomTooShort
+            // 
+            this.NumericCustomTooShort.Location = new System.Drawing.Point(156, 134);
+            this.NumericCustomTooShort.Maximum = new decimal(new int[] {
+            86400000,
+            0,
+            0,
+            0});
+            this.NumericCustomTooShort.Minimum = new decimal(new int[] {
+            2200,
+            0,
+            0,
+            0});
+            this.NumericCustomTooShort.Name = "NumericCustomTooShort";
+            this.NumericCustomTooShort.Size = new System.Drawing.Size(90, 20);
+            this.NumericCustomTooShort.TabIndex = 15;
+            this.NumericCustomTooShort.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.NumericCustomTooShort.Value = new decimal(new int[] {
+            2200,
+            0,
+            0,
+            0});
+            this.NumericCustomTooShort.ValueChanged += new System.EventHandler(this.NumericCustomTooShortValueChanged);
+            // 
+            // LblCustomTooShort
+            // 
+            this.LblCustomTooShort.AutoSize = true;
+            this.LblCustomTooShort.Location = new System.Drawing.Point(6, 136);
+            this.LblCustomTooShort.Name = "LblCustomTooShort";
+            this.LblCustomTooShort.Size = new System.Drawing.Size(151, 13);
+            this.LblCustomTooShort.TabIndex = 17;
+            this.LblCustomTooShort.Text = "Skip fights shorter than (in ms):";
             // 
             // BtnFolderSelect
             // 
@@ -367,7 +403,7 @@
             this.GroupWebhookSettings.TabIndex = 45;
             this.GroupWebhookSettings.TabStop = false;
             this.GroupWebhookSettings.Text = "Webhook Settings";
-            this.TlpSettings.SetToolTip(this.GroupWebhookSettings, "Disabled with Multiple Parse Logs and when not uploading to dps.reports");
+            this.TlpSettings.SetToolTip(this.GroupWebhookSettings, "Disabled when not uploading to dps.reports");
             // 
             // LblWebhookUrl
             // 
@@ -393,7 +429,7 @@
             // ChkAnonymous
             // 
             this.ChkAnonymous.AutoSize = true;
-            this.ChkAnonymous.Location = new System.Drawing.Point(228, 24);
+            this.ChkAnonymous.Location = new System.Drawing.Point(210, 24);
             this.ChkAnonymous.Name = "ChkAnonymous";
             this.ChkAnonymous.Size = new System.Drawing.Size(118, 17);
             this.ChkAnonymous.TabIndex = 20;
@@ -419,7 +455,7 @@
             // ChkSaveOutTrace
             // 
             this.ChkSaveOutTrace.AutoSize = true;
-            this.ChkSaveOutTrace.Location = new System.Drawing.Point(6, 134);
+            this.ChkSaveOutTrace.Location = new System.Drawing.Point(341, 24);
             this.ChkSaveOutTrace.Name = "ChkSaveOutTrace";
             this.ChkSaveOutTrace.Size = new System.Drawing.Size(87, 17);
             this.ChkSaveOutTrace.TabIndex = 40;
@@ -467,7 +503,7 @@
             this.TabControl.Multiline = true;
             this.TabControl.Name = "TabControl";
             this.TabControl.SelectedIndex = 0;
-            this.TabControl.Size = new System.Drawing.Size(479, 335);
+            this.TabControl.Size = new System.Drawing.Size(479, 339);
             this.TabControl.TabIndex = 47;
             // 
             // TabGeneral
@@ -478,7 +514,7 @@
             this.TabGeneral.Location = new System.Drawing.Point(4, 22);
             this.TabGeneral.Name = "TabGeneral";
             this.TabGeneral.Padding = new System.Windows.Forms.Padding(3);
-            this.TabGeneral.Size = new System.Drawing.Size(471, 309);
+            this.TabGeneral.Size = new System.Drawing.Size(471, 313);
             this.TabGeneral.TabIndex = 0;
             this.TabGeneral.Text = "General";
             this.TabGeneral.UseVisualStyleBackColor = true;
@@ -488,12 +524,13 @@
             this.GroupParsing.Controls.Add(this.ChkMultiThreaded);
             this.GroupParsing.Controls.Add(this.ChkMultiLogs);
             this.GroupParsing.Controls.Add(this.ChkAutoParse);
-            this.GroupParsing.Controls.Add(this.ChkSaveOutTrace);
             this.GroupParsing.Controls.Add(this.ChkAutoAdd);
             this.GroupParsing.Controls.Add(this.ChkSkipFailedTries);
-            this.GroupParsing.Location = new System.Drawing.Point(240, 8);
+            this.GroupParsing.Controls.Add(this.NumericCustomTooShort);
+            this.GroupParsing.Controls.Add(this.LblCustomTooShort);
+            this.GroupParsing.Location = new System.Drawing.Point(205, 8);
             this.GroupParsing.Name = "GroupParsing";
-            this.GroupParsing.Size = new System.Drawing.Size(216, 160);
+            this.GroupParsing.Size = new System.Drawing.Size(251, 160);
             this.GroupParsing.TabIndex = 41;
             this.GroupParsing.TabStop = false;
             this.GroupParsing.Text = "Parsing";
@@ -536,6 +573,7 @@
             this.GroupOutput.Controls.Add(this.ChkAnonymous);
             this.GroupOutput.Controls.Add(this.ChkAddDuration);
             this.GroupOutput.Controls.Add(this.ChkAddPoVProf);
+            this.GroupOutput.Controls.Add(this.ChkSaveOutTrace);
             this.GroupOutput.Controls.Add(this.ChkDefaultOutputLoc);
             this.GroupOutput.Controls.Add(this.BtnFolderSelect);
             this.GroupOutput.Controls.Add(this.TxtCustomSaveLoc);
@@ -576,7 +614,7 @@
             this.GroupEncounter.Controls.Add(this.ChkDamageMods);
             this.GroupEncounter.Location = new System.Drawing.Point(12, 8);
             this.GroupEncounter.Name = "GroupEncounter";
-            this.GroupEncounter.Size = new System.Drawing.Size(216, 160);
+            this.GroupEncounter.Size = new System.Drawing.Size(187, 160);
             this.GroupEncounter.TabIndex = 36;
             this.GroupEncounter.TabStop = false;
             this.GroupEncounter.Text = "Encounter";
@@ -589,7 +627,7 @@
             this.TabHTML.Location = new System.Drawing.Point(4, 22);
             this.TabHTML.Name = "TabHTML";
             this.TabHTML.Padding = new System.Windows.Forms.Padding(3);
-            this.TabHTML.Size = new System.Drawing.Size(471, 309);
+            this.TabHTML.Size = new System.Drawing.Size(476, 335);
             this.TabHTML.TabIndex = 1;
             this.TabHTML.Text = "HTML";
             this.TabHTML.UseVisualStyleBackColor = true;
@@ -650,7 +688,7 @@
             this.TabCSV.Controls.Add(this.ChkOutputCsv);
             this.TabCSV.Location = new System.Drawing.Point(4, 22);
             this.TabCSV.Name = "TabCSV";
-            this.TabCSV.Size = new System.Drawing.Size(471, 309);
+            this.TabCSV.Size = new System.Drawing.Size(476, 335);
             this.TabCSV.TabIndex = 2;
             this.TabCSV.Text = "CSV";
             this.TabCSV.UseVisualStyleBackColor = true;
@@ -664,7 +702,7 @@
             this.TabRaw.Controls.Add(this.GroupRawSettings);
             this.TabRaw.Location = new System.Drawing.Point(4, 22);
             this.TabRaw.Name = "TabRaw";
-            this.TabRaw.Size = new System.Drawing.Size(471, 309);
+            this.TabRaw.Size = new System.Drawing.Size(476, 335);
             this.TabRaw.TabIndex = 3;
             this.TabRaw.Text = "Raw formats";
             this.TabRaw.UseVisualStyleBackColor = true;
@@ -739,7 +777,7 @@
             this.TabUpload.Controls.Add(this.GroupWebhookSettings);
             this.TabUpload.Location = new System.Drawing.Point(4, 22);
             this.TabUpload.Name = "TabUpload";
-            this.TabUpload.Size = new System.Drawing.Size(471, 309);
+            this.TabUpload.Size = new System.Drawing.Size(476, 335);
             this.TabUpload.TabIndex = 4;
             this.TabUpload.Text = "Upload";
             this.TabUpload.UseVisualStyleBackColor = true;
@@ -763,7 +801,7 @@
             this.TabAPI.Controls.Add(this.BtnResetSkillList);
             this.TabAPI.Location = new System.Drawing.Point(4, 22);
             this.TabAPI.Name = "TabAPI";
-            this.TabAPI.Size = new System.Drawing.Size(471, 309);
+            this.TabAPI.Size = new System.Drawing.Size(476, 335);
             this.TabAPI.TabIndex = 5;
             this.TabAPI.Text = "Maintenance";
             this.TabAPI.UseVisualStyleBackColor = true;
@@ -798,7 +836,7 @@
             // BtnClose
             // 
             this.BtnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.BtnClose.Location = new System.Drawing.Point(412, 370);
+            this.BtnClose.Location = new System.Drawing.Point(412, 374);
             this.BtnClose.Name = "BtnClose";
             this.BtnClose.Size = new System.Drawing.Size(84, 24);
             this.BtnClose.TabIndex = 48;
@@ -809,7 +847,7 @@
             // BtnDumpSettings
             // 
             this.BtnDumpSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.BtnDumpSettings.Location = new System.Drawing.Point(322, 370);
+            this.BtnDumpSettings.Location = new System.Drawing.Point(322, 374);
             this.BtnDumpSettings.Name = "BtnDumpSettings";
             this.BtnDumpSettings.Size = new System.Drawing.Size(84, 24);
             this.BtnDumpSettings.TabIndex = 49;
@@ -820,7 +858,7 @@
             // BtnLoadSettings
             // 
             this.BtnLoadSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.BtnLoadSettings.Location = new System.Drawing.Point(232, 370);
+            this.BtnLoadSettings.Location = new System.Drawing.Point(232, 374);
             this.BtnLoadSettings.Name = "BtnLoadSettings";
             this.BtnLoadSettings.Size = new System.Drawing.Size(84, 24);
             this.BtnLoadSettings.TabIndex = 50;
@@ -833,7 +871,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
-            this.ClientSize = new System.Drawing.Size(503, 406);
+            this.ClientSize = new System.Drawing.Size(503, 410);
             this.Controls.Add(this.BtnLoadSettings);
             this.Controls.Add(this.BtnDumpSettings);
             this.Controls.Add(this.BtnClose);
@@ -846,6 +884,7 @@
             this.Text = "Parse settings";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SettingsFormFormClosing);
             this.VisibleChanged += new System.EventHandler(this.SettingsFormLoad);
+            ((System.ComponentModel.ISupportInitialize)(this.NumericCustomTooShort)).EndInit();
             this.GroupWebhookSettings.ResumeLayout(false);
             this.GroupWebhookSettings.PerformLayout();
             this.TabControl.ResumeLayout(false);
@@ -895,6 +934,8 @@
         private System.Windows.Forms.CheckBox ChkOutputCsv;
         private System.Windows.Forms.CheckBox ChkPhaseParsing;
         private System.Windows.Forms.CheckBox ChkMultiThreaded;
+        private System.Windows.Forms.Label LblCustomTooShort;
+        private System.Windows.Forms.NumericUpDown NumericCustomTooShort;
         private System.Windows.Forms.CheckBox ChkCombatReplay;
         private System.Windows.Forms.CheckBox ChkUploadDPSReports;
         private System.Windows.Forms.TextBox TxtDPSReportUserToken;

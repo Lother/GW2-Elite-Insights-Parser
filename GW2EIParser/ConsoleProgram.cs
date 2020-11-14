@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using GW2EIParser.Exceptions;
 
@@ -7,11 +9,37 @@ namespace GW2EIParser
 {
     internal class ConsoleProgram
     {
+
         public ConsoleProgram(IEnumerable<string> logFiles)
         {
             if (Properties.Settings.Default.ParseMultipleLogs)
             {
-                Parallel.ForEach(logFiles, file => ParseLog(file));
+                var splitLogFiles = new List<List<string>>();
+                var sizeSortedLogFiles = new List<string>(logFiles);
+                for (int i = 0; i < ProgramHelper.GetMaxParallelRunning(); i++)
+                {
+                    splitLogFiles.Add(new List<string>());
+                }
+                sizeSortedLogFiles.Sort((x, y) =>
+                {
+                    var fInfoX = new FileInfo(x);
+                    var xValue = fInfoX.Exists ? fInfoX.Length : 0;
+                    var fInfoY = new FileInfo(y);
+                    var yValue = fInfoY.Exists ? fInfoY.Length : 0;
+                    return xValue.CompareTo(yValue);
+                });
+                int index = 0;
+                foreach(string file in sizeSortedLogFiles)
+                {
+                    splitLogFiles[index].Add(file);
+                    index = (index + 1) % ProgramHelper.GetMaxParallelRunning();
+                }
+                Parallel.ForEach(splitLogFiles, files => {
+                    foreach(string file in files)
+                    {
+                        ParseLog(file);
+                    }
+                });
             }
             else
             {
