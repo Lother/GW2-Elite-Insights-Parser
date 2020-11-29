@@ -335,7 +335,7 @@ namespace GW2EIEvtcParser.EIData
             List<DownEvent> downs = log.CombatData.GetDownEvents(AgentItem);
             List<AliveEvent> ups = log.CombatData.GetAliveEvents(AgentItem);
             long lastDeathTime = 0;
-            List<AbstractDamageEvent> damageLogs = GetDamageTakenLogs(null, log, 0, log.FightData.FightEnd);
+            List<AbstractHealthDamageEvent> damageLogs = GetDamageTakenLogs(null, log, 0, log.FightData.FightEnd);
             foreach (DeadEvent dead in deads)
             {
                 res.Add(new DeathRecap(damageLogs, dead, downs, ups, lastDeathTime));
@@ -380,7 +380,7 @@ namespace GW2EIEvtcParser.EIData
                 {
                     swapped = skill.FindWeaponSlot(swaps);
                 }
-                if (!skill.EstimateWeapons(weapons, swapped, cl.Time > swappedTime) && cl is WeaponSwapEvent swe)
+                if (!skill.EstimateWeapons(weapons, swapped, cl.Time > swappedTime + ParserHelper.WeaponSwapDelayConstant) && cl is WeaponSwapEvent swe)
                 {
                     //wepswap  
                     swapped = swe.SwappedTo;

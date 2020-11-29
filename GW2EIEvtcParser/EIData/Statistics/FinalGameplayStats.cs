@@ -24,10 +24,10 @@ namespace GW2EIEvtcParser.EIData
 
         internal FinalGameplayStats(ParsedEvtcLog log, PhaseData phase, AbstractSingleActor actor, AbstractSingleActor target)
         {
-            List<AbstractDamageEvent> dls = actor.GetJustActorDamageLogs(target, log, phase.Start, phase.End);
-            foreach (AbstractDamageEvent dl in dls)
+            List<AbstractHealthDamageEvent> dls = actor.GetJustActorDamageLogs(target, log, phase.Start, phase.End);
+            foreach (AbstractHealthDamageEvent dl in dls)
             {
-                if (!(dl is NonDirectDamageEvent))
+                if (!(dl is NonDirectHealthDamageEvent))
                 {
                     if (dl.HasHit) {
                         if (SkillItem.CanCrit(dl.SkillId, log.LogData.GW2Build))
@@ -35,7 +35,7 @@ namespace GW2EIEvtcParser.EIData
                             if (dl.HasCrit)
                             {
                                 CriticalCount++;
-                                CriticalDmg += dl.Damage;
+                                CriticalDmg += dl.HealthDamage;
                             }
                             CritableDirectDamageCount++;
                         }

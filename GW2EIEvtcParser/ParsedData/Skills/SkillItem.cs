@@ -10,7 +10,7 @@ namespace GW2EIEvtcParser.ParsedData
     public class SkillItem
     {
         public const long DodgeId = 65001;
-        public const long MirageCloakDodgeId = 65002;
+        public const long MirageCloakDodgeId = -17;
         public const long ResurrectId = 1066;
         public const long BandageId = 1175;
         public const long WeaponSwapId = -2;
@@ -205,7 +205,14 @@ namespace GW2EIEvtcParser.ParsedData
         internal GW2APISkill ApiSkill { get; }
         private SkillInfoEvent _skillInfo { get; set; }
 
+        public bool UnknownSkill { get; } = false;
+
         // Constructor
+
+        internal SkillItem(long ID) : this(ID, "UNKNOWN")
+        {
+            UnknownSkill = Name == "UNKNOWN";
+        }
 
         public SkillItem(long ID, string name)
         {
@@ -283,7 +290,7 @@ namespace GW2EIEvtcParser.ParsedData
                     // if the first swap is not a water set that means the next time we get to a water set was the first set to begin with
                     if (firstSwap != FirstWaterSet && firstSwap != SecondWaterSet)
                     {
-                        swapped = swaps.Exists(x => x == FirstWaterSet || x == FirstWaterSet) ? swaps.First(x => x == FirstWaterSet || x == SecondWaterSet) : FirstWaterSet;
+                        swapped = swaps.Exists(x => x == FirstWaterSet || x == SecondWaterSet) ? swaps.First(x => x == FirstWaterSet || x == SecondWaterSet) : FirstWaterSet;
                     }
                     else
                     {
@@ -294,14 +301,14 @@ namespace GW2EIEvtcParser.ParsedData
             return swapped;
         }
 
-        internal bool EstimateWeapons(string[] weapons, int swapped, bool swapCheck)
+        internal bool EstimateWeapons(string[] weapons, int swapped, bool validForCurrentSwap)
         {
             if (weapons.Length != 8)
             {
                 throw new InvalidOperationException("Invalid count in weapons array");
             }
             int id = swapped == FirstLandSet ? 0 : swapped == SecondLandSet ? 2 : swapped == FirstWaterSet ? 4 : swapped == SecondWaterSet ? 6 : -1;
-            if (_weaponDescriptor == null || id == -1 || !swapCheck)
+            if (_weaponDescriptor == null || id == -1 || !validForCurrentSwap)
             {
                 return false;
             }

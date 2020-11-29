@@ -29,14 +29,14 @@ namespace GW2EIEvtcParser.EIData
             Tracker = new BuffsTrackerMulti(new List<long>(ids));
         }
 
-        protected double ComputeGain(int stack, AbstractDamageEvent dl)
+        protected double ComputeGain(int stack, AbstractHealthDamageEvent dl)
         {
             if (DLChecker != null && !DLChecker(dl))
             {
                 return -1.0;
             }
             double gain = GainComputer.ComputeGain(GainPerStack, stack);
-            return gain > 0.0 ? gain * dl.Damage : -1.0;
+            return gain > 0.0 ? gain * dl.HealthDamage : -1.0;
         }
 
         internal override void ComputeDamageModifier(Dictionary<string, List<DamageModifierStat>> data, Dictionary<NPC, Dictionary<string, List<DamageModifierStat>>> dataTarget, Player p, ParsedEvtcLog log)
@@ -60,7 +60,7 @@ namespace GW2EIEvtcParser.EIData
                     for (int i = 0; i < phases.Count; i++)
                     {
                         int totalDamage = GetTotalDamage(p, log, target, i);
-                        List<AbstractDamageEvent> typeHits = GetHitDamageLogs(p, log, target, phases[i]);
+                        List<AbstractHealthDamageEvent> typeHits = GetHitDamageLogs(p, log, target, phases[i]);
                         var damages = typeHits.Select(x => ComputeGain(Tracker.GetStack(bgms, x.Time), x)).Where(x => x != -1.0).ToList();
                         extraDataList.Add(new DamageModifierStat(damages.Count, typeHits.Count, damages.Sum(), totalDamage));
                     }
@@ -71,7 +71,7 @@ namespace GW2EIEvtcParser.EIData
             for (int i = 0; i < phases.Count; i++)
             {
                 int totalDamage = GetTotalDamage(p, log, null, i);
-                List<AbstractDamageEvent> typeHits = GetHitDamageLogs(p, log, null, phases[i]);
+                List<AbstractHealthDamageEvent> typeHits = GetHitDamageLogs(p, log, null, phases[i]);
                 var damages = typeHits.Select(x => ComputeGain(Tracker.GetStack(bgms, x.Time), x)).Where(x => x != -1.0).ToList();
                 data[Name].Add(new DamageModifierStat(damages.Count, typeHits.Count, damages.Sum(), totalDamage));
             }

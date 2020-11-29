@@ -19,8 +19,7 @@ namespace GW2EIEvtcParser.EIData
                 }
                 WeaponSwapEvent nextSwap = combatData.GetWeaponSwapData(swap.Caster).FirstOrDefault(x => x.Time > swap.Time + ParserHelper.ServerDelayConstant);
                 long nextSwapTime = nextSwap != null ? nextSwap.Time : long.MaxValue;
-                long postSwapDelay = 75;
-                var castIds = new HashSet<long>(combatData.GetAnimatedCastData(swap.Caster).Where(x => x.Time >= swap.Time + postSwapDelay && x.Time <= nextSwapTime).Select(x => x.SkillId));
+                var castIds = new HashSet<long>(combatData.GetAnimatedCastData(swap.Caster).Where(x => x.Time >= swap.Time + ParserHelper.WeaponSwapDelayConstant && x.Time <= nextSwapTime).Select(x => x.SkillId));
                 return skill.ApiSkill.BundleSkills.Intersect(castIds).Any();
             })
             {
@@ -75,7 +74,7 @@ namespace GW2EIEvtcParser.EIData
 
         };
 
-        public static void AttachMasterToEngineerTurrets(List<Player> players, Dictionary<long, List<AbstractDamageEvent>> damageData, Dictionary<long, List<AbstractCastEvent>> castData)
+        public static void AttachMasterToEngineerTurrets(List<Player> players, Dictionary<long, List<AbstractHealthDamageEvent>> damageData, Dictionary<long, List<AbstractCastEvent>> castData)
         {
             var playerAgents = new HashSet<AgentItem>(players.Select(x => x.AgentItem));
 

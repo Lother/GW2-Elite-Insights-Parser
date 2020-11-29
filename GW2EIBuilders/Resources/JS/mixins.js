@@ -1,12 +1,23 @@
 "use strict";
 
-var roundingComponent = {
+var numberComponent = {
     methods: {
+        // https://stackoverflow.com/questions/16637051/adding-space-between-numbers
+        integerWithSpaces: function(x) {
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        },
         round: function (value) {
             if (isNaN(value)) {
                 return 0;
             }
             return Math.round(value);
+        },
+        round1: function (value) {
+            if (isNaN(value)) {
+                return 0;
+            }
+            var mul = 10;
+            return Math.round(mul * value) / mul;
         },
         round2: function (value) {
             if (isNaN(value)) {

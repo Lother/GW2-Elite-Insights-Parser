@@ -10,12 +10,14 @@ namespace GW2EIBuilders.HtmlModels
     internal class DmgDistributionDto
     {
         public long ContributedDamage { get; set; }
+        public double ContributedBreakbarDamage { get; set; }
         public long ContributedShieldDamage { get; set; }
         public long TotalDamage { get; set; }
+        public double TotalBreakbarDamage { get; set; }
         public long TotalCasting { get; set; }
         public List<object[]> Distribution { get; set; }
 
-        private static object[] GetDMGDtoItem(KeyValuePair<SkillItem, List<AbstractDamageEvent>> entry, Dictionary<SkillItem, List<AbstractCastEvent>> castLogsBySkill, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBoons, BuffsContainer boons, PhaseData phase)
+        private static object[] GetDMGDtoItem(KeyValuePair<SkillItem, List<AbstractHealthDamageEvent>> entry, Dictionary<SkillItem, List<AbstractCastEvent>> castLogsBySkill, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBoons, BuffsContainer boons, PhaseData phase)
         {
             int totaldamage = 0,
                     mindamage = int.MaxValue,
@@ -28,10 +30,10 @@ namespace GW2EIBuilders.HtmlModels
                     glance = 0,
                     shieldDamage = 0;
             bool IsIndirectDamage = false;
-            foreach (AbstractDamageEvent dl in entry.Value.Where(x => !x.DoubleProcHit))
+            foreach (AbstractHealthDamageEvent dl in entry.Value.Where(x => !x.DoubleProcHit))
             {
-                IsIndirectDamage = IsIndirectDamage || dl is NonDirectDamageEvent;
-                int curdmg = dl.Damage;
+                IsIndirectDamage = IsIndirectDamage || dl is NonDirectHealthDamageEvent;
+                int curdmg = dl.HealthDamage;
                 totaldamage += curdmg;
                 hits++;
                 if (dl.HasHit)
@@ -42,7 +44,7 @@ namespace GW2EIBuilders.HtmlModels
                     if (dl.HasCrit)
                     {
                         crit++;
-                        critDamage += dl.Damage;
+                        critDamage += dl.HealthDamage;
                     }
                     if (dl.HasGlanced)
                     {
@@ -133,12 +135,12 @@ namespace GW2EIBuilders.HtmlModels
                 Distribution = new List<object[]>()
             };
             PhaseData phase = log.FightData.GetPhases(log)[phaseIndex];
-            List<AbstractDamageEvent> damageLogs = p.GetDamageTakenLogs(null, log, phase.Start, phase.End);
+            List<AbstractHealthDamageEvent> damageLogs = p.GetDamageTakenLogs(null, log, phase.Start, phase.End);
             var damageLogsBySkill = damageLogs.GroupBy(x => x.Skill).ToDictionary(x => x.Key, x => x.ToList());
-            dto.ContributedDamage = damageLogs.Count > 0 ? damageLogs.Sum(x => x.Damage) : 0;
-            dto.ContributedShieldDamage = damageLogs.Count > 0 ? damageLogs.Sum(x => x.ShieldDamage) : 0;
+            dto.ContributedDamage = damageLogs.Sum(x => x.HealthDamage);
+            dto.ContributedShieldDamage = damageLogs.Sum(x => x.ShieldDamage);
             var conditionsById = log.Statistics.PresentConditions.ToDictionary(x => x.ID);
-            foreach (KeyValuePair<SkillItem, List<AbstractDamageEvent>> entry in damageLogsBySkill)
+            foreach (KeyValuePair<SkillItem, List<AbstractHealthDamageEvent>> entry in damageLogsBySkill)
             {
                 dto.Distribution.Add(GetDMGDtoItem(entry, null, usedSkills, usedBuffs, log.Buffs, phase));
             }
@@ -146,14 +148,14 @@ namespace GW2EIBuilders.HtmlModels
         }
 
 
-        private static List<object[]> BuildDMGDistBodyData(ParsedEvtcLog log, List<AbstractCastEvent> casting, List<AbstractDamageEvent> damageLogs, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBuffs, int phaseIndex)
+        private static List<object[]> BuildDMGDistBodyData(ParsedEvtcLog log, List<AbstractCastEvent> casting, List<AbstractHealthDamageEvent> damageLogs, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBuffs, int phaseIndex)
         {
             var list = new List<object[]>();
             var castLogsBySkill = casting.GroupBy(x => x.Skill).ToDictionary(x => x.Key, x => x.ToList());
             var damageLogsBySkill = damageLogs.GroupBy(x => x.Skill).ToDictionary(x => x.Key, x => x.ToList());
             var conditionsById = log.Statistics.PresentConditions.ToDictionary(x => x.ID);
             PhaseData phase = log.FightData.GetPhases(log)[phaseIndex];
-            foreach (KeyValuePair<SkillItem, List<AbstractDamageEvent>> entry in damageLogsBySkill)
+            foreach (KeyValuePair<SkillItem, List<AbstractHealthDamageEvent>> entry in damageLogsBySkill)
             {
                 list.Add(GetDMGDtoItem(entry, castLogsBySkill, usedSkills, usedBuffs, log.Buffs, phase));
             }
@@ -219,10 +221,12 @@ namespace GW2EIBuilders.HtmlModels
             var dto = new DmgDistributionDto();
             PhaseData phase = log.FightData.GetPhases(log)[phaseIndex];
             List<AbstractCastEvent> casting = p.GetIntersectingCastLogs(log, phase.Start, phase.End);
-            List<AbstractDamageEvent> damageLogs = p.GetJustActorDamageLogs(target, log, phase.Start, phase.End);
-            dto.ContributedDamage = damageLogs.Count > 0 ? damageLogs.Sum(x => x.Damage) : 0;
-            dto.ContributedShieldDamage = damageLogs.Count > 0 ? damageLogs.Sum(x => x.ShieldDamage) : 0;
+            List<AbstractHealthDamageEvent> damageLogs = p.GetJustActorDamageLogs(target, log, phase.Start, phase.End);
+            dto.ContributedDamage = dps.ActorDamage;
+            dto.ContributedShieldDamage = damageLogs.Sum(x => x.ShieldDamage);
+            dto.ContributedBreakbarDamage = dps.ActorBreakbarDamage;
             dto.TotalDamage = dps.Damage;
+            dto.TotalBreakbarDamage = dps.BreakbarDamage;
             dto.TotalCasting = casting.Sum(cl => Math.Min(cl.EndTime, phase.End) - Math.Max(cl.Time, phase.Start));
             dto.Distribution = BuildDMGDistBodyData(log, casting, damageLogs, usedSkills, usedBuffs, phaseIndex);
             return dto;
@@ -247,10 +251,13 @@ namespace GW2EIBuilders.HtmlModels
             var dto = new DmgDistributionDto();
             PhaseData phase = log.FightData.GetPhases(log)[phaseIndex];
             List<AbstractCastEvent> casting = minions.GetIntersectingCastLogs(log, phase.Start, phase.End);
-            List<AbstractDamageEvent> damageLogs = minions.GetDamageLogs(target, log, phase.Start, phase.End);
-            dto.ContributedDamage = damageLogs.Count > 0 ? damageLogs.Sum(x => x.Damage) : 0;
-            dto.ContributedShieldDamage = damageLogs.Count > 0 ? damageLogs.Sum(x => x.ShieldDamage) : 0;
+            List<AbstractHealthDamageEvent> damageLogs = minions.GetDamageLogs(target, log, phase.Start, phase.End);
+            List<AbstractBreakbarDamageEvent> brkDamageLogs = minions.GetBreakbarDamageLogs(target, log, phase.Start, phase.End);
+            dto.ContributedDamage = damageLogs.Sum(x => x.HealthDamage);
+            dto.ContributedShieldDamage = damageLogs.Sum(x => x.ShieldDamage);
+            dto.ContributedBreakbarDamage = Math.Round(brkDamageLogs.Sum(x => x.BreakbarDamage), 1);
             dto.TotalDamage = dps.Damage;
+            dto.TotalBreakbarDamage = dps.BreakbarDamage;
             dto.TotalCasting = casting.Sum(cl => Math.Min(cl.EndTime, phase.End) - Math.Max(cl.Time, phase.Start));
             dto.Distribution = BuildDMGDistBodyData(log, casting, damageLogs, usedSkills, usedBuffs, phaseIndex);
             return dto;

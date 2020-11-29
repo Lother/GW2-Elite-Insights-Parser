@@ -108,9 +108,9 @@ namespace GW2EIBuilders.JsonModels
 
         }
 
-        protected JsonDamageDist(long id, List<AbstractDamageEvent> list, ParsedEvtcLog log, Dictionary<string, JsonLog.SkillDesc> skillDesc, Dictionary<string, JsonLog.BuffDesc> buffDesc)
+        protected JsonDamageDist(long id, List<AbstractHealthDamageEvent> list, ParsedEvtcLog log, Dictionary<string, JsonLog.SkillDesc> skillDesc, Dictionary<string, JsonLog.BuffDesc> buffDesc)
         {
-            IndirectDamage = list.Exists(x => x is NonDirectDamageEvent);
+            IndirectDamage = list.Exists(x => x is NonDirectHealthDamageEvent);
             if (IndirectDamage)
             {
                 if (!buffDesc.ContainsKey("b" + id))
@@ -138,20 +138,23 @@ namespace GW2EIBuilders.JsonModels
             Id = id;
             Min = int.MaxValue;
             Max = int.MinValue;
-            foreach (AbstractDamageEvent dmgEvt in list)
+            foreach (AbstractHealthDamageEvent dmgEvt in list)
             {
                 Hits += dmgEvt.DoubleProcHit ? 0 : 1;
-                TotalDamage += dmgEvt.Damage;
+                TotalDamage += dmgEvt.HealthDamage;
+                if (dmgEvt.HasHit)
+                {
+                    Min = Math.Min(Min, dmgEvt.HealthDamage);
+                    Max = Math.Max(Max, dmgEvt.HealthDamage);
+                }
                 if (!IndirectDamage)
                 {
                     if (dmgEvt.HasHit)
                     {
-                        Min = Math.Min(Min, dmgEvt.Damage);
-                        Max = Math.Max(Max, dmgEvt.Damage);
                         Flank += dmgEvt.IsFlanking ? 1 : 0;
                         Glance += dmgEvt.HasGlanced ? 1 : 0;
                         Crit += dmgEvt.HasCrit ? 1 : 0;
-                        CritDamage += dmgEvt.HasCrit ? dmgEvt.Damage : 0;
+                        CritDamage += dmgEvt.HasCrit ? dmgEvt.HealthDamage : 0;
                     }
                     Missed += dmgEvt.IsBlind ? 1 : 0;
                     Evaded += dmgEvt.IsEvaded ? 1 : 0;
@@ -166,10 +169,10 @@ namespace GW2EIBuilders.JsonModels
             Max = Max == int.MinValue ? 0 : Max;
         }
 
-        internal static List<JsonDamageDist> BuildJsonDamageDistList(Dictionary<long, List<AbstractDamageEvent>> dlsByID, ParsedEvtcLog log, Dictionary<string, JsonLog.SkillDesc> skillDesc, Dictionary<string, JsonLog.BuffDesc> buffDesc)
+        internal static List<JsonDamageDist> BuildJsonDamageDistList(Dictionary<long, List<AbstractHealthDamageEvent>> dlsByID, ParsedEvtcLog log, Dictionary<string, JsonLog.SkillDesc> skillDesc, Dictionary<string, JsonLog.BuffDesc> buffDesc)
         {
             var res = new List<JsonDamageDist>();
-            foreach (KeyValuePair<long, List<AbstractDamageEvent>> pair in dlsByID)
+            foreach (KeyValuePair<long, List<AbstractHealthDamageEvent>> pair in dlsByID)
             {
                 res.Add(new JsonDamageDist(pair.Key, pair.Value, log, skillDesc, buffDesc));
             }

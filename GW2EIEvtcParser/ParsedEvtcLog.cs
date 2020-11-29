@@ -30,9 +30,8 @@ namespace GW2EIEvtcParser
         private readonly ParserController _operation;
 
         private Dictionary<AgentItem, AbstractSingleActor> _agentToActorDictionary;
-        public Version ParserVersion => _operation.ParserVersion;
 
-        public ParsedEvtcLog(string buildVersion, FightData fightData, AgentData agentData, SkillData skillData,
+        internal ParsedEvtcLog(string buildVersion, FightData fightData, AgentData agentData, SkillData skillData,
                 List<CombatItem> combatItems, List<Player> playerList, long evtcLogDuration, EvtcParserSettings parserSettings, ParserController operation)
         {
             FightData = fightData;
@@ -65,7 +64,7 @@ namespace GW2EIEvtcParser
             _operation.UpdateProgressWithCancellationCheck("Creating Buff Container");
             Buffs = new BuffsContainer(LogData.GW2Build, CombatData, operation);
             _operation.UpdateProgressWithCancellationCheck("Creating Damage Modifier Container");
-            DamageModifiers = new DamageModifiersContainer(LogData.GW2Build, fightData.Logic.Mode);
+            DamageModifiers = new DamageModifiersContainer(LogData.GW2Build, fightData.Logic.Mode, parserSettings);
             _operation.UpdateProgressWithCancellationCheck("Creating Mechanic Data");
             MechanicData = FightData.Logic.GetMechanicData();
             _operation.UpdateProgressWithCancellationCheck("Creating General Statistics Container");

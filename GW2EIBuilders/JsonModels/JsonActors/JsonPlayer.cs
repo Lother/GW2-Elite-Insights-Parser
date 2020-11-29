@@ -61,6 +61,16 @@ namespace GW2EIBuilders.JsonModels
         public List<int>[][] TargetDamage1S { get; internal set; }
         [JsonProperty]
         /// <summary>
+        /// Array of double representing 1S breakbar damage points \n
+        /// Length == # of targets and the length of each sub array is equal to # of phases
+        /// </summary>
+        /// <remarks>
+        /// If the duration of the phase in seconds is non integer, the last point of this array will correspond to the last point  \n
+        /// ex: duration === 15250ms, the array will have 17 elements [0, 1000,...,15000,15250]
+        /// </remarks>
+        public List<double>[][] TargetBreakbarDamage1S { get; internal set; }
+        [JsonProperty]
+        /// <summary>
         /// Per Target Damage distribution array \n
         /// Length == # of targets and the length of each sub array is equal to # of phases
         /// </summary>
@@ -191,30 +201,38 @@ namespace GW2EIBuilders.JsonModels
             //
             Support = player.GetPlayerSupport(log).Select(x => new JsonStatistics.JsonPlayerSupport(x)).ToArray();
             TargetDamage1S = new List<int>[log.FightData.Logic.Targets.Count][];
+            TargetBreakbarDamage1S = new List<double>[log.FightData.Logic.Targets.Count][];
             DpsTargets = new JsonStatistics.JsonDPS[log.FightData.Logic.Targets.Count][];
             StatsTargets = new JsonStatistics.JsonGameplayStats[log.FightData.Logic.Targets.Count][];
             TargetDamageDist = new List<JsonDamageDist>[log.FightData.Logic.Targets.Count][];
             for (int j = 0; j < log.FightData.Logic.Targets.Count; j++)
             {
                 NPC target = log.FightData.Logic.Targets[j];
-                var dpsGraphList = new List<int>[phases.Count];
+                var graph1SDamageList = new List<int>[phases.Count];
+                var graph1SBreakbarDamageList = new List<double>[phases.Count];
                 var targetDamageDistList = new List<JsonDamageDist>[phases.Count];
                 for (int i = 0; i < phases.Count; i++)
                 {
                     PhaseData phase = phases[i];
                     if (settings.RawFormatTimelineArrays)
                     {
-                        dpsGraphList[i] = player.Get1SDamageList(log, i, phase, target);
+                        graph1SDamageList[i] = player.Get1SDamageList(log, i, phase, target);
+                        graph1SBreakbarDamageList[i] = player.Get1SBreakbarDamageList(log, i, phase, target);
                     }
                     targetDamageDistList[i] = JsonDamageDist.BuildJsonDamageDistList(player.GetDamageLogs(target, log, phase.Start, phase.End).GroupBy(x => x.SkillId).ToDictionary(x => x.Key, x => x.ToList()), log, skillDesc, buffDesc);
                 }
                 if (settings.RawFormatTimelineArrays)
                 {
-                    TargetDamage1S[j] = dpsGraphList;
+                    TargetDamage1S[j] = graph1SDamageList;
+                    TargetBreakbarDamage1S[j] = graph1SBreakbarDamageList;
                 }
                 TargetDamageDist[j] = targetDamageDistList;
                 DpsTargets[j] = player.GetDPSTarget(log, target).Select(x => new JsonStatistics.JsonDPS(x)).ToArray();
                 StatsTargets[j] = player.GetGameplayStats(log, target).Select(x => new JsonStatistics.JsonGameplayStats(x)).ToArray();
+            }
+            if (!log.CombatData.HasBreakbarDamageData)
+            {
+                TargetBreakbarDamage1S = null;
             }
             //
             BuffUptimes = GetPlayerJsonBuffsUptime(player, player.GetBuffs(log, BuffEnum.Self), player.GetBuffsDictionary(log), log, settings, buffDesc, personalBuffs);

@@ -1,7 +1,7 @@
 <template>
     <div>     
         <dps-graph-mode-selector-component :data="graphdata" 
-            :phaseduration="this.phase.end - this.phase.start" :phasehassubphases="!!this.phase.subPhases">
+            :phaseduration="this.phase.end - this.phase.start" :phasehassubphases="!!this.phase.subPhases" :ignorebreakbar="true">
         </dps-graph-mode-selector-component>
         <h3 class="text-center mt-1 mb-1">{{graphname}}</h3>
         <graph-component :id="graphid" :layout="layout" :data="computeData"></graph-component>
@@ -45,7 +45,7 @@
                     right = end - 1;
                 }
             }  
-            var div = graphMode !== GraphType.Damage ? Math.max(times[right] - times[left], 1) : 1;
+            var div = graphMode !== GraphType.Damage && graphMode !== GraphType.BreakbarDamage ? Math.max(times[right] - times[left], 1) : 1;
             totalDamage = damageData[right] - damageData[left];
             totalDPS[j] = Math.round(totalDamage / (div));
             maxDPS = Math.max(maxDPS, totalDPS[j]);
@@ -96,7 +96,7 @@
             this.targetOffset += computeRotationData(this.target.details.rotation[this.phaseindex], images, this.data, this.phase);
             var oldOffset = this.targetOffset;
             this.targetOffset += computeBuffData(this.target.details.boonGraph[this.phaseindex], this.data);
-            var dpsY = oldOffset === this.targetOffset ? 'y2' : 'y3';
+            var hasBuffs = oldOffset !== this.targetOffset;
             if (this.hasBreakbarStates) {
                 var breakbarStates = this.graph.targets[this.phaseTargetIndex].breakbarPercentStates;
                 var breakbarTexts = [];
@@ -116,7 +116,7 @@
                     hoverinfo: 'text',
                     visible: this.phase.breakbarPhase ? true : 'legendonly',
                     name: this.target.name + ' breakbar',
-                    yaxis: dpsY
+                    yaxis: 'y3'
                 };
                 this.data.push(res);
                 this.targetOffset++;
@@ -139,7 +139,7 @@
                     },
                     hoverinfo: 'text',
                     name: this.target.name + ' health',
-                    yaxis: dpsY
+                    yaxis: 'y3'
                 };
                 this.data.push(res);
                 this.targetOffset++;
@@ -151,11 +151,11 @@
                 line: {
                     shape: 'spline'
                 },
-                yaxis: dpsY,
+                yaxis: 'y3',
                 hoverinfo: 'name+y+x',
                 name: 'Total'
             });
-            this.layout = getActorGraphLayout(images, this.light ? '#495057' : '#cccccc');
+            this.layout = getActorGraphLayout(images, this.light ? '#495057' : '#cccccc', hasBuffs);
             computePhaseMarkups(this.layout.shapes, this.layout.annotations, this.phase, this.light ? '#495057' : '#cccccc');
         },
         computed: {
@@ -178,20 +178,7 @@
                 return "targetgraph-" + this.phaseTargetIndex + '-' + this.phaseindex;
             },
             graphname: function () {
-                var name = "Graph";
-                switch (this.graphdata.graphmode) {
-                    case GraphType.DPS:
-                        name = "DPS " + name;
-                        break;
-                    case GraphType.CenteredDPS:
-                        name = "Centered DPS " + name;
-                        break;
-                    case GraphType.Damage:
-                        name = "Damage " + name;
-                        break;
-                    default:
-                        break;
-                }
+                var name = getDamageGraphName(this.graphdata.graphmode);
                 switch (this.graphdata.dpsmode) {
                     case 0:
                         name = "Full " + name;
@@ -218,19 +205,7 @@
             },
             computeData: function () {
                 this.layout.datarevision = new Date().getTime();
-                switch (this.graphdata.graphmode) {
-                    case GraphType.DPS:
-                        this.layout.yaxis3.title = "DPS";
-                        break;
-                    case GraphType.CenteredDPS:
-                        this.layout.yaxis3.title = "Centered DPS";
-                        break;
-                    case GraphType.Damage:
-                        this.layout.yaxis3.title = "Damage";
-                        break;
-                    default:
-                        break;
-                }
+                this.layout.yaxis3.title = graphTypeEnumToString(this.graphdata.graphmode);
                 var res = this.data;
                 var data = this.computeDPSRelatedData();
                 this.data[this.targetOffset].y = data[0];
@@ -243,7 +218,7 @@
         },
         methods: {
             computeDPSData: function () {
-                var cacheID = this.graphdata.dpsmode + '-' + this.graphdata.graphmode;
+                var cacheID = getDPSGraphCacheID(this.graphdata.dpsmode, this.graphdata.graphmode, [], this.phaseindex, null);
                 if (this.dpsCache.has(cacheID)) {
                     return this.dpsCache.get(cacheID);
                 }
@@ -251,15 +226,15 @@
                 var res;
                 var damageData = this.graph.targets[this.phaseTargetIndex].total;
                 if (this.graphdata.dpsmode >= 0) {
-                    res = computeTargetDPS(this.target, damageData, this.graphdata.dpsmode, null, cacheID + '-' + this.phaseindex, this.phase.times, this.graphdata.graphmode);
+                    res = computeTargetDPS(this.target, damageData, this.graphdata.dpsmode, null, cacheID, this.phase.times, this.graphdata.graphmode);
                 } else {
-                    res = computeTargetDPS(this.target, damageData, 0, this.computePhaseBreaks, cacheID + '-' + this.phaseindex, this.phase.times, this.graphdata.graphmode);
+                    res = computeTargetDPS(this.target, damageData, 0, this.computePhaseBreaks, cacheID, this.phase.times, this.graphdata.graphmode);
                 }
                 this.dpsCache.set(cacheID, res);
                 return res;
             },
             computeDPSRelatedData: function () {
-                var cacheID = this.graphdata.dpsmode + '-' + this.graphdata.graphmode;
+                var cacheID = getDPSGraphCacheID(this.graphdata.dpsmode, this.graphdata.graphmode, [], this.phaseindex, null);
                 if (this.dataCache.has(cacheID)) {
                     return this.dataCache.get(cacheID);
                 }

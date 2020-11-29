@@ -27,7 +27,7 @@ namespace GW2EIEvtcParser.EIData
         public string Name { get; }
         public int ID { get; }
         public string Tooltip { get; }
-        public delegate bool DamageLogChecker(AbstractDamageEvent dl);
+        public delegate bool DamageLogChecker(AbstractHealthDamageEvent dl);
 
         protected DamageModifierMode Mode { get; } = DamageModifierMode.All;
         protected DamageLogChecker DLChecker { get; }
@@ -99,11 +99,11 @@ namespace GW2EIEvtcParser.EIData
             return gw2Build < _maxBuild && gw2Build >= _minBuild;
         }
 
-        internal bool Keep(FightLogic.ParseMode mode)
+        internal bool Keep(FightLogic.ParseMode mode, EvtcParserSettings parserSettings)
         {
             if (Mode == DamageModifierMode.All)
             {
-                if (mode == FightLogic.ParseMode.WvW)
+                if (mode == FightLogic.ParseMode.WvW && !parserSettings.DetailedWvWParse)
                 {
                     return !(this is BuffDamageModifierTarget);
                 }
@@ -117,7 +117,7 @@ namespace GW2EIEvtcParser.EIData
                 case FightLogic.ParseMode.Benchmark:
                     return Mode == DamageModifierMode.PvE;
                 case FightLogic.ParseMode.WvW:
-                    return !(this is BuffDamageModifierTarget) && (Mode == DamageModifierMode.WvW || Mode == DamageModifierMode.sPvPWvW);
+                    return !(!parserSettings.DetailedWvWParse && this is BuffDamageModifierTarget) && (Mode == DamageModifierMode.WvW || Mode == DamageModifierMode.sPvPWvW);
                 case FightLogic.ParseMode.sPvP:
                     return Mode == DamageModifierMode.sPvP || Mode == DamageModifierMode.sPvPWvW;
             }
@@ -139,7 +139,7 @@ namespace GW2EIEvtcParser.EIData
             return 0;
         }
 
-        public List<AbstractDamageEvent> GetHitDamageLogs(Player p, ParsedEvtcLog log, NPC t, PhaseData phase)
+        public List<AbstractHealthDamageEvent> GetHitDamageLogs(Player p, ParsedEvtcLog log, NPC t, PhaseData phase)
         {
             switch (_srcType)
             {

@@ -52,6 +52,7 @@ namespace GW2EIEvtcParser
             Blind = 7,
             KillingBlow = 8,
             Downed = 9,
+            BreakbarDamage = 10,
 
             Unknown
         };
@@ -68,6 +69,7 @@ namespace GW2EIEvtcParser
             InvulByPlayerSkill1 = 2,
             InvulByPlayerSkill2 = 3,
             InvulByPlayerSkill3 = 4,
+            //BreakbarDamage = 5,
 
             Unknown
         };
@@ -201,14 +203,14 @@ namespace GW2EIEvtcParser
             ExperienceFromAll = 100,
             WXP = 112,*/
             ConditionDurationIncrease = -1,
-            BuffPowerDamageFormula = -2,
+            DamageFormulaSquaredLevel = -2,
             CriticalChance = -3,
             PowerDamageToHP = -4,
             ConditionDamageToHP = -5,
             GlancingBlow = -6,
-            ConditionSkillActivationFormula = -7,
-            ConditionDamageFormula = -8,
-            ConditionMovementActivationFormula = -9,
+            SkillActivationDamageFormula = -7,
+            DamageFormula = -8,
+            MovementActivationDamageFormula = -9,
             EnduranceRegeneration = -10,
             IncomingHealingEffectiveness = -11,
             OutgoingHealingEffectivenessFlatInc = -12,
@@ -218,7 +220,7 @@ namespace GW2EIEvtcParser
             GoldFind = -16,
             MovementSpeed = -17,
             KarmaBonus = -18,
-            SkillCooldownReduction = -19,
+            SkillRechargeSpeedIncrease = -19,
             MagicFind = -20,
             ExperienceFromAll = -21,
             WXP = -22,
@@ -270,6 +272,7 @@ namespace GW2EIEvtcParser
         private const int PyreGuardianRetal = -6;
         private const int QadimLamp = -7;
         private const int AiKeeperOfThePeak2 = -8;
+        private const int MatthiasSacrifice = -9;
 
 
         //
@@ -319,6 +322,7 @@ namespace GW2EIEvtcParser
             IcePatch = 16139,
             Storm = 16108,
             Tornado = 16068,
+            MatthiasSacrificeCrystal = MatthiasSacrifice,
             // KC
             Olson = 16244,
             Engul = 16274,

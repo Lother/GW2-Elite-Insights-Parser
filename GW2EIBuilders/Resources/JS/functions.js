@@ -61,9 +61,38 @@ function findSkill(isBuff, id) {
 function getTargetCacheID(activetargets) {
     var id = 0;
     for (var i = 0; i < activetargets.length; i++) {
-        id = id | Math.pow(2, activetargets[i]);
+        id |= 1 << activetargets[i];
     }
     return id;
+}
+
+function getDPSGraphCacheID(dpsmode, graphmode, activetargets, phaseIndex, extra) {
+    return dpsmode + '-' + graphmode + '-' + getTargetCacheID(activetargets) + '-' + phaseIndex + (extra !== null ? '-' + extra : '');
+}
+
+function graphTypeEnumToString(mode) {
+    var name = "";
+    switch (mode) {
+        case GraphType.DPS:
+            name = "DPS";
+            break;
+        case GraphType.CenteredDPS:
+            name = "Centered DPS";
+            break;
+        case GraphType.Damage:
+            name = "Damage";
+            break;
+        case GraphType.BreakbarDamage:
+            name = "Breakbar Damage";
+            break;
+        default:
+            break;
+    }
+    return name;
+}
+
+function getDamageGraphName(mode) {
+    return graphTypeEnumToString(mode) + " Graph";
 }
 
 const quickColor = {
@@ -282,9 +311,6 @@ function computePlayerDPS(player, damageData, lim, phasebreaks, activetargets, c
     var totalDPS = [0];
     var cleaveDPS = [0];
     var targetDPS = [0];
-    var totalTotalDamage = [0];
-    var totalCleaveDamage = [0];
-    var totalTargetDamage = [0];
     var maxDPS = {
         total: 0,
         cleave: 0,
@@ -295,6 +321,7 @@ function computePlayerDPS(player, damageData, lim, phasebreaks, activetargets, c
     }
     var end = times.length;
     var left = 0, right = 0, targetid, k;
+    var roundingToUse = graphMode === GraphType.BreakbarDamage ? numberComponent.methods.round1 : numberComponent.methods.round;
     for (var j = 0; j < end; j++) {
         var time = times[j];
         if (lim > 0) {
@@ -317,19 +344,16 @@ function computePlayerDPS(player, damageData, lim, phasebreaks, activetargets, c
                 right = end - 1;
             }
         }          
-        var div = graphMode !== GraphType.Damage ? Math.max(times[right] - times[left], 1) : 1;
+        var div = graphMode !== GraphType.Damage && graphMode !== GraphType.BreakbarDamage ? Math.max(times[right] - times[left], 1) : 1;
         totalDamage = damageData.total[right] - damageData.total[left];
         targetDamage = 0;
         for (k = 0; k < activetargets.length; k++) {
             targetid = activetargets[k];
             targetDamage += damageData.targets[targetid][right] - damageData.targets[targetid][left];
         }
-        totalDPS[j] = Math.round(totalDamage / div);
-        targetDPS[j] = Math.round(targetDamage / div);
-        cleaveDPS[j] = Math.round((totalDamage - targetDamage) / div);
-        totalTotalDamage[j] = totalDamage;
-        totalTargetDamage[j] = targetDamage;
-        totalCleaveDamage[j] = (totalDamage - targetDamage);
+        totalDPS[j] = roundingToUse(totalDamage / div);
+        targetDPS[j] = roundingToUse(targetDamage / div);
+        cleaveDPS[j] = roundingToUse((totalDamage - targetDamage) / div);
         maxDPS.total = Math.max(maxDPS.total, totalDPS[j]);
         maxDPS.target = Math.max(maxDPS.target, targetDPS[j]);
         maxDPS.cleave = Math.max(maxDPS.cleave, cleaveDPS[j]);
@@ -348,11 +372,6 @@ function computePlayerDPS(player, damageData, lim, phasebreaks, activetargets, c
             total: totalDPS,
             target: targetDPS,
             cleave: cleaveDPS
-        },
-        total: {
-            total: totalTotalDamage,
-            target: totalTargetDamage,
-            cleave: totalCleaveDamage
         },
         maxDPS: maxDPS
     };
@@ -379,7 +398,7 @@ function findState(states, timeS, start, end) {
     }
 }
 
-function getActorGraphLayout(images, color) {
+function getActorGraphLayout(images, color, hasBuffs) {
     return {
         barmode: 'stack',
         yaxis: {
@@ -398,7 +417,7 @@ function getActorGraphLayout(images, color) {
         hoverdistance: 150,
         yaxis2: {
             title: 'Buffs',
-            domain: [0.11, 0.6],
+            domain: hasBuffs ? [0.11, 0.6] : [0.11, 0.11],
             color: color,
             gridcolor: color,
             fixedrange: true
@@ -407,7 +426,7 @@ function getActorGraphLayout(images, color) {
             title: 'DPS',
             color: color,
             gridcolor: color,
-            domain: [0.61, 1]
+            domain: hasBuffs ? [0.61, 1] : [0.11, 1]
         },
         images: images,
         font: {

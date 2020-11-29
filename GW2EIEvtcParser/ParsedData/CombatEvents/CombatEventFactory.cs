@@ -295,21 +295,44 @@ namespace GW2EIEvtcParser.ParsedData
             return res;
         }
 
-        public static List<AbstractDamageEvent> CreateDamageEvents(List<CombatItem> damageEvents, AgentData agentData, SkillData skillData)
+        public static (List<AbstractHealthDamageEvent>, List<AbstractBreakbarDamageEvent>) CreateDamageEvents(List<CombatItem> damageEvents, AgentData agentData, SkillData skillData)
         {
-            var res = new List<AbstractDamageEvent>();
+            var hpDamage = new List<AbstractHealthDamageEvent>();
+            var brkBarDamage = new List<AbstractBreakbarDamageEvent>();
             foreach (CombatItem c in damageEvents)
             {
                 if ((c.IsBuff != 0 && c.Value == 0))
                 {
-                    res.Add(new NonDirectDamageEvent(c, agentData, skillData));
+                    ArcDPSEnums.ConditionResult result = ArcDPSEnums.GetConditionResult(c.Result);
+                    switch (result)
+                    {
+                        /*case ArcDPSEnums.ConditionResult.BreakbarDamage:
+                            brkBarDamage.Add(new NonDirectBreakbarDamageEvent(c, agentData, skillData));
+                            break;*/
+                        case ArcDPSEnums.ConditionResult.Unknown:
+                            break;
+                        default:
+                            hpDamage.Add(new NonDirectHealthDamageEvent(c, agentData, skillData, result));
+                            break;
+                    }
                 }
                 else if (c.IsBuff == 0)
                 {
-                    res.Add(new DirectDamageEvent(c, agentData, skillData));
+                    ArcDPSEnums.PhysicalResult result = ArcDPSEnums.GetPhysicalResult(c.Result);
+                    switch (result)
+                    {
+                        case ArcDPSEnums.PhysicalResult.BreakbarDamage:
+                            brkBarDamage.Add(new DirectBreakbarDamageEvent(c, agentData, skillData));
+                            break;
+                        case ArcDPSEnums.PhysicalResult.Unknown:
+                            break;
+                        default:
+                            hpDamage.Add(new DirectHealthDamageEvent(c, agentData, skillData, result));
+                            break;
+                    }
                 }
             }
-            return res;
+            return (hpDamage, brkBarDamage);
         }
 
     }

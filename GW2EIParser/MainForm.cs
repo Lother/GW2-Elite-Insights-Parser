@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -55,7 +56,7 @@ namespace GW2EIParser
 
                 _logsFiles.Add(file);
 
-                var operation = new FormOperationController(ProgramHelper.ParserVersion, file, "Ready to parse", dgvFiles);
+                var operation = new FormOperationController(file, "Ready to parse", dgvFiles);
                 operatorBindingSource.Add(operation);
 
                 if (Properties.Settings.Default.AutoParse)
@@ -68,8 +69,7 @@ namespace GW2EIParser
                 SortDgvFiles();
             }
 
-            btnParse.Enabled = !Properties.Settings.Default.AutoParse;
-            btnCancelAll.Enabled = Properties.Settings.Default.AutoParse;
+            btnParse.Enabled = !_anyRunning && filesArray.Any();
         }
 
         private void EnableSettingsWatcher(object sender, EventArgs e)

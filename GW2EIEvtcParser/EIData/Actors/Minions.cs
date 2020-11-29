@@ -23,22 +23,55 @@ namespace GW2EIEvtcParser.EIData
             _minionList.Add(minion);
         }
 
-        public override List<AbstractDamageEvent> GetDamageLogs(AbstractActor target, ParsedEvtcLog log, long start, long end)
+        public override List<AbstractHealthDamageEvent> GetDamageLogs(AbstractActor target, ParsedEvtcLog log, long start, long end)
         {
             if (DamageLogs == null)
             {
-                DamageLogs = new List<AbstractDamageEvent>();
+                DamageLogs = new List<AbstractHealthDamageEvent>();
                 foreach (NPC minion in _minionList)
                 {
                     DamageLogs.AddRange(minion.GetDamageLogs(null, log, 0, log.FightData.FightEnd));
                 }
                 DamageLogsByDst = DamageLogs.GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
             }
-            if (target != null && DamageLogsByDst.TryGetValue(target.AgentItem, out List<AbstractDamageEvent> list))
+            if (target != null)
             {
-                return list.Where(x => x.Time >= start && x.Time <= end).ToList();
-            }
+                if (DamageLogsByDst.TryGetValue(target.AgentItem, out List<AbstractHealthDamageEvent> list))
+                {
+                    return list.Where(x => x.Time >= start && x.Time <= end).ToList();
+                } 
+                else
+                {
+                    return new List<AbstractHealthDamageEvent>();
+                }
+            }    
             return DamageLogs.Where(x => x.Time >= start && x.Time <= end).ToList();
+        }
+
+        public override List<AbstractBreakbarDamageEvent> GetBreakbarDamageLogs(AbstractActor target, ParsedEvtcLog log, long start, long end)
+        {
+            if (BreakbarDamageLogs == null)
+            {
+                BreakbarDamageLogs = new List<AbstractBreakbarDamageEvent>();
+                foreach (NPC minion in _minionList)
+                {
+                    BreakbarDamageLogs.AddRange(minion.GetBreakbarDamageLogs(null, log, 0, log.FightData.FightEnd));
+                }
+                BreakbarDamageLogsByDst = BreakbarDamageLogs.GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
+            }
+            if (target != null)
+            {
+                if (BreakbarDamageLogsByDst.TryGetValue(target.AgentItem, out List<AbstractBreakbarDamageEvent> list))
+                {
+                    return list.Where(x => x.Time >= start && x.Time <= end).ToList();
+                } 
+                else
+                {
+                    return new List<AbstractBreakbarDamageEvent>();
+                }
+            }
+            
+            return BreakbarDamageLogs.Where(x => x.Time >= start && x.Time <= end).ToList();
         }
 
         /*public List<DamageLog> getHealingLogs(ParsedEvtcLog log, long start, long end)
@@ -51,22 +84,40 @@ namespace GW2EIEvtcParser.EIData
             return res;
         }*/
 
-        public override List<AbstractDamageEvent> GetDamageTakenLogs(AbstractActor target, ParsedEvtcLog log, long start, long end)
+        public override List<AbstractHealthDamageEvent> GetDamageTakenLogs(AbstractActor target, ParsedEvtcLog log, long start, long end)
         {
             if (DamageTakenlogs == null)
             {
-                DamageTakenlogs = new List<AbstractDamageEvent>();
+                DamageTakenlogs = new List<AbstractHealthDamageEvent>();
                 foreach (NPC minion in _minionList)
                 {
                     DamageTakenlogs.AddRange(minion.GetDamageTakenLogs(null, log, 0, log.FightData.FightEnd));
                 }
                 DamageTakenLogsBySrc = DamageTakenlogs.GroupBy(x => x.From).ToDictionary(x => x.Key, x => x.ToList());
             }
-            if (target != null && DamageTakenLogsBySrc.TryGetValue(target.AgentItem, out List<AbstractDamageEvent> list))
+            if (target != null && DamageTakenLogsBySrc.TryGetValue(target.AgentItem, out List<AbstractHealthDamageEvent> list))
             {
                 return list.Where(x => x.Time >= start && x.Time <= end).ToList();
             }
             return DamageTakenlogs.Where(x => x.Time >= start && x.Time <= end).ToList();
+        }
+
+        public override List<AbstractBreakbarDamageEvent> GetBreakbarDamageTakenLogs(AbstractActor target, ParsedEvtcLog log, long start, long end)
+        {
+            if (BreakbarDamageTakenLogs == null)
+            {
+                BreakbarDamageTakenLogs = new List<AbstractBreakbarDamageEvent>();
+                foreach (NPC minion in _minionList)
+                {
+                    BreakbarDamageTakenLogs.AddRange(minion.GetBreakbarDamageTakenLogs(null, log, 0, log.FightData.FightEnd));
+                }
+                BreakbarDamageTakenLogsBySrc = BreakbarDamageTakenLogs.GroupBy(x => x.From).ToDictionary(x => x.Key, x => x.ToList());
+            }
+            if (target != null && BreakbarDamageTakenLogsBySrc.TryGetValue(target.AgentItem, out List<AbstractBreakbarDamageEvent> list))
+            {
+                return list.Where(x => x.Time >= start && x.Time <= end).ToList();
+            }
+            return BreakbarDamageTakenLogs.Where(x => x.Time >= start && x.Time <= end).ToList();
         }
 
         private void InitCastLogs(ParsedEvtcLog log)

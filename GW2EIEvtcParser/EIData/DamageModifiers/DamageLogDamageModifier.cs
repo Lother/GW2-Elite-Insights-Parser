@@ -36,9 +36,9 @@ namespace GW2EIEvtcParser.EIData
                     for (int i = 0; i < phases.Count; i++)
                     {
                         int totalDamage = GetTotalDamage(p, log, target, i);
-                        List<AbstractDamageEvent> typeHits = GetHitDamageLogs(p, log, target, phases[i]);
+                        List<AbstractHealthDamageEvent> typeHits = GetHitDamageLogs(p, log, target, phases[i]);
                         var effect = typeHits.Where(x => DLChecker(x)).ToList();
-                        extraDataList.Add(new DamageModifierStat(effect.Count, typeHits.Count, gain * effect.Sum(x => x.Damage), totalDamage));
+                        extraDataList.Add(new DamageModifierStat(effect.Count, typeHits.Count, gain * effect.Sum(x => x.HealthDamage), totalDamage));
                     }
                     dict[Name] = extraDataList;
                 }
@@ -47,9 +47,9 @@ namespace GW2EIEvtcParser.EIData
             for (int i = 0; i < phases.Count; i++)
             {
                 int totalDamage = GetTotalDamage(p, log, null, i);
-                List<AbstractDamageEvent> typeHits = GetHitDamageLogs(p, log, null, phases[i]);
+                List<AbstractHealthDamageEvent> typeHits = GetHitDamageLogs(p, log, null, phases[i]);
                 var effect = typeHits.Where(x => DLChecker(x)).ToList();
-                data[Name].Add(new DamageModifierStat(effect.Count, typeHits.Count, gain * effect.Sum(x => x.Damage), totalDamage));
+                data[Name].Add(new DamageModifierStat(effect.Count, typeHits.Count, gain * effect.Sum(x => x.HealthDamage), totalDamage));
             }
         }
     }

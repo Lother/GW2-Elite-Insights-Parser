@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser;
 using GW2EIEvtcParser.EIData;
@@ -38,6 +39,7 @@ namespace GW2EIBuilders.HtmlModels
         public bool LightTheme { get; set; }
         public bool NoMechanics { get; set; }
         public bool SingleGroup { get; set; }
+        public bool HasBreakbarDamage { get; set; }
         public List<string> LogErrors { get; set; }
 
         public string EncounterStart { get; set; }
@@ -136,7 +138,7 @@ namespace GW2EIBuilders.HtmlModels
             return false;
         }
 
-        public static LogDataDto BuildLogData(ParsedEvtcLog log, Dictionary<long, SkillItem> usedSkills,Dictionary<long, Buff> usedBuffs, HashSet<DamageModifier> usedDamageMods, bool cr, bool light, string[] uploadLinks)
+        public static LogDataDto BuildLogData(ParsedEvtcLog log, Dictionary<long, SkillItem> usedSkills,Dictionary<long, Buff> usedBuffs, HashSet<DamageModifier> usedDamageMods, bool cr, bool light, Version parserVersion, string[] uploadLinks)
         {
             GeneralStatistics statistics = log.Statistics;
             log.UpdateProgressWithCancellationCheck("HTML: building Log Data");
@@ -147,7 +149,7 @@ namespace GW2EIBuilders.HtmlModels
                 ArcVersion = log.LogData.ArcVersion,
                 Gw2Build = log.LogData.GW2Build,
                 FightID = log.FightData.TriggerID,
-                Parser = "Elite Insights " + log.ParserVersion.ToString(),
+                Parser = "Elite Insights " + parserVersion.ToString(),
                 RecordedBy = log.LogData.PoVName,
                 UploadLinks = uploadLinks.ToList()
             };
@@ -337,6 +339,7 @@ namespace GW2EIBuilders.HtmlModels
             logData.FightIcon = log.FightData.Logic.Icon;
             logData.LightTheme = light;
             logData.SingleGroup = log.PlayerList.Where(x => !x.IsFakeActor).Select(x => x.Group).Distinct().Count() == 1;
+            logData.HasBreakbarDamage = log.CombatData.HasBreakbarDamageData;
             logData.NoMechanics = log.FightData.Logic.HasNoFightSpecificMechanics;
             if (log.LogData.LogErrors.Count > 0)
             {

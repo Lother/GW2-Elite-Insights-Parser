@@ -26,15 +26,15 @@ namespace GW2EIEvtcParser.EncounterLogic
             new PlayerBuffApplyMechanic(34416, "Corruption", new MechanicPlotlySetting("circle","rgb(255,140,0)"), "Corruption","Corruption Application", "Corruption",0),
             new HitOnPlayerMechanic(34473, "Corruption", new MechanicPlotlySetting("circle-open","rgb(255,140,0)"), "Corr. dmg","Hit by Corruption AoE", "Corruption dmg",0),
             new PlayerBuffApplyMechanic(34442, "Sacrifice", new MechanicPlotlySetting("diamond-tall","rgb(0,160,150)"), "Sacrifice","Sacrifice (Breakbar)", "Sacrifice",0),
-            new PlayerBuffRemoveMechanic(34442, "Sacrifice", new MechanicPlotlySetting("diamond-tall","rgb(0,160,0)"), "CC.End","Sacrifice (Breakbar) ended", "Sacrifice End",0, (br,log) => br.RemovedDuration > 25),
-            new PlayerBuffRemoveMechanic(34442, "Sacrificed", new MechanicPlotlySetting("diamond-tall","rgb(255,0,0)"), "CC.Fail","Sacrifice time ran out", "Sacrificed",0, (br,log) => br.RemovedDuration <= 25),
+            new PlayerBuffRemoveMechanic(34442, "Sacrifice", new MechanicPlotlySetting("diamond-tall","rgb(0,160,0)"), "CC.End","Sacrifice (Breakbar) ended", "Sacrifice End",0, (br,log) => br.RemovedDuration > 25 && !log.CombatData.GetDeadEvents(br.To).Any(x => Math.Abs(br.Time - x.Time) < ParserHelper.ServerDelayConstant)),
+            new PlayerBuffRemoveMechanic(34442, "Sacrificed", new MechanicPlotlySetting("diamond-tall","rgb(255,0,0)"), "CC.Fail","Sacrifice time ran out", "Sacrificed",0, (br,log) => br.RemovedDuration <= 25 || log.CombatData.GetDeadEvents(br.To).Any(x => Math.Abs(br.Time - x.Time) < ParserHelper.ServerDelayConstant)),
             new PlayerBuffRemoveMechanic(34367, "Unbalanced", new MechanicPlotlySetting("square","rgb(200,140,255)"), "KD","Unbalanced (triggered Storm phase Debuff)", "Knockdown",0, (br,log) => br.RemovedDuration > 0 && !br.To.HasBuff(log, 1122, br.Time)),
             //new Mechanic(34367, "Unbalanced", Mechanic.MechType.PlayerOnPlayer, ParseEnum.BossIDS.Matthias, new MechanicPlotlySetting("square","rgb(0,140,0)"), "KD","Unbalanced (triggered Storm phase Debuff) only on successful interrupt", "Knockdown (interrupt)",0,(condition => condition.getCombatItem().Result == ParseEnum.Result.Interrupt)),
             //new Mechanic(34367, "Unbalanced", ParseEnum.BossIDS.Matthias, new MechanicPlotlySetting("square","rgb(0,140,0)"), "KD","Unbalanced (triggered Storm phase Debuff) only on successful interrupt", "Knockdown (interrupt)",0,(condition => condition.getDLog().GetResult() == ParseEnum.Result.Interrupt)),
             //new Mechanic(34422, "Blood Fueled", ParseEnum.BossIDS.Matthias, new MechanicPlotlySetting("square","rgb(255,0,0)"), "Ate Reflects(good)",0),//human //Applied at the same time as Backflip Shards since it is the buff applied by them, can be omitted imho
             //new Mechanic(34428, "Blood Fueled", ParseEnum.BossIDS.Matthias, new MechanicPlotlySetting("square","rgb(255,0,0)"), "Ate Reflects(good)",0),//abom
-            new EnemyBuffApplyMechanic(34376, "Blood Shield", new MechanicPlotlySetting("octagon","rgb(255,0,0)"), "Bubble","Blood Shield (protective bubble)", "Bubble",0),//human
-            new EnemyBuffApplyMechanic(34518, "Blood Shield", new MechanicPlotlySetting("octagon","rgb(255,0,0)"), "Bubble","Blood Shield (protective bubble)", "Bubble",0),//abom
+            new EnemyBuffApplyMechanic(34376, "Blood Shield", new MechanicPlotlySetting("octagon","rgb(255,0,0)"), "Bubble","Blood Shield (protective bubble)", "Bubble",100),//human
+            new EnemyBuffApplyMechanic(34518, "Blood Shield", new MechanicPlotlySetting("octagon","rgb(255,0,0)"), "Bubble","Blood Shield (protective bubble)", "Bubble",100),//abom
             new PlayerBuffApplyMechanic(34511, "Zealous Benediction", new MechanicPlotlySetting("circle","rgb(255,200,0)"), "Bombs","Zealous Benediction (Expanding bombs)","Bomb",0),
             new PlayerBuffApplyMechanic(26766, "Icy Patch", new MechanicPlotlySetting("circle-open","rgb(0,0,255)"), "Icy KD","Knockdown by Icy Patch", "Icy Patch KD",0, (br,log) => br.AppliedDuration == 10000 && !br.To.HasBuff(log, 1122, br.Time)),
             new HitOnPlayerMechanic(34413, "Surrender", new MechanicPlotlySetting("circle-open","rgb(0,0,0)"), "Spirit","Surrender (hit by walking Spirit)", "Spirit hit",0)
@@ -71,7 +71,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             if (heatWave != null)
             {
                 phases.Add(new PhaseData(0, heatWave.Time - 1));
-                AbstractDamageEvent downPour = log.CombatData.GetDamageData(mainTarget.AgentItem).Find(x => x.SkillId == 34554);
+                AbstractHealthDamageEvent downPour = log.CombatData.GetDamageData(mainTarget.AgentItem).Find(x => x.SkillId == 34554);
                 if (downPour != null)
                 {
                     phases.Add(new PhaseData(heatWave.Time, downPour.Time - 1));
@@ -108,6 +108,90 @@ namespace GW2EIEvtcParser.EncounterLogic
                 phases[i].Targets.Add(mainTarget);
             }
             return phases;
+        }
+
+        internal override void EIEvtcParse(FightData fightData, AgentData agentData, List<CombatItem> combatData, List<Player> playerList)
+        {
+            // has breakbar state into
+            if (combatData.Any(x => x.IsStateChange == ArcDPSEnums.StateChange.BreakbarState))
+            {
+                long sacrificeID = 34442;
+                var sacrificeList = combatData.Where(x => x.SkillID == sacrificeID && ((x.IsBuffRemove == ArcDPSEnums.BuffRemove.All && x.IsBuff != 0) || (x.IsBuff != 0 && x.BuffDmg == 0 && x.Value > 0 && x.IsStateChange == ArcDPSEnums.StateChange.None && x.IsActivation == ArcDPSEnums.Activation.None && x.IsBuffRemove == ArcDPSEnums.BuffRemove.None))).ToList();
+                var sacrificeStartList = sacrificeList.Where(x => x.IsBuffRemove == ArcDPSEnums.BuffRemove.None).ToList();
+                var sacrificeEndList = sacrificeList.Where(x => x.IsBuffRemove == ArcDPSEnums.BuffRemove.All).ToList();
+                var copies = new List<CombatItem>();
+                for (int i = 0; i < sacrificeStartList.Count; i++)
+                {
+                    //
+                    long sacrificeStartTime = sacrificeStartList[i].Time;
+                    long sacrificeEndTime = i < sacrificeEndList.Count ? sacrificeEndList[i].Time : fightData.FightEnd;
+                    //
+                    Player sacrifice = playerList.FirstOrDefault(x => x.AgentItem == agentData.GetAgent(sacrificeStartList[i].DstAgent));
+                    if (sacrifice == null)
+                    {
+                        continue;
+                    }
+                    AgentItem sacrificeCrystal = agentData.AddCustomAgent(sacrificeStartTime, sacrificeEndTime + 100, AgentItem.AgentType.NPC, "Sacrificed " + (i + 1) + " " + sacrifice.Character, sacrifice.Prof, (int)ArcDPSEnums.TrashID.MatthiasSacrificeCrystal);
+                    foreach (CombatItem cbt in combatData)
+                    {
+                        if (!sacrificeCrystal.InAwareTimes(cbt.Time))
+                        {
+                            continue;
+                        }
+                        bool skip = !((cbt.IsStateChange.DstIsAgent() && cbt.DstAgent == sacrifice.Agent) || (cbt.IsStateChange.SrcIsAgent() && cbt.SrcAgent == sacrifice.Agent));
+                        if (skip)
+                        {
+                            continue;
+                        }
+                        bool isDamageEvent = cbt.IsStateChange == ArcDPSEnums.StateChange.None && cbt.IsActivation == ArcDPSEnums.Activation.None && cbt.IsBuffRemove == ArcDPSEnums.BuffRemove.None && ((cbt.IsBuff != 0 && cbt.Value == 0) || (cbt.IsBuff == 0));
+                        // redirect damage events
+                        if (isDamageEvent)
+                        {
+                            // only redirect incoming damage
+                            if (cbt.DstAgent == sacrifice.Agent)
+                            {
+                                cbt.OverrideDstAgent(sacrificeCrystal.Agent);
+                            }
+                        }
+                        // copy the rest
+                        else
+                        {
+                            var copy = new CombatItem(cbt);
+                            if (cbt.IsStateChange.DstIsAgent() && cbt.DstAgent == sacrifice.Agent)
+                            {
+                                cbt.OverrideDstAgent(sacrificeCrystal.Agent);
+                            }
+                            if (cbt.IsStateChange.SrcIsAgent() && cbt.SrcAgent == sacrifice.Agent)
+                            {
+                                cbt.OverrideSrcAgent(sacrificeCrystal.Agent);
+                            }
+                            copies.Add(copy);
+                        }
+                    }
+                }
+                if (copies.Any())
+                {
+                    combatData.AddRange(copies);
+                    combatData.Sort((x, y) => x.Time.CompareTo(y.Time));
+                }
+            }       
+            ComputeFightTargets(agentData, combatData);
+            Targets.ForEach(x =>
+            {
+                if (x.ID == (int)ArcDPSEnums.TrashID.MatthiasSacrificeCrystal)
+                {
+                    x.SetManualHealth(100000);
+                }
+            });
+        }
+
+        protected override List<int> GetFightTargetsIDs()
+        {
+            return new List<int>
+            {
+                (int)ArcDPSEnums.TargetID.Matthias,
+                (int)ArcDPSEnums.TrashID.MatthiasSacrificeCrystal
+            };
         }
 
         protected override List<ArcDPSEnums.TrashID> GetTrashMobsIDS()
