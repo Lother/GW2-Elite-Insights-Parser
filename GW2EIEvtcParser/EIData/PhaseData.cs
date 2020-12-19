@@ -1,7 +1,7 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -20,7 +20,8 @@ namespace GW2EIEvtcParser.EIData
         public bool CanBeSubPhase { get; internal set; } = true;
 
         public bool BreakbarPhase { get; internal set; } = false;
-        public List<NPC> Targets { get; } = new List<NPC>();
+        public IReadOnlyList<NPC> Targets => _targets;
+        private readonly List<NPC> _targets = new List<NPC>();
 
         internal PhaseData(long start, long end)
         {
@@ -39,6 +40,21 @@ namespace GW2EIEvtcParser.EIData
         public bool InInterval(long time)
         {
             return Start <= time && time <= End;
+        }
+
+        internal void AddTarget(NPC target)
+        {
+            _targets.Add(target);
+        }
+
+        internal void RemoveTarget(NPC target)
+        {
+            _targets.Remove(target);
+        }
+
+        internal void AddTargets(IEnumerable<NPC> targets)
+        {
+            _targets.AddRange(targets);
         }
 
         internal void OverrideStart(long start)
@@ -99,10 +115,10 @@ namespace GW2EIEvtcParser.EIData
 
         public long GetActorActiveDuration(AbstractSingleActor p, ParsedEvtcLog log)
         {
-            var dead = new List<(long start, long end)>();
-            var down = new List<(long start, long end)>();
-            var dc = new List<(long start, long end)>();
-            p.AgentItem.GetAgentStatus(dead, down, dc, log);
+            List<(long start, long end)> dead;
+            List<(long start, long end)> down;
+            List<(long start, long end)> dc;
+            (dead, down, dc) = p.GetStatus(log);
             return DurationInMS -
                 dead.Sum(x =>
                 {

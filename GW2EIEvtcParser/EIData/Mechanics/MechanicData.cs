@@ -1,6 +1,6 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -122,7 +122,7 @@ namespace GW2EIEvtcParser.EIData
             return new List<MechanicEvent>();
         }
 
-        public List<MechanicEvent> GetMechanicLogs(ParsedEvtcLog log, long id)
+        internal List<MechanicEvent> GetMechanicLogs(ParsedEvtcLog log, long id)
         {
             ProcessMechanics(log);
             Mechanic mech = _mechanicLogs.Keys.FirstOrDefault(x => x.SkillId == id);

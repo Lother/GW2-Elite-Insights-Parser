@@ -1,6 +1,6 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -19,7 +19,7 @@ namespace GW2EIEvtcParser.EIData
         public List<DeathRecapDamageItem> ToDown { get; }
         public List<DeathRecapDamageItem> ToKill { get; }
 
-        internal DeathRecap(List<AbstractHealthDamageEvent> damageLogs, DeadEvent dead, List<DownEvent> downs, List<AliveEvent> ups, long lastDeathTime)
+        internal DeathRecap(List<AbstractHealthDamageEvent> damageLogs, DeadEvent dead, IReadOnlyList<DownEvent> downs, IReadOnlyList<AliveEvent> ups, long lastDeathTime)
         {
             DeathTime = dead.Time;
             DownEvent downed;

@@ -24,7 +24,7 @@ function ToRadians(degrees) {
     return degrees * (Math.PI / 180);
 }
 
-const resolutionMultiplier = window.devicePixelRatio;
+const resolutionMultiplier = 2 * window.devicePixelRatio;
 
 var animator = null;
 // reactive structures
@@ -57,6 +57,8 @@ class Animator {
         this.backwards = false;
         this.rangeControl = [{ enabled: false, radius: 180 }, { enabled: false, radius: 360 }, { enabled: false, radius: 720 }];
         this.highlightSelectedGroup = true;
+        this.displayMechanics = true;
+        this.displayTrashMobs = true;
         this.selectedGroup = -1;
         this.coneControl = {
             enabled: false,
@@ -119,7 +121,6 @@ class Animator {
         this.mainCanvas.height *= resolutionMultiplier;
         this.mainContext = this.mainCanvas.getContext('2d');
         this.mainContext.imageSmoothingEnabled = true;
-        this.mainContext.imageSmoothingQuality = 'high';
         // bg canvas
         this.bgCanvas = document.getElementById('bg-canvas');
         this.bgCanvas.style.width = this.bgCanvas.width + "px";
@@ -128,7 +129,6 @@ class Animator {
         this.bgCanvas.height *= resolutionMultiplier;
         this.bgContext = this.bgCanvas.getContext('2d');
         this.bgContext.imageSmoothingEnabled = true;
-        this.bgContext.imageSmoothingQuality = 'high';
         // manipulation
         this.lastX = this.mainCanvas.width / 2;
         this.lastY = this.mainCanvas.height / 2;
@@ -282,6 +282,16 @@ class Animator {
 
     toggleHighlightSelectedGroup() {
         this.highlightSelectedGroup = !this.highlightSelectedGroup;
+        animateCanvas(noUpdateTime);
+    }
+
+    toggleTrashMobs() {
+        this.displayTrashMobs = !this.displayTrashMobs;
+        animateCanvas(noUpdateTime);
+    }
+
+    toggleMechanics() {
+        this.displayMechanics = !this.displayMechanics;
         animateCanvas(noUpdateTime);
     }
 
@@ -558,9 +568,12 @@ class Animator {
         for (let i = 0; i < animator.backgroundActorData.length; i++) {
             animator.backgroundActorData[i].draw();
         }
-        for (let i = 0; i < this.mechanicActorData.length; i++) {
-            this.mechanicActorData[i].draw();
+        if (this.displayMechanics) {
+            for (let i = 0; i < this.mechanicActorData.length; i++) {
+                this.mechanicActorData[i].draw();
+            }
         }
+        
         this.playerData.forEach(function (value, key, map) {
             if (!value.selected) {
                 value.draw();
@@ -569,12 +582,16 @@ class Animator {
                 }
             }
         });
-        this.trashMobData.forEach(function (value, key, map) {
-            value.draw();
-            if (_this.attachedActorData.has(key)) {
-                _this.attachedActorData.get(key).draw();
-            }
-        });
+        
+        if (this.displayTrashMobs) {
+            this.trashMobData.forEach(function (value, key, map) {
+                value.draw();
+                if (_this.attachedActorData.has(key)) {
+                    _this.attachedActorData.get(key).draw();
+                }
+            });
+        }
+        
         this.targetData.forEach(function (value, key, map) {
             value.draw();
             if (_this.attachedActorData.has(key)) {

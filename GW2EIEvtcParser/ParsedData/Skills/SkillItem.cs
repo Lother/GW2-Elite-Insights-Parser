@@ -200,7 +200,7 @@ namespace GW2EIEvtcParser.ParsedData
 
         public bool IsSwap => ID == WeaponSwapId || ElementalistHelper.IsElementalSwap(ID) || RevenantHelper.IsLegendSwap(ID);
         public string Name { get; }
-        public string Icon { get;}
+        public string Icon { get; }
         private readonly WeaponDescriptor _weaponDescriptor;
         internal GW2APISkill ApiSkill { get; }
         private SkillInfoEvent _skillInfo { get; set; }
@@ -209,16 +209,11 @@ namespace GW2EIEvtcParser.ParsedData
 
         // Constructor
 
-        internal SkillItem(long ID) : this(ID, "UNKNOWN")
-        {
-            UnknownSkill = Name == "UNKNOWN";
-        }
-
-        public SkillItem(long ID, string name)
+        internal SkillItem(long ID, string name, GW2APIController apiController)
         {
             this.ID = ID;
             Name = name.Replace("\0", "");
-            ApiSkill = GW2APIController.GetAPISkill(ID);
+            ApiSkill = apiController.GetAPISkill(ID);
             //
             if (_overrideNames.TryGetValue(ID, out string overrideName))
             {
@@ -236,7 +231,11 @@ namespace GW2EIEvtcParser.ParsedData
             {
                 Icon = ApiSkill != null ? ApiSkill.Icon : DefaultIcon;
             }
-            if (ApiSkill != null && ApiSkill.Type == "Weapon" && ApiSkill.WeaponType != "None" && ApiSkill.Professions.Count > 0 && (ApiSkill.Categories == null || (ApiSkill.Categories.Contains("Phantasm") || ApiSkill.Categories.Contains("DualWield"))))
+            if (ApiSkill != null && ApiSkill.Type == "Weapon" 
+                && ApiSkill.WeaponType != "None" && ApiSkill.Professions.Count > 0 
+                && (ApiSkill.Categories == null || ApiSkill.Categories.Count == 0 
+                    || ApiSkill.Categories.Contains("Clone") || ApiSkill.Categories.Contains("Phantasm") 
+                    || ApiSkill.Categories.Contains("DualWield")))
             {
                 _weaponDescriptor = new WeaponDescriptor(ApiSkill);
             }

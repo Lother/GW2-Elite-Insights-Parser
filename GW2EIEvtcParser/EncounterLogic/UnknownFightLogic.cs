@@ -1,7 +1,7 @@
-﻿using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -28,12 +28,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                 agentItem = agentData.GetGadgetsByID(id).FirstOrDefault();
                 if (agentItem != null)
                 {
-                    Targets.Add(new NPC(agentItem));
+                    _targets.Add(new NPC(agentItem));
                 }
             }
             else
             {
-                Targets.Add(new NPC(agentItem));
+                _targets.Add(new NPC(agentItem));
             }
         }
     }

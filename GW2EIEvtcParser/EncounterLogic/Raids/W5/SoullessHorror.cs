@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
@@ -67,10 +68,10 @@ namespace GW2EIEvtcParser.EncounterLogic
             base.CheckSuccess(combatData, agentData, fightData, playerAgents);
             if (!fightData.Success)
             {
-                NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.SoullessHorror);
+                NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.SoullessHorror);
                 if (mainTarget == null)
                 {
-                    throw new InvalidOperationException("Soulless Horror not found");
+                    throw new MissingKeyActorsException("Soulless Horror not found");
                 }
                 AbstractBuffEvent buffOnDeath = combatData.GetBuffData(895).Where(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent).LastOrDefault();
                 if (buffOnDeath != null)
@@ -92,12 +93,12 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             long fightDuration = log.FightData.FightEnd;
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.SoullessHorror);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.SoullessHorror);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Soulless Horror not found");
+                throw new MissingKeyActorsException("Soulless Horror not found");
             }
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
@@ -108,14 +109,14 @@ namespace GW2EIEvtcParser.EncounterLogic
             foreach (AbstractCastEvent c in howling)
             {
                 var phase = new PhaseData(start, Math.Min(c.Time, fightDuration), "Pre-Breakbar " + i++);
-                phase.Targets.Add(mainTarget);
+                phase.AddTarget(mainTarget);
                 start = c.EndTime;
                 phases.Add(phase);
             }
             if (fightDuration - start > 3000)
             {
                 var lastPhase = new PhaseData(start, fightDuration, "Final");
-                lastPhase.Targets.Add(mainTarget);
+                lastPhase.AddTarget(mainTarget);
                 phases.Add(lastPhase);
             }
             return phases;

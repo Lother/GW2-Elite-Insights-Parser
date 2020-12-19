@@ -1,6 +1,6 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -23,7 +23,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     993
                 };
-            List<RewardEvent> rewards = combatData.GetRewardEvents();
+            IReadOnlyList<RewardEvent> rewards = combatData.GetRewardEvents();
             RewardEvent reward = rewards.FirstOrDefault(x => strikeRewardIDs.Contains(x.RewardID));
             if (reward != null)
             {

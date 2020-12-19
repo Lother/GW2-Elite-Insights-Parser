@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
@@ -68,23 +68,23 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == GenericTriggerID);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == GenericTriggerID);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Golem not found");
+                throw new MissingKeyActorsException("Golem not found");
             }
             phases[0].Name = "Final Number";
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
             }
-            List<HealthUpdateEvent> hpUpdates = log.CombatData.GetHealthUpdateEvents(mainTarget.AgentItem);
+            IReadOnlyList<HealthUpdateEvent> hpUpdates = log.CombatData.GetHealthUpdateEvents(mainTarget.AgentItem);
             if (hpUpdates.Count > 0)
             {
                 long fightDuration = log.FightData.FightEnd;
                 var thresholds = new List<double> { 80, 60, 40, 20, 0 };
-                var numberNames = new string[] { "First Number", "Second Number", "Third Number", "Fourth Number" };
+                string[] numberNames = new string[] { "First Number", "Second Number", "Third Number", "Fourth Number" };
                 // Fifth number would the equivalent of full fight phase
                 for (int j = 0; j < thresholds.Count - 1; j++)
                 {
@@ -95,22 +95,22 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             CanBeSubPhase = false
                         };
-                        phase.Targets.Add(mainTarget);
+                        phase.AddTarget(mainTarget);
                         phases.Add(phase);
                     }
                 }
                 phases.AddRange(GetPhasesByHealthPercent(log, mainTarget, thresholds));
             }
-            
+
             return phases;
         }
 
         internal override void CheckSuccess(CombatData combatData, AgentData agentData, FightData fightData, HashSet<AgentItem> playerAgents)
         {
-            NPC mainTarget = Targets.Find(x => x.ID == GenericTriggerID);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == GenericTriggerID);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Golem not found");
+                throw new MissingKeyActorsException("Golem not found");
             }
             AbstractHealthDamageEvent lastDamageTaken = combatData.GetDamageTakenData(mainTarget.AgentItem).LastOrDefault(x => x.HealthDamage > 0);
             long fightEndLogTime = fightData.FightEnd;
@@ -119,7 +119,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 fightEndLogTime = lastDamageTaken.Time;
             }
-            List<HealthUpdateEvent> hpUpdates = combatData.GetHealthUpdateEvents(mainTarget.AgentItem);
+            IReadOnlyList<HealthUpdateEvent> hpUpdates = combatData.GetHealthUpdateEvents(mainTarget.AgentItem);
             if (hpUpdates.Count > 0)
             {
                 success = hpUpdates.Last().HPPercent < 2.00;

@@ -1,5 +1,5 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -27,14 +27,14 @@ namespace GW2EIEvtcParser.EIData
 
         internal override void CheckMechanic(ParsedEvtcLog log, Dictionary<Mechanic, List<MechanicEvent>> mechanicLogs, Dictionary<int, AbstractSingleActor> regroupedMobs)
         {
-            foreach (AbstractCastEvent c in log.CombatData.GetCastData(SkillId))
+            foreach (AbstractCastEvent c in log.CombatData.GetAnimatedCastData(SkillId))
             {
                 AbstractSingleActor amp = null;
                 if (Keep(c, log))
                 {
                     if (!regroupedMobs.TryGetValue(c.Caster.ID, out amp))
                     {
-                        amp = log.FindActor(c.Caster, false);
+                        amp = log.FindActor(c.Caster, true);
                         if (amp == null)
                         {
                             continue;

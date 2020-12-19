@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.EncounterLogic;
 
@@ -140,7 +139,7 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.PeerlessQadim:
                     Logic = new PeerlessQadim(id);
                     break;
-                    //
+                //
                 case ArcDPSEnums.TargetID.IcebroodConstruct:
                     Logic = new IcebroodConstruct(id);
                     break;
@@ -186,7 +185,7 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.WorldVersusWorld:
                     Logic = new WvWFight(id, parserSettings.DetailedWvWParse);
                     break;
-                    //
+                //
                 case ArcDPSEnums.TargetID.MassiveGolem:
                 case ArcDPSEnums.TargetID.AvgGolem:
                 case ArcDPSEnums.TargetID.LGolem:
@@ -194,7 +193,7 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.StdGolem:
                     Logic = new Golem(id);
                     break;
-                    //
+                //
                 default:
                     switch (ArcDPSEnums.GetTrashID(id))
                     {
@@ -214,7 +213,7 @@ namespace GW2EIEvtcParser.ParsedData
         {
             return Logic.GetLogicName(log) + (_isCM == CMStatus.CM ? " CM" : "");
         }
-        public List<PhaseData> GetPhases(ParsedEvtcLog log)
+        public IReadOnlyList<PhaseData> GetPhases(ParsedEvtcLog log)
         {
 
             if (_phases.Count == 0)
@@ -224,22 +223,23 @@ namespace GW2EIEvtcParser.ParsedData
                 _phases.RemoveAll(x => x.Targets.Count == 0);
                 if (_phases.Exists(x => x.BreakbarPhase && x.Targets.Count != 1))
                 {
-                    throw new InvalidDataException("Breakbar phases can only have one target");
+                    throw new InvalidOperationException("Breakbar phases can only have one target");
                 }
                 _phases.RemoveAll(x => x.DurationInMS < ParserHelper.PhaseTimeLimit);
-                _phases.Sort((x, y) => {
-                    var startCompare = x.Start.CompareTo(y.Start);
+                _phases.Sort((x, y) =>
+                {
+                    int startCompare = x.Start.CompareTo(y.Start);
                     if (startCompare == 0)
                     {
                         return -x.DurationInMS.CompareTo(y.DurationInMS);
                     }
-                    return startCompare; 
+                    return startCompare;
                 });
             }
             return _phases;
         }
 
-        public List<NPC> GetMainTargets(ParsedEvtcLog log)
+        public IReadOnlyList<NPC> GetMainTargets(ParsedEvtcLog log)
         {
             return GetPhases(log)[0].Targets;
         }

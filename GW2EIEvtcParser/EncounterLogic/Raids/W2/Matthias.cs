@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
@@ -56,12 +57,12 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             long fightDuration = log.FightData.FightEnd;
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Matthias);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Matthias);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Matthias not found");
+                throw new MissingKeyActorsException("Matthias not found");
             }
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
@@ -71,7 +72,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             if (heatWave != null)
             {
                 phases.Add(new PhaseData(0, heatWave.Time - 1));
-                AbstractHealthDamageEvent downPour = log.CombatData.GetDamageData(mainTarget.AgentItem).Find(x => x.SkillId == 34554);
+                AbstractHealthDamageEvent downPour = log.CombatData.GetDamageData(mainTarget.AgentItem).FirstOrDefault(x => x.SkillId == 34554);
                 if (downPour != null)
                 {
                     phases.Add(new PhaseData(heatWave.Time, downPour.Time - 1));
@@ -105,7 +106,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 phases[i].Name = namesMat[i - 1];
                 phases[i].DrawStart = i > 1;
-                phases[i].Targets.Add(mainTarget);
+                phases[i].AddTarget(mainTarget);
             }
             return phases;
         }
@@ -174,15 +175,15 @@ namespace GW2EIEvtcParser.EncounterLogic
                     combatData.AddRange(copies);
                     combatData.Sort((x, y) => x.Time.CompareTo(y.Time));
                 }
-            }       
+            }
             ComputeFightTargets(agentData, combatData);
-            Targets.ForEach(x =>
+            foreach (NPC target in Targets)
             {
-                if (x.ID == (int)ArcDPSEnums.TrashID.MatthiasSacrificeCrystal)
+                if (target.ID == (int)ArcDPSEnums.TrashID.MatthiasSacrificeCrystal)
                 {
-                    x.SetManualHealth(100000);
+                    target.SetManualHealth(100000);
                 }
-            });
+            }
         }
 
         protected override List<int> GetFightTargetsIDs()

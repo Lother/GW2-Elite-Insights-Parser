@@ -1,5 +1,5 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -27,7 +27,7 @@ namespace GW2EIEvtcParser.EIData
         {
             foreach (Player p in log.PlayerList)
             {
-                foreach (AbstractCastEvent c in log.CombatData.GetCastData(SkillId))
+                foreach (AbstractCastEvent c in log.CombatData.GetAnimatedCastData(SkillId))
                 {
                     if (c.Caster == p.AgentItem && Keep(c, log))
                     {

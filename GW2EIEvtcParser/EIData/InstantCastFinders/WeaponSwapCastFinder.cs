@@ -1,7 +1,5 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -28,7 +26,7 @@ namespace GW2EIEvtcParser.EIData
             var res = new List<InstantCastEvent>();
             foreach (AgentItem playerAgent in agentData.GetAgentByType(AgentItem.AgentType.Player))
             {
-                List<WeaponSwapEvent> swaps = combatData.GetWeaponSwapData(playerAgent);
+                IReadOnlyList<WeaponSwapEvent> swaps = combatData.GetWeaponSwapData(playerAgent);
                 long lastTime = int.MinValue;
                 foreach (WeaponSwapEvent swap in swaps)
                 {

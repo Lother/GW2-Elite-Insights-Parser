@@ -13,9 +13,9 @@ namespace GW2EIBuilders
     {
         private readonly ParsedEvtcLog _log;
         private readonly Version _parserVersion;
-        private readonly List<PhaseData> _phases;
+        private readonly IReadOnlyList<PhaseData> _phases;
         private readonly NPC _legacyTarget;
-        private readonly GeneralStatistics _statistics;
+        private readonly StatisticsHelper _statistics;
         private StreamWriter _sw;
         private readonly string _delimiter;
         private readonly string[] _uploadResult;
@@ -34,7 +34,7 @@ namespace GW2EIBuilders
             _phases = log.FightData.GetPhases(log);
             _noFakePlayers = log.PlayerList.Where(x => !x.IsFakeActor).ToList();
 
-            _statistics = log.Statistics;
+            _statistics = log.StatisticsHelper;
 
             _uploadResult = uploadresult ?? new string[] { "", "", "" };
             _legacyTarget = log.FightData.Logic.GetLegacyTarget();
@@ -93,7 +93,7 @@ namespace GW2EIBuilders
             WriteLine(new[] { "Boss", _log.FightData.GetFightName(_log) });
             WriteLine(new[] { "Success", _log.FightData.Success.ToString() });
             WriteLine(new[] { "Total Boss Health", _legacyTarget.GetHealth(_log.CombatData).ToString() });
-            List<HealthUpdateEvent> hpUpdates = _log.CombatData.GetHealthUpdateEvents(_legacyTarget.AgentItem);
+            IReadOnlyList<HealthUpdateEvent> hpUpdates = _log.CombatData.GetHealthUpdateEvents(_legacyTarget.AgentItem);
             double hpLeft = hpUpdates.Count > 0
                 ? hpUpdates.Last().HPPercent
                 : 100.0;

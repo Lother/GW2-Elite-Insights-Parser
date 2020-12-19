@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
@@ -98,12 +99,12 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Adina);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Adina);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Adina not found");
+                throw new MissingKeyActorsException("Adina not found");
             }
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
@@ -153,10 +154,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                 // no split
                 mainPhases.Add(new PhaseData(start, log.FightData.FightEnd, "Phase 1"));
             }
-            
+
             foreach (PhaseData phase in mainPhases)
             {
-                phase.Targets.Add(mainTarget);
+                phase.AddTarget(mainTarget);
             }
             phases.AddRange(mainPhases);
             phases.Sort((x, y) => x.Start.CompareTo(y.Start));
@@ -183,10 +184,10 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.CMStatus IsCM(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            NPC target = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Adina);
+            NPC target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Adina);
             if (target == null)
             {
-                throw new InvalidOperationException("Adina not found");
+                throw new MissingKeyActorsException("Adina not found");
             }
             return (target.GetHealth(combatData) > 23e6) ? FightData.CMStatus.CM : FightData.CMStatus.NoCM;
         }

@@ -53,12 +53,12 @@ namespace GW2EIEvtcParser.EIData
                 _deads = new List<(long start, long end)>();
                 _downs = new List<(long start, long end)>();
                 _dcs = new List<(long start, long end)>();
-                AgentItem.GetAgentStatus(_deads, _downs, _dcs, log);
+                AgentItem.GetAgentStatus(_deads, _downs, _dcs, log.CombatData, log.FightData);
             }
             return (_deads, _downs, _dcs);
         }
 
-        public abstract string GetIcon();     
+        public abstract string GetIcon();
 
         public List<Segment> GetHealthUpdates(ParsedEvtcLog log)
         {
@@ -136,11 +136,7 @@ namespace GW2EIEvtcParser.EIData
             var dmgList = new List<int>();
             List<AbstractHealthDamageEvent> damageLogs = GetDamageLogs(target, log, phase.Start, phase.End);
             // fill the graph, full precision
-            var dmgListFull = new List<int>();
-            for (int i = 0; i <= phase.DurationInMS; i++)
-            {
-                dmgListFull.Add(0);
-            }
+            var dmgListFull = new int[phase.DurationInMS + 1];
             int totalTime = 1;
             int totalDamage = 0;
             foreach (AbstractHealthDamageEvent dl in damageLogs)
@@ -189,11 +185,7 @@ namespace GW2EIEvtcParser.EIData
             var brkDmgList = new List<double>();
             List<AbstractBreakbarDamageEvent> breakbarDamageLogs = GetBreakbarDamageLogs(target, log, phase.Start, phase.End);
             // fill the graph, full precision
-            var brkDmgListFull = new List<double>();
-            for (int i = 0; i <= phase.DurationInMS; i++)
-            {
-                brkDmgListFull.Add(0);
-            }
+            var brkDmgListFull = new double[phase.DurationInMS + 1];
             int totalTime = 1;
             double totalDamage = 0;
             foreach (DirectBreakbarDamageEvent dl in breakbarDamageLogs)
@@ -255,6 +247,30 @@ namespace GW2EIEvtcParser.EIData
             return BuffPoints;
         }
 
+        /// <summary>
+        /// Checks if a buff is present on the actor. Given buff id must be in the buff simulator, throws <see cref="InvalidOperationException"/> otherwise
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="buffId"></param>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public bool HasBuff(ParsedEvtcLog log, long buffId, long time)
+        {
+            if (!log.Buffs.BuffsByIds.ContainsKey(buffId))
+            {
+                throw new InvalidOperationException("Buff id must be simulated");
+            }
+            Dictionary<long, BuffsGraphModel> bgms = GetBuffGraphs(log);
+            if (bgms.TryGetValue(buffId, out BuffsGraphModel bgm))
+            {
+                return bgm.IsPresent(time, ParserHelper.ServerDelayConstant);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         public void ComputeBuffMap(ParsedEvtcLog log)
         {
             if (_buffMap == null)
@@ -314,7 +330,7 @@ namespace GW2EIEvtcParser.EIData
             var boonIds = new HashSet<long>(log.Buffs.BuffsByNature[BuffNature.Boon].Select(x => x.ID));
             var condiIds = new HashSet<long>(log.Buffs.BuffsByNature[BuffNature.Condition].Select(x => x.ID));
             // Init status
-            List<PhaseData> phases = log.FightData.GetPhases(log);
+            IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
             for (int i = 0; i < phases.Count; i++)
             {
                 _buffDistribution.Add(new BuffDistribution());
@@ -341,7 +357,7 @@ namespace GW2EIEvtcParser.EIData
                         for (int i = 0; i < phases.Count; i++)
                         {
                             PhaseData phase = phases[i];
-                            var value = simul.GetClampedDuration(phase.Start, phase.End);
+                            long value = simul.GetClampedDuration(phase.Start, phase.End);
                             if (value == 0)
                             {
                                 continue;
@@ -384,16 +400,16 @@ namespace GW2EIEvtcParser.EIData
                     BuffPoints[boonid] = new BuffsGraphModel(buff, graphSegments);
                     if (updateBoonPresence || updateCondiPresence)
                     {
-                        (updateBoonPresence? boonPresenceGraph : condiPresenceGraph).MergePresenceInto(BuffPoints[boonid].BuffChart);
+                        (updateBoonPresence ? boonPresenceGraph : condiPresenceGraph).MergePresenceInto(BuffPoints[boonid].BuffChart);
                     }
 
                 }
             }
             BuffPoints[NumberOfBoonsID] = boonPresenceGraph;
             BuffPoints[NumberOfConditionsID] = condiPresenceGraph;
-            foreach(Minions minions in GetMinions(log).Values)
+            foreach (Minions minions in GetMinions(log).Values)
             {
-                foreach(List<Segment> minionsSegments in minions.GetLifeSpanSegments(log))
+                foreach (List<Segment> minionsSegments in minions.GetLifeSpanSegments(log))
                 {
                     activeCombatMinionsGraph.MergePresenceInto(minionsSegments);
                 }
@@ -426,7 +442,7 @@ namespace GW2EIEvtcParser.EIData
         {
             _buffsDictionary = new List<Dictionary<long, FinalBuffsDictionary>>();
             _buffsActiveDictionary = new List<Dictionary<long, FinalBuffsDictionary>>();
-            List<PhaseData> phases = log.FightData.GetPhases(log);
+            IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
             for (int phaseIndex = 0; phaseIndex < phases.Count; phaseIndex++)
             {
                 BuffDistribution buffDistribution = GetBuffDistribution(log, phaseIndex);
@@ -549,7 +565,7 @@ namespace GW2EIEvtcParser.EIData
             }
             CastLogs.Sort((x, y) =>
             {
-                var compare = x.Time.CompareTo(y.Time);
+                int compare = x.Time.CompareTo(y.Time);
                 if (compare == 0 && x.SkillId != y.SkillId)
                 {
                     if (y.Skill.IsSwap)
@@ -722,7 +738,7 @@ namespace GW2EIEvtcParser.EIData
             if (_supportAll == null)
             {
                 _supportAll = new List<FinalSupportAll>();
-                List<PhaseData> phases = log.FightData.GetPhases(log);
+                IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
                 for (int phaseIndex = 0; phaseIndex < phases.Count; phaseIndex++)
                 {
                     PhaseData phase = phases[phaseIndex];
@@ -781,7 +797,7 @@ namespace GW2EIEvtcParser.EIData
                 if (DamageLogsByDst.TryGetValue(target.AgentItem, out List<AbstractHealthDamageEvent> list))
                 {
                     return list.Where(x => x.Time >= start && x.Time <= end).ToList();
-                } 
+                }
                 else
                 {
                     return new List<AbstractHealthDamageEvent>();

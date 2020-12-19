@@ -91,7 +91,7 @@ namespace GW2EIBuilders.JsonModels
                         {
                             continue;
                         }
-                        var desc = formula.GetDescription(false, log.Buffs.BuffsByIds);
+                        string desc = formula.GetDescription(false, log.Buffs.BuffsByIds);
                         if (desc.Length > 0)
                         {
                             Descriptions.Add(desc);
@@ -348,10 +348,10 @@ namespace GW2EIBuilders.JsonModels
             Language = log.LogData.Language;
             LanguageID = (byte)log.LogData.LanguageID;
             IsCM = log.FightData.IsCM;
-            if (log.Statistics.PresentFractalInstabilities.Any())
+            if (log.StatisticsHelper.PresentFractalInstabilities.Any())
             {
                 PresentFractalInstabilities = new List<long>();
-                foreach (Buff fractalInstab in log.Statistics.PresentFractalInstabilities)
+                foreach (Buff fractalInstab in log.StatisticsHelper.PresentFractalInstabilities)
                 {
                     PresentFractalInstabilities.Add(fractalInstab.ID);
                     if (!BuffMap.ContainsKey("b" + fractalInstab.ID))

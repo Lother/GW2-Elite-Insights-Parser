@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
@@ -17,7 +18,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
             new HitOnPlayerMechanic(37716, "Rapid Decay", new MechanicPlotlySetting("circle-open","rgb(0,0,0)"), "Oil","Rapid Decay (Black expanding oil)", "Black Oil",0),
             new FirstHitOnPlayerMechanic(37716, "Rapid Decay", new MechanicPlotlySetting("circle","rgb(0,0,0)"), "Oil T.","Rapid Decay Trigger (Black expanding oil)", "Black Oil Trigger",0, (ce, log) => {
-                AbstractSingleActor actor = log.FindActor(ce.To, true);
+                AbstractSingleActor actor = log.FindActor(ce.To);
                 if (actor == null)
                 {
                     return false;
@@ -102,10 +103,10 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override List<AbstractBuffEvent> SpecialBuffEventProcess(Dictionary<AgentItem, List<AbstractBuffEvent>> buffsByDst, Dictionary<long, List<AbstractBuffEvent>> buffsById, SkillData skillData)
         {
-            NPC target = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
+            NPC target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
             if (target == null)
             {
-                throw new InvalidOperationException("Deimos not found");
+                throw new MissingKeyActorsException("Deimos not found");
             }
             var res = new List<AbstractBuffEvent>();
             if (buffsById.TryGetValue(38224, out List<AbstractBuffEvent> list))
@@ -139,12 +140,21 @@ namespace GW2EIEvtcParser.EncounterLogic
             base.CheckSuccess(combatData, agentData, fightData, playerAgents);
             if (!fightData.Success && _specialSplit > 0)
             {
-                NPC target = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
-                if (target == null)
+                NPC deimos = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
+                if (deimos == null)
                 {
-                    throw new InvalidOperationException("Deimos not found");
+                    throw new MissingKeyActorsException("Deimos not found");
                 }
-                List<AttackTargetEvent> attackTargets = combatData.GetAttackTargetEvents(target.AgentItem);
+                NPC saul = TrashMobs.LastOrDefault(x => x.ID == (int)ArcDPSEnums.TrashID.Saul);
+                if (saul == null)
+                {
+                    throw new MissingKeyActorsException("Saul not found");
+                }
+                if (combatData.GetDeadEvents(saul.AgentItem).Any())
+                {
+                    return;
+                }
+                IReadOnlyList<AttackTargetEvent> attackTargets = combatData.GetAttackTargetEvents(deimos.AgentItem);
                 if (attackTargets.Count == 0)
                 {
                     return;
@@ -162,16 +172,14 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     return;
                 }
-                var playerExits = new List<ExitCombatEvent>();
-                foreach (AgentItem a in playerAgents)
+                AbstractHealthDamageEvent lastDamageTaken = combatData.GetDamageTakenData(deimos.AgentItem).LastOrDefault(x => (x.HealthDamage > 0) && x.Time > specialSplitTime && playerAgents.Contains(x.From.GetFinalMaster()));
+                if (lastDamageTaken != null)
                 {
-                    playerExits.AddRange(combatData.GetExitCombatEvents(a));
-                }
-                ExitCombatEvent lastPlayerExit = playerExits.Count > 0 ? playerExits.MaxBy(x => x.Time) : null; 
-                AbstractHealthDamageEvent lastDamageTaken = combatData.GetDamageTakenData(target.AgentItem).LastOrDefault(x => (x.HealthDamage > 0) && playerAgents.Contains(x.From.GetFinalMaster()));
-                if (lastDamageTaken != null && lastPlayerExit != null)
-                {
-                    fightData.SetSuccess(lastPlayerExit.Time > notAttackableEvent.Time + 1000, lastDamageTaken.Time);
+                    if (!AtLeastOnePlayerAlive(combatData, fightData, notAttackableEvent.Time, playerAgents))
+                    {
+                        return;
+                    }
+                    fightData.SetSuccess(true, lastDamageTaken.Time);
                 }
             }
         }
@@ -184,38 +192,32 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
             long firstAware = targetable.Time;
             AgentItem targetAgent = agentData.GetAgent(targetable.SrcAgent);
-            if (targetAgent != ParserHelper._unknownAgent)
+            if (targetAgent == ParserHelper._unknownAgent)
             {
-                try
-                {
-                    string[] names = targetAgent.Name.Split('-');
-                    if (ushort.TryParse(names[2], out ushort masterInstid))
-                    {
-                        CombatItem structDeimosDamageEvent = combatData.FirstOrDefault(x => x.Time >= firstAware && x.IFF == ArcDPSEnums.IFF.Foe && x.DstInstid == masterInstid && x.IsStateChange == ArcDPSEnums.StateChange.None && x.IsBuffRemove == ArcDPSEnums.BuffRemove.None &&
-                                ((x.IsBuff == 1 && x.BuffDmg >= 0 && x.Value == 0) ||
-                                (x.IsBuff == 0 && x.Value >= 0)));
-                        if (structDeimosDamageEvent != null)
-                        {
-                            gadgetAgents.Add(structDeimosDamageEvent.DstAgent);
-                        }
-                        CombatItem armDeimosDamageEvent = combatData.FirstOrDefault(x => x.Time >= firstAware && (x.SkillID == 37980 || x.SkillID == 37982 || x.SkillID == 38046) && x.SrcAgent != 0 && x.SrcInstid != 0);
-                        if (armDeimosDamageEvent != null)
-                        {
-                            gadgetAgents.Add(armDeimosDamageEvent.SrcAgent);
-                        }
-                    };
-                }
-                catch
-                {
-                    // nothing to do
-                }
+                return 0;
+            }
+            CombatItem attackTargetEvent = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.AttackTarget && x.SrcAgent == targetAgent.Agent);
+            if (attackTargetEvent == null)
+            {
+                return 0;
+            }
+            AgentItem deimosStructBody = agentData.GetAgent(attackTargetEvent.DstAgent);
+            if (deimosStructBody == ParserHelper._unknownAgent)
+            {
+                return 0;
+            }
+            gadgetAgents.Add(deimosStructBody.Agent);
+            CombatItem armDeimosDamageEvent = combatData.FirstOrDefault(x => x.Time >= firstAware && (x.SkillID == 37980 || x.SkillID == 37982 || x.SkillID == 38046) && x.SrcAgent != 0 && x.SrcInstid != 0);
+            if (armDeimosDamageEvent != null)
+            {
+                gadgetAgents.Add(armDeimosDamageEvent.SrcAgent);
             }
             return firstAware;
         }
 
         internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
-            List<AgentItem> deimosAgents = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Deimos);
+            IReadOnlyList<AgentItem> deimosAgents = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Deimos);
             long offset = fightData.FightOffset;
             foreach (AgentItem deimos in deimosAgents)
             {
@@ -235,10 +237,10 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             ComputeFightTargets(agentData, combatData);
             // Find target
-            NPC target = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
+            NPC target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
             if (target == null)
             {
-                throw new InvalidOperationException("Deimos not found");
+                throw new MissingKeyActorsException("Deimos not found");
             }
             // Remove deimos despawn events as they are useless and mess with combat replay
             combatData.RemoveAll(x => x.IsStateChange == ArcDPSEnums.StateChange.Despawn && x.SrcAgent == target.Agent);
@@ -281,18 +283,18 @@ namespace GW2EIEvtcParser.EncounterLogic
             long end = 0;
             long fightDuration = log.FightData.FightEnd;
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Deimos not found");
+                throw new MissingKeyActorsException("Deimos not found");
             }
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
             }
             // Determined + additional data on inst change
-            AbstractBuffEvent invulDei = log.CombatData.GetBuffData(762).Find(x => x is BuffApplyEvent && x.To == mainTarget.AgentItem);
+            AbstractBuffEvent invulDei = log.CombatData.GetBuffData(762).FirstOrDefault(x => x is BuffApplyEvent && x.To == mainTarget.AgentItem);
             if (invulDei != null)
             {
                 end = invulDei.Time;
@@ -315,7 +317,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             for (int i = 1; i < phases.Count; i++)
             {
                 phases[i].Name = names[i - 1];
-                phases[i].Targets.Add(mainTarget);
+                phases[i].AddTarget(mainTarget);
             }
             foreach (NPC tar in Targets)
             {
@@ -324,10 +326,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                     string name = (tar.ID == (int)ArcDPSEnums.TrashID.Thief ? "Thief" : (tar.ID == (int)ArcDPSEnums.TrashID.Drunkard ? "Drunkard" : (tar.ID == (int)ArcDPSEnums.TrashID.Gambler ? "Gambler" : "")));
                     tar.OverrideName(name);
                     var tarPhase = new PhaseData(tar.FirstAware - 1000, Math.Min(tar.LastAware + 1000, fightDuration), name);
-                    tarPhase.Targets.Add(tar);
+                    tarPhase.AddTarget(tar);
                     tarPhase.OverrideTimes(log);
                     // override first then add Deimos so that it does not disturb the override process
-                    tarPhase.Targets.Add(mainTarget);
+                    tarPhase.AddTarget(mainTarget);
                     phases.Add(tarPhase);
                 }
             }
@@ -346,7 +348,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     sigEnd = Math.Min(signet.Time - 1, fightDuration);
                     var burstPhase = new PhaseData(sigStart, sigEnd, "Burst " + burstID++);
-                    burstPhase.Targets.Add(mainTarget);
+                    burstPhase.AddTarget(mainTarget);
                     phases.Add(burstPhase);
                 }
             }
@@ -485,10 +487,10 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.CMStatus IsCM(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            NPC target = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
+            NPC target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Deimos);
             if (target == null)
             {
-                throw new InvalidOperationException("Deimos not found");
+                throw new MissingKeyActorsException("Deimos not found");
             }
             FightData.CMStatus res = (target.GetHealth(combatData) > 40e6) ? FightData.CMStatus.CM : FightData.CMStatus.NoCM;
             if (_specialSplit > 0)

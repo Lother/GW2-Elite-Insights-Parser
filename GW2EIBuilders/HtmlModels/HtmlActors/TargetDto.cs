@@ -22,13 +22,14 @@ namespace GW2EIBuilders.HtmlModels
             Health = target.GetHealth(log.CombatData);
             HbHeight = target.HitboxHeight;
             HbWidth = target.HitboxWidth;
+            HpLeft = 100.0;
             if (log.FightData.Success)
             {
                 HpLeft = 0;
             }
             else
             {
-                List<HealthUpdateEvent> hpUpdates = log.CombatData.GetHealthUpdateEvents(target.AgentItem);
+                IReadOnlyList<HealthUpdateEvent> hpUpdates = log.CombatData.GetHealthUpdateEvents(target.AgentItem);
                 if (hpUpdates.Count > 0)
                 {
                     HpLeft = hpUpdates.Last().HPPercent;

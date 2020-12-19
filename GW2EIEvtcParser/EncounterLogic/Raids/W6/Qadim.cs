@@ -104,7 +104,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void EIEvtcParse(FightData fightData, AgentData agentData, List<CombatItem> combatData, List<Player> playerList)
         {
-            List<AgentItem> pyres = agentData.GetNPCsByID((int)ArcDPSEnums.TrashID.PyreGuardian);
+            IReadOnlyList<AgentItem> pyres = agentData.GetNPCsByID((int)ArcDPSEnums.TrashID.PyreGuardian);
             // Lamps
             var lampAgents = combatData.Where(x => x.DstAgent == 14940 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 202).ToList();
             foreach (AgentItem lamp in lampAgents)
@@ -153,13 +153,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             AgentItem target = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Qadim).FirstOrDefault();
             if (target == null)
             {
-                throw new InvalidOperationException("Qadim not found");
+                throw new MissingKeyActorsException("Qadim not found");
             }
             CombatItem startCast = combatData.FirstOrDefault(x => x.SkillID == 52496 && x.IsActivation.StartCasting());
             CombatItem sanityCheckCast = combatData.FirstOrDefault(x => (x.SkillID == 52528 || x.SkillID == 52333 || x.SkillID == 58814) && x.IsActivation.StartCasting());
             if (startCast == null || sanityCheckCast == null)
             {
-                throw new IncompleteLogException();
+                return fightData.FightOffset;
             }
             // sanity check
             if (sanityCheckCast.Time - startCast.Time > 0)
@@ -176,12 +176,12 @@ namespace GW2EIEvtcParser.EncounterLogic
             // If changing phase detection, combat replay platform timings may have to be updated.
 
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC qadim = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Qadim);
+            NPC qadim = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Qadim);
             if (qadim == null)
             {
-                throw new InvalidOperationException("Qadim not found");
+                throw new MissingKeyActorsException("Qadim not found");
             }
-            phases[0].Targets.Add(qadim);
+            phases[0].AddTarget(qadim);
             if (!requirePhases)
             {
                 return phases;
@@ -209,7 +209,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         phase.OverrideStart(pyresFirstAware.Max());
                     }
-                    phase.Targets.Add(qadim);
+                    phase.AddTarget(qadim);
                 }
                 else
                 {
@@ -225,7 +225,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     if (phase.Targets.Count > 0)
                     {
                         NPC phaseTar = phase.Targets[0];
-                        switch(phaseTar.ID)
+                        switch (phaseTar.ID)
                         {
                             case (int)ArcDPSEnums.TrashID.AncientInvokedHydra:
                                 phase.Name = "Hydra";
@@ -238,7 +238,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                                 phase.Name = "Wyvern";
                                 break;
                             default:
-                                throw new InvalidOperationException("Unknown phase target in Qadim");
+                                phase.Name = "Unknown";
+                                break;
                         }
                     }
                 }
@@ -510,10 +511,10 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.CMStatus IsCM(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            NPC target = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Qadim);
+            NPC target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Qadim);
             if (target == null)
             {
-                throw new InvalidOperationException("Qadim not found");
+                throw new MissingKeyActorsException("Qadim not found");
             }
             return (target.GetHealth(combatData) > 21e6) ? FightData.CMStatus.CM : FightData.CMStatus.NoCM;
         }

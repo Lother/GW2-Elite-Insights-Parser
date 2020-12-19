@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.EIData.Buff;
 
@@ -38,11 +39,11 @@ namespace GW2EIEvtcParser.EIData
             string[] name = agent.Name.Split('\0');
             if (name.Length < 2)
             {
-                throw new InvalidOperationException("Name problem on Player");
+                throw new EvtcAgentException("Name problem on Player");
             }
             if (name[1].Length == 0 || name[2].Length == 0 || Character.Contains("-"))
             {
-                throw new InvalidOperationException("Missing Group on Player");
+                throw new EvtcAgentException("Missing Group on Player");
             }
             Account = name[1].TrimStart(':');
             Group = noSquad ? 1 : int.Parse(name[2], NumberStyles.Integer, CultureInfo.InvariantCulture);
@@ -72,7 +73,7 @@ namespace GW2EIEvtcParser.EIData
             if (_playerSupport == null)
             {
                 _playerSupport = new List<FinalPlayerSupport>();
-                List<PhaseData> phases = log.FightData.GetPhases(log);
+                IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
                 for (int phaseIndex = 0; phaseIndex < phases.Count; phaseIndex++)
                 {
                     var playerSup = new FinalPlayerSupport();
@@ -303,7 +304,7 @@ namespace GW2EIEvtcParser.EIData
                 return;
             }
             var damageMods = new List<DamageModifier>();
-            if (log.DamageModifiers.DamageModifiersPerSource.TryGetValue(ParserHelper.Source.Item, out List<DamageModifier> list))
+            if (log.DamageModifiers.DamageModifiersPerSource.TryGetValue(ParserHelper.Source.Item, out IReadOnlyList<DamageModifier> list))
             {
                 damageMods.AddRange(list);
             }
@@ -331,9 +332,9 @@ namespace GW2EIEvtcParser.EIData
         {
             _deathRecaps = new List<DeathRecap>();
             List<DeathRecap> res = _deathRecaps;
-            List<DeadEvent> deads = log.CombatData.GetDeadEvents(AgentItem);
-            List<DownEvent> downs = log.CombatData.GetDownEvents(AgentItem);
-            List<AliveEvent> ups = log.CombatData.GetAliveEvents(AgentItem);
+            IReadOnlyList<DeadEvent> deads = log.CombatData.GetDeadEvents(AgentItem);
+            IReadOnlyList<DownEvent> downs = log.CombatData.GetDownEvents(AgentItem);
+            IReadOnlyList<AliveEvent> ups = log.CombatData.GetAliveEvents(AgentItem);
             long lastDeathTime = 0;
             List<AbstractHealthDamageEvent> damageLogs = GetDamageTakenLogs(null, log, 0, log.FightData.FightEnd);
             foreach (DeadEvent dead in deads)
@@ -392,7 +393,7 @@ namespace GW2EIEvtcParser.EIData
 
         private void SetConsumablesList(ParsedEvtcLog log)
         {
-            List<Buff> consumableList = log.Buffs.BuffsByNature[BuffNature.Consumable];
+            IReadOnlyList<Buff> consumableList = log.Buffs.BuffsByNature[BuffNature.Consumable];
             _consumeList = new List<Consumable>();
             long fightDuration = log.FightData.FightEnd;
             foreach (Buff consumable in consumableList)

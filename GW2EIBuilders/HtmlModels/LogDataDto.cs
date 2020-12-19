@@ -59,14 +59,14 @@ namespace GW2EIBuilders.HtmlModels
             foreach (KeyValuePair<string, List<Player>> pair in log.PlayerListBySpec)
             {
                 List<Player> players = pair.Value;
-                var specBoonIds = new HashSet<long>(log.Buffs.GetRemainingBuffsList(pair.Key).Select(x => x.ID));
+                var specBoonIds = new HashSet<long>(log.Buffs.GetPersonalBuffsList(pair.Key).Select(x => x.ID));
                 var boonToUse = new HashSet<Buff>();
                 foreach (Player player in players)
                 {
                     for (int i = 0; i < log.FightData.GetPhases(log).Count; i++)
                     {
                         Dictionary<long, FinalPlayerBuffs> boons = player.GetBuffs(log, i, BuffEnum.Self);
-                        foreach (Buff boon in log.Statistics.PresentPersonalBuffs[player])
+                        foreach (Buff boon in log.StatisticsHelper.PresentRemainingBuffsPerPlayer[player])
                         {
                             if (boons.TryGetValue(boon.ID, out FinalPlayerBuffs uptime))
                             {
@@ -125,7 +125,7 @@ namespace GW2EIBuilders.HtmlModels
         private static bool HasBoons(ParsedEvtcLog log, int phaseIndex, NPC target)
         {
             Dictionary<long, FinalBuffs> conditions = target.GetBuffs(log, phaseIndex);
-            foreach (Buff boon in log.Statistics.PresentBoons)
+            foreach (Buff boon in log.StatisticsHelper.PresentBoons)
             {
                 if (conditions.TryGetValue(boon.ID, out FinalBuffs uptime))
                 {
@@ -138,9 +138,9 @@ namespace GW2EIBuilders.HtmlModels
             return false;
         }
 
-        public static LogDataDto BuildLogData(ParsedEvtcLog log, Dictionary<long, SkillItem> usedSkills,Dictionary<long, Buff> usedBuffs, HashSet<DamageModifier> usedDamageMods, bool cr, bool light, Version parserVersion, string[] uploadLinks)
+        public static LogDataDto BuildLogData(ParsedEvtcLog log, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBuffs, HashSet<DamageModifier> usedDamageMods, bool cr, bool light, Version parserVersion, string[] uploadLinks)
         {
-            GeneralStatistics statistics = log.Statistics;
+            StatisticsHelper statistics = log.StatisticsHelper;
             log.UpdateProgressWithCancellationCheck("HTML: building Log Data");
             var logData = new LogDataDto
             {
@@ -186,7 +186,7 @@ namespace GW2EIBuilders.HtmlModels
                 allDamageMods.UnionWith(p.GetPresentDamageModifier(log));
             }
             var commonDamageModifiers = new List<DamageModifier>();
-            if (log.DamageModifiers.DamageModifiersPerSource.TryGetValue(ParserHelper.Source.Common, out List<DamageModifier> list))
+            if (log.DamageModifiers.DamageModifiersPerSource.TryGetValue(ParserHelper.Source.Common, out IReadOnlyList<DamageModifier> list))
             {
                 foreach (DamageModifier dMod in list)
                 {
@@ -255,7 +255,7 @@ namespace GW2EIBuilders.HtmlModels
             }
             //
             log.UpdateProgressWithCancellationCheck("HTML: building Phases");
-            List<PhaseData> phases = log.FightData.GetPhases(log);
+            IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
             for (int i = 0; i < phases.Count; i++)
             {
                 PhaseData phaseData = phases[i];

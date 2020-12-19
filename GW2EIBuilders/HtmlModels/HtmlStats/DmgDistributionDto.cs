@@ -30,12 +30,12 @@ namespace GW2EIBuilders.HtmlModels
                     glance = 0,
                     shieldDamage = 0;
             bool IsIndirectDamage = false;
-            foreach (AbstractHealthDamageEvent dl in entry.Value.Where(x => !x.DoubleProcHit))
+            foreach (AbstractHealthDamageEvent dl in entry.Value)
             {
                 IsIndirectDamage = IsIndirectDamage || dl is NonDirectHealthDamageEvent;
                 int curdmg = dl.HealthDamage;
                 totaldamage += curdmg;
-                hits++;
+                hits += dl.DoubleProcHit ? 0 : 1;
                 if (dl.HasHit)
                 {
                     if (curdmg < mindamage) { mindamage = curdmg; }
@@ -104,7 +104,7 @@ namespace GW2EIBuilders.HtmlModels
                         }
                     }
                     timeCasting += Math.Min(cl.EndTime, phase.End) - Math.Max(cl.Time, phase.Start);
-                    
+
                 }
             }
             object[] skillItem = {
@@ -139,7 +139,7 @@ namespace GW2EIBuilders.HtmlModels
             var damageLogsBySkill = damageLogs.GroupBy(x => x.Skill).ToDictionary(x => x.Key, x => x.ToList());
             dto.ContributedDamage = damageLogs.Sum(x => x.HealthDamage);
             dto.ContributedShieldDamage = damageLogs.Sum(x => x.ShieldDamage);
-            var conditionsById = log.Statistics.PresentConditions.ToDictionary(x => x.ID);
+            var conditionsById = log.StatisticsHelper.PresentConditions.ToDictionary(x => x.ID);
             foreach (KeyValuePair<SkillItem, List<AbstractHealthDamageEvent>> entry in damageLogsBySkill)
             {
                 dto.Distribution.Add(GetDMGDtoItem(entry, null, usedSkills, usedBuffs, log.Buffs, phase));
@@ -153,7 +153,7 @@ namespace GW2EIBuilders.HtmlModels
             var list = new List<object[]>();
             var castLogsBySkill = casting.GroupBy(x => x.Skill).ToDictionary(x => x.Key, x => x.ToList());
             var damageLogsBySkill = damageLogs.GroupBy(x => x.Skill).ToDictionary(x => x.Key, x => x.ToList());
-            var conditionsById = log.Statistics.PresentConditions.ToDictionary(x => x.ID);
+            var conditionsById = log.StatisticsHelper.PresentConditions.ToDictionary(x => x.ID);
             PhaseData phase = log.FightData.GetPhases(log)[phaseIndex];
             foreach (KeyValuePair<SkillItem, List<AbstractHealthDamageEvent>> entry in damageLogsBySkill)
             {
@@ -193,12 +193,12 @@ namespace GW2EIBuilders.HtmlModels
                     timeCasting += Math.Min(cl.EndTime, phase.End) - Math.Max(cl.Time, phase.Start);
                 }
 
-                object[] skillData = { 
-                    false, 
-                    entry.Key.ID, 
-                    0, 
-                    -1, 
-                    0, 
+                object[] skillData = {
+                    false,
+                    entry.Key.ID,
+                    0,
+                    -1,
+                    0,
                     casts,
                     0,
                     0,
@@ -243,7 +243,7 @@ namespace GW2EIBuilders.HtmlModels
         public static DmgDistributionDto BuildTargetDMGDistData(ParsedEvtcLog log, NPC target, int phaseIndex, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBuffs)
         {
             FinalDPS dps = target.GetDPSAll(log, phaseIndex);
-            return BuildDMGDistDataInternal(log ,dps, target, null, phaseIndex, usedSkills, usedBuffs);
+            return BuildDMGDistDataInternal(log, dps, target, null, phaseIndex, usedSkills, usedBuffs);
         }
 
         private static DmgDistributionDto BuildDMGDistDataMinionsInternal(ParsedEvtcLog log, FinalDPS dps, Minions minions, NPC target, int phaseIndex, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBuffs)

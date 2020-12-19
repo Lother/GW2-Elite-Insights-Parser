@@ -1,5 +1,5 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -14,15 +14,14 @@ namespace GW2EIEvtcParser.EIData
         {
             Dictionary<AgentItem, BuffDistributionItem> distrib = distribs.GetDistrib(buffID);
             AgentItem agent = Src;
-            var value = GetValue(start, end);
+            long value = GetValue(start, end);
             if (value == 0)
             {
                 return;
             }
             if (distrib.TryGetValue(agent, out BuffDistributionItem toModify))
             {
-                toModify.Waste += value;
-                distrib[agent] = toModify;
+                toModify.IncrementWaste(value);
             }
             else
             {

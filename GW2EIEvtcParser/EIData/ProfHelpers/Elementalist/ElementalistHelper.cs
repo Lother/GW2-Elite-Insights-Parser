@@ -1,6 +1,6 @@
-﻿using GW2EIEvtcParser.ParsedData;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.EIData.Buff;
 using static GW2EIEvtcParser.EIData.DamageModifier;
@@ -101,7 +101,7 @@ namespace GW2EIEvtcParser.EIData
             return _elementalSwaps.Contains(id);
         }
 
-        public static void RemoveDualBuffs(List<AbstractBuffEvent> buffsPerDst, SkillData skillData)
+        public static void RemoveDualBuffs(IReadOnlyList<AbstractBuffEvent> buffsPerDst, Dictionary<long, List<AbstractBuffEvent>> buffsByID, SkillData skillData)
         {
             var duals = new HashSet<long>
             {
@@ -110,9 +110,15 @@ namespace GW2EIEvtcParser.EIData
                 AirDual,
                 EarthDual,
             };
+            var toClean = new HashSet<long>();
             foreach (AbstractBuffEvent c in buffsPerDst.Where(x => duals.Contains(x.BuffID)))
             {
+                toClean.Add(c.BuffID);
                 c.Invalidate(skillData);
+            }
+            foreach (long buffID in toClean)
+            {
+                buffsByID[buffID].RemoveAll(x => x.BuffID == NoBuff);
             }
         }
     }

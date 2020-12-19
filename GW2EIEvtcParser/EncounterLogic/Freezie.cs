@@ -1,6 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -15,13 +16,13 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Freezie);
-            NPC heartTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TrashID.FreeziesFrozenHeart);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Freezie);
+            NPC heartTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TrashID.FreeziesFrozenHeart);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Freezie not found");
+                throw new MissingKeyActorsException("Freezie not found");
             }
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
@@ -30,15 +31,15 @@ namespace GW2EIEvtcParser.EncounterLogic
             for (int i = 1; i < phases.Count; i++)
             {
                 PhaseData phase = phases[i];
-                if (i%2 == 1)
+                if (i % 2 == 1)
                 {
                     phase.Name = "Phase " + (i + 1) / 2;
-                    phase.Targets.Add(mainTarget);
+                    phase.AddTarget(mainTarget);
                 }
                 else
                 {
                     phase.Name = "Heal " + (i) / 2;
-                    phase.Targets.Add(heartTarget);
+                    phase.AddTarget(heartTarget);
                 }
             }
             return phases;

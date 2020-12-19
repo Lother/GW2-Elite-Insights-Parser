@@ -1,9 +1,9 @@
-﻿using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.ParsedData;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser
 {
@@ -13,22 +13,6 @@ namespace GW2EIEvtcParser
         internal static AgentItem _unknownAgent = new AgentItem();
         // use this for "null" in AbstractActor dictionaries
         internal static NPC _nullActor = new NPC(_unknownAgent);
-
-        internal static void SafeSkip(Stream stream, long bytesToSkip)
-        {
-            if (stream.CanSeek)
-            {
-                stream.Seek(bytesToSkip, SeekOrigin.Current);
-            }
-            else
-            {
-                while (bytesToSkip > 0)
-                {
-                    stream.ReadByte();
-                    --bytesToSkip;
-                }
-            }
-        }
 
 
         internal const int PollingRate = 150;
@@ -41,6 +25,7 @@ namespace GW2EIEvtcParser
         internal const long ServerDelayConstant = 10;
         internal const long BuffSimulatorDelayConstant = 50;
         internal const long WeaponSwapDelayConstant = 75;
+        internal const long MinimumInCombatDuration = 2200;
 
         internal const int PhaseTimeLimit = 1000;
 
@@ -104,6 +89,16 @@ namespace GW2EIEvtcParser
             return null;
         }
         */
+        public static Exception GetFinalException(Exception ex)
+        {
+            Exception final = ex;
+            while (final.InnerException != null)
+            {
+                final = final.InnerException;
+            }
+            return final;
+        }
+
         public static List<Source> ProfToEnum(string prof)
         {
             switch (prof)
@@ -163,10 +158,10 @@ namespace GW2EIEvtcParser
                 case "Revenant":
                     return new List<Source> { Source.Revenant };
             }
-            return new List<Source> { Source.Unknown };
+            return new List<Source> { };
         }
 
-        internal static string GetProfIcon(string prof)
+        internal static string GetHighResolutionProfIcon(string prof)
         {
             switch (prof)
             {
@@ -229,6 +224,71 @@ namespace GW2EIEvtcParser
             }
             return "";
         }
+
+        internal static string GetProfIcon(string prof)
+        {
+            switch (prof)
+            {
+                case "Warrior":
+                    return "https://wiki.guildwars2.com/images/4/43/Warrior_tango_icon_20px.png";
+                case "Berserker":
+                    return "https://wiki.guildwars2.com/images/d/da/Berserker_tango_icon_20px.png";
+                case "Spellbreaker":
+                    return "https://wiki.guildwars2.com/images/e/ed/Spellbreaker_tango_icon_20px.png";
+                case "Guardian":
+                    return "https://wiki.guildwars2.com/images/8/8c/Guardian_tango_icon_20px.png";
+                case "Dragonhunter":
+                    return "https://wiki.guildwars2.com/images/c/c9/Dragonhunter_tango_icon_20px.png";
+                case "Firebrand":
+                    return "https://wiki.guildwars2.com/images/0/02/Firebrand_tango_icon_20px.png";
+                case "Revenant":
+                    return "https://wiki.guildwars2.com/images/b/b5/Revenant_tango_icon_20px.png";
+                case "Herald":
+                    return "https://wiki.guildwars2.com/images/6/67/Herald_tango_icon_20px.png";
+                case "Renegade":
+                    return "https://wiki.guildwars2.com/images/7/7c/Renegade_tango_icon_20px.png";
+                case "Engineer":
+                    return "https://wiki.guildwars2.com/images/2/27/Engineer_tango_icon_20px.png";
+                case "Scrapper":
+                    return "https://wiki.guildwars2.com/images/3/3a/Scrapper_tango_icon_200px.png";
+                case "Holosmith":
+                    return "https://wiki.guildwars2.com/images/2/28/Holosmith_tango_icon_20px.png";
+                case "Ranger":
+                    return "https://wiki.guildwars2.com/images/4/43/Ranger_tango_icon_20px.png";
+                case "Druid":
+                    return "https://wiki.guildwars2.com/images/d/d2/Druid_tango_icon_20px.png";
+                case "Soulbeast":
+                    return "https://wiki.guildwars2.com/images/7/7c/Soulbeast_tango_icon_20px.png";
+                case "Thief":
+                    return "https://wiki.guildwars2.com/images/7/7a/Thief_tango_icon_20px.png";
+                case "Daredevil":
+                    return "https://wiki.guildwars2.com/images/e/e1/Daredevil_tango_icon_20px.png";
+                case "Deadeye":
+                    return "https://wiki.guildwars2.com/images/c/c9/Deadeye_tango_icon_20px.png";
+                case "Elementalist":
+                    return "https://wiki.guildwars2.com/images/a/aa/Elementalist_tango_icon_20px.png";
+                case "Tempest":
+                    return "https://wiki.guildwars2.com/images/4/4a/Tempest_tango_icon_20px.png";
+                case "Weaver":
+                    return "https://wiki.guildwars2.com/images/f/fc/Weaver_tango_icon_20px.png";
+                case "Mesmer":
+                    return "https://wiki.guildwars2.com/images/6/60/Mesmer_tango_icon_20px.png";
+                case "Chronomancer":
+                    return "https://wiki.guildwars2.com/images/f/f4/Chronomancer_tango_icon_20px.png";
+                case "Mirage":
+                    return "https://wiki.guildwars2.com/images/d/df/Mirage_tango_icon_20px.png";
+                case "Necromancer":
+                    return "https://wiki.guildwars2.com/images/4/43/Necromancer_tango_icon_20px.png";
+                case "Reaper":
+                    return "https://wiki.guildwars2.com/images/1/11/Reaper_tango_icon_20px.png";
+                case "Scourge":
+                    return "https://wiki.guildwars2.com/images/0/06/Scourge_tango_icon_20px.png";
+                case "Sword":
+                    return "https://wiki.guildwars2.com/images/0/07/Crimson_Antique_Blade.png";
+            }
+            return "";
+        }
+
         internal static string GetNPCIcon(int id)
         {
             switch (ArcDPSEnums.GetTargetID(id))
@@ -585,6 +645,21 @@ namespace GW2EIEvtcParser
             return false;
         }
 
+        public static int IndexOf<T>(this IReadOnlyList<T> self, T elementToFind)
+        {
+            int i = 0;
+            foreach (T element in self)
+            {
+                if (Equals(element, elementToFind))
+                {
+                    return i;
+                }
+
+                i++;
+            }
+            return -1;
+        }
+
         public static bool IsTemporaryFormat(string fileName)
         {
             foreach (string format in _tmpFiles)
@@ -595,25 +670,6 @@ namespace GW2EIEvtcParser
                 }
             }
             return false;
-        }
-
-
-        internal static string GetString(Stream stream, int length, bool nullTerminated = true)
-        {
-            byte[] bytes = new byte[length];
-            stream.Read(bytes, 0, length);
-            if (nullTerminated)
-            {
-                for (int i = 0; i < length; ++i)
-                {
-                    if (bytes[i] == 0)
-                    {
-                        length = i;
-                        break;
-                    }
-                }
-            }
-            return System.Text.Encoding.UTF8.GetString(bytes, 0, length);
         }
     }
 }

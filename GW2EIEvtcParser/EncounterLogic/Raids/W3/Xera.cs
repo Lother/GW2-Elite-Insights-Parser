@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
@@ -50,10 +50,10 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override List<AbstractBuffEvent> SpecialBuffEventProcess(Dictionary<AgentItem, List<AbstractBuffEvent>> buffsByDst, Dictionary<long, List<AbstractBuffEvent>> buffsById, SkillData skillData)
         {
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Xera);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Xera);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Xera not found");
+                throw new MissingKeyActorsException("Xera not found");
             }
             var res = new List<AbstractBuffEvent>();
             if (_specialSplit != 0)
@@ -69,18 +69,18 @@ namespace GW2EIEvtcParser.EncounterLogic
             long start = 0;
             long fightDuration = log.FightData.FightEnd;
             List<PhaseData> phases = GetInitialPhase(log);
-            NPC mainTarget = Targets.Find(x => x.ID == (int)ArcDPSEnums.TargetID.Xera);
+            NPC mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Xera);
             if (mainTarget == null)
             {
-                throw new InvalidOperationException("Xera not found");
+                throw new MissingKeyActorsException("Xera not found");
             }
-            phases[0].Targets.Add(mainTarget);
+            phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
                 return phases;
             }
             long end = 0;
-            AbstractBuffEvent invulXera = log.CombatData.GetBuffData(762).Find(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent) ?? log.CombatData.GetBuffData(34113).Find(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent);
+            AbstractBuffEvent invulXera = log.CombatData.GetBuffData(762).FirstOrDefault(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent) ?? log.CombatData.GetBuffData(34113).FirstOrDefault(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent);
             if (invulXera != null)
             {
                 end = invulXera.Time;
@@ -97,7 +97,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             for (int i = 1; i < phases.Count; i++)
             {
                 phases[i].Name = "Phase " + i;
-                phases[i].Targets.Add(mainTarget);
+                phases[i].AddTarget(mainTarget);
 
             }
             return phases;
@@ -108,7 +108,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             AgentItem target = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Xera).FirstOrDefault();
             if (target == null)
             {
-                throw new InvalidOperationException("Xera not found");
+                throw new MissingKeyActorsException("Xera not found");
             }
             // enter combat
             CombatItem enterCombat = combatData.Find(x => x.SrcAgent == target.Agent && x.IsStateChange == ArcDPSEnums.StateChange.EnterCombat);
@@ -125,7 +125,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             AgentItem target = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Xera).FirstOrDefault();
             if (target == null)
             {
-                throw new InvalidOperationException("Xera not found");
+                throw new MissingKeyActorsException("Xera not found");
             }
             // find split
             foreach (AgentItem NPC in agentData.GetAgentByType(AgentItem.AgentType.NPC))

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using GW2EIParser.Exceptions;
 
@@ -23,19 +22,20 @@ namespace GW2EIParser
                 sizeSortedLogFiles.Sort((x, y) =>
                 {
                     var fInfoX = new FileInfo(x);
-                    var xValue = fInfoX.Exists ? fInfoX.Length : 0;
+                    long xValue = fInfoX.Exists ? fInfoX.Length : 0;
                     var fInfoY = new FileInfo(y);
-                    var yValue = fInfoY.Exists ? fInfoY.Length : 0;
+                    long yValue = fInfoY.Exists ? fInfoY.Length : 0;
                     return xValue.CompareTo(yValue);
                 });
                 int index = 0;
-                foreach(string file in sizeSortedLogFiles)
+                foreach (string file in sizeSortedLogFiles)
                 {
                     splitLogFiles[index].Add(file);
                     index = (index + 1) % ProgramHelper.GetMaxParallelRunning();
                 }
-                Parallel.ForEach(splitLogFiles, files => {
-                    foreach(string file in files)
+                Parallel.ForEach(splitLogFiles, files =>
+                {
+                    foreach (string file in files)
                     {
                         ParseLog(file);
                     }
@@ -58,9 +58,9 @@ namespace GW2EIParser
                 ProgramHelper.DoWork(operation);
                 operation.FinalizeStatus("Parsing Successful - ");
             }
-            catch (EncompassException ex)
+            catch (ProgramException ex)
             {
-                operation.UpdateProgress(ex.GetFinalException().Message);
+                operation.UpdateProgress(ex.InnerException.Message);
                 operation.FinalizeStatus("Parsing Failure - ");
             }
             catch (Exception)

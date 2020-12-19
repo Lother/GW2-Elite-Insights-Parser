@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.EncounterLogic;
 
 namespace GW2EIEvtcParser.ParsedData
 {
@@ -24,10 +23,9 @@ namespace GW2EIEvtcParser.ParsedData
         private readonly Dictionary<AgentItem, List<AnimatedCastEvent>> _animatedCastData;
         private readonly Dictionary<AgentItem, List<InstantCastEvent>> _instantCastData;
         private readonly Dictionary<AgentItem, List<WeaponSwapEvent>> _weaponSwapData;
-        private readonly Dictionary<long, List<AbstractCastEvent>> _castDataById;
+        private readonly Dictionary<long, List<AnimatedCastEvent>> _animatedCastDataById;
         private readonly Dictionary<AgentItem, List<AbstractHealthDamageEvent>> _damageTakenData;
         private readonly Dictionary<AgentItem, List<AbstractBreakbarDamageEvent>> _breakbarDamageTakenData;
-        private readonly Dictionary<AgentItem, List<AbstractMovementEvent>> _movementData;
         private readonly List<RewardEvent> _rewardEvents = new List<RewardEvent>();
 
         internal bool HasStackIDs { get; } = false;
@@ -41,11 +39,11 @@ namespace GW2EIEvtcParser.ParsedData
             {
                 if (p.Prof == "Weaver")
                 {
-                    toAdd.AddRange(WeaverHelper.TransformWeaverAttunements(GetBuffData(p.AgentItem), p.AgentItem, skillData));
+                    toAdd.AddRange(WeaverHelper.TransformWeaverAttunements(GetBuffData(p.AgentItem), _buffData, p.AgentItem, skillData));
                 }
                 if (p.Prof == "Elementalist" || p.Prof == "Tempest")
                 {
-                    ElementalistHelper.RemoveDualBuffs(GetBuffData(p.AgentItem), skillData);
+                    ElementalistHelper.RemoveDualBuffs(GetBuffData(p.AgentItem), _buffData, skillData);
                 }
             }
             toAdd.AddRange(fightData.Logic.SpecialBuffEventProcess(_buffDataByDst, _buffData, skillData));
@@ -147,9 +145,9 @@ namespace GW2EIEvtcParser.ParsedData
                 _damageData[a].Sort((x, y) => x.Time.CompareTo(y.Time));
             }
         }
-        private void EICastParse(List<Player> players, SkillData skillData, AgentData agentData)
+        private void EICastParse(List<Player> players, SkillData skillData, FightData fightData, AgentData agentData)
         {
-            var toAdd = new List<AbstractCastEvent>();
+            List<AbstractCastEvent> toAdd = fightData.Logic.SpecialCastEventProcess(_animatedCastData, _weaponSwapData, _animatedCastDataById, skillData);
             toAdd.AddRange(ProfHelper.ComputeInstantCastEvents(players, this, skillData, agentData));
             //
             var castIDsToSort = new HashSet<long>();
@@ -172,6 +170,18 @@ namespace GW2EIEvtcParser.ParsedData
                         };
                     }
                     castAgentsToSort.Add(ace.Caster);
+                    if (_animatedCastDataById.TryGetValue(ace.SkillId, out List<AnimatedCastEvent> list2))
+                    {
+                        list2.Add(ace);
+                    }
+                    else
+                    {
+                        _animatedCastDataById[cast.SkillId] = new List<AnimatedCastEvent>()
+                    {
+                        ace
+                    };
+                    }
+                    castIDsToSort.Add(cast.SkillId);
                 }
                 if (cast is WeaponSwapEvent wse)
                 {
@@ -203,22 +213,10 @@ namespace GW2EIEvtcParser.ParsedData
                     }
                     instantAgentsToSort.Add(ice.Caster);
                 }
-                if (_castDataById.TryGetValue(cast.SkillId, out List<AbstractCastEvent> list2))
-                {
-                    list2.Add(cast);
-                }
-                else
-                {
-                    _castDataById[cast.SkillId] = new List<AbstractCastEvent>()
-                    {
-                        cast
-                    };
-                }
-                castIDsToSort.Add(cast.SkillId);
             }
             foreach (long buffID in castIDsToSort)
             {
-                _castDataById[buffID].Sort((x, y) => x.Time.CompareTo(y.Time));
+                _animatedCastDataById[buffID].Sort((x, y) => x.Time.CompareTo(y.Time));
             }
             foreach (AgentItem a in castAgentsToSort)
             {
@@ -258,7 +256,8 @@ namespace GW2EIEvtcParser.ParsedData
                 {
                     if (evt.HasKilled)
                     {
-                        if (!agentDeaths.Exists(x => Math.Abs(x.Time - evt.Time) < 500)) {
+                        if (!agentDeaths.Exists(x => Math.Abs(x.Time - evt.Time) < 500))
+                        {
                             agentDeaths.Add(new DeadEvent(pair.Key, evt.Time));
                         }
                     }
@@ -270,7 +269,7 @@ namespace GW2EIEvtcParser.ParsedData
                         }
                     }
                 }
-                agentDowns.Sort((x,y) => x.Time.CompareTo(y.Time));
+                agentDowns.Sort((x, y) => x.Time.CompareTo(y.Time));
                 agentDeaths.Sort((x, y) => x.Time.CompareTo(y.Time));
                 if (setDeads && agentDeaths.Count > 0)
                 {
@@ -291,64 +290,91 @@ namespace GW2EIEvtcParser.ParsedData
             operation.UpdateProgressWithCancellationCheck("Creating Custom Damage Events");
             EIDamageParse(skillData, fightData);
             operation.UpdateProgressWithCancellationCheck("Creating Custom Cast Events");
-            EICastParse(players, skillData, agentData);
+            EICastParse(players, skillData, fightData, agentData);
             operation.UpdateProgressWithCancellationCheck("Creating Custom Status Events");
             EIMetaAndStatusParse(fightData);
             // master attachements
             operation.UpdateProgressWithCancellationCheck("Attaching Banners to Warriors");
-            WarriorHelper.AttachMasterToWarriorBanners(players, _buffData, _castDataById);
+            WarriorHelper.AttachMasterToWarriorBanners(players, _buffData, _animatedCastDataById);
             operation.UpdateProgressWithCancellationCheck("Attaching Turrets to Engineers");
-            EngineerHelper.AttachMasterToEngineerTurrets(players, _damageDataById, _castDataById);
+            EngineerHelper.AttachMasterToEngineerTurrets(players, _damageDataById, _animatedCastDataById);
             operation.UpdateProgressWithCancellationCheck("Attaching Ranger Gadgets to Rangers");
-            RangerHelper.AttachMasterToRangerGadgets(players, _damageDataById, _castDataById);
+            RangerHelper.AttachMasterToRangerGadgets(players, _damageDataById, _animatedCastDataById);
             operation.UpdateProgressWithCancellationCheck("Attaching Racial Gadgets to Players");
-            ProfHelper.AttachMasterToRacialGadgets(players, _damageDataById, _castDataById);
+            ProfHelper.AttachMasterToRacialGadgets(players, _damageDataById, _animatedCastDataById);
         }
 
         internal CombatData(List<CombatItem> allCombatItems, FightData fightData, AgentData agentData, SkillData skillData, List<Player> players, ParserController operation)
         {
-            _skillIds = new HashSet<long>(allCombatItems.Select(x => (long)x.SkillID));
-            IEnumerable<CombatItem> noStateActiBuffRem = allCombatItems.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.None && x.IsActivation == ArcDPSEnums.Activation.None && x.IsBuffRemove == ArcDPSEnums.BuffRemove.None);
-            // movement events
-            _movementData = CombatEventFactory.CreateMovementEvents(allCombatItems.Where(x =>
-                       x.IsStateChange == ArcDPSEnums.StateChange.Position ||
-                       x.IsStateChange == ArcDPSEnums.StateChange.Velocity ||
-                       x.IsStateChange == ArcDPSEnums.StateChange.Rotation).ToList(), agentData);
-            HasMovementData = _movementData.Count > 1;
-            // state change events
-            operation.UpdateProgressWithCancellationCheck("Creating status and metadata events");
-            CombatEventFactory.CreateStateChangeEvents(allCombatItems, _metaDataEvents, _statusEvents, _rewardEvents, agentData);
+            _skillIds = new HashSet<long>();
+            var castCombatEvents = new Dictionary<ulong, List<CombatItem>>();
+            var buffEvents = new List<AbstractBuffEvent>();
+            var wepSwaps = new List<WeaponSwapEvent>();
+            var brkDamageData = new List<AbstractBreakbarDamageEvent>();
+            var damageData = new List<AbstractHealthDamageEvent>();
+            operation.UpdateProgressWithCancellationCheck("Creating EI Combat Data");
+            foreach (CombatItem combatItem in allCombatItems)
+            {
+                _skillIds.Add(combatItem.SkillID);
+                if (combatItem.IsStateChange != ArcDPSEnums.StateChange.None)
+                {
+                    CombatEventFactory.AddStateChangeEvent(combatItem, agentData, skillData, _metaDataEvents, _statusEvents, _rewardEvents, wepSwaps, buffEvents);
+                }
+                else if (combatItem.IsActivation != ArcDPSEnums.Activation.None)
+                {
+                    if (castCombatEvents.TryGetValue(combatItem.SrcAgent, out List<CombatItem> list))
+                    {
+                        list.Add(combatItem);
+                    }
+                    else
+                    {
+                        castCombatEvents[combatItem.SrcAgent] = new List<CombatItem>() { combatItem };
+                    }
+                }
+                else if (combatItem.IsBuffRemove != ArcDPSEnums.BuffRemove.None)
+                {
+                    CombatEventFactory.AddBuffRemoveEvent(combatItem, buffEvents, agentData, skillData);
+                }
+                else
+                {
+                    if (combatItem.IsBuff != 0 && combatItem.BuffDmg == 0 && combatItem.Value > 0)
+                    {
+                        CombatEventFactory.AddBuffApplyEvent(combatItem, buffEvents, agentData, skillData);
+                    }
+                    else if (combatItem.IsBuff == 0)
+                    {
+                        CombatEventFactory.AddDirectDamageEvent(combatItem, damageData, brkDamageData, agentData, skillData);
+                    }
+                    else if (combatItem.IsBuff != 0 && combatItem.Value == 0)
+                    {
+                        CombatEventFactory.AddIndirectDamageEvent(combatItem, damageData, brkDamageData, agentData, skillData);
+                    }
+                }
+            }
+            HasMovementData = _statusEvents.MovementEvents.Count > 1;
+            HasBreakbarDamageData = brkDamageData.Any();
+            //
             operation.UpdateProgressWithCancellationCheck("Combining SkillInfo with SkillData");
             skillData.CombineWithSkillInfo(_metaDataEvents.SkillInfoEvents);
-            // activation events
+            //
             operation.UpdateProgressWithCancellationCheck("Creating Cast Events");
-            List<AnimatedCastEvent> animatedCastData = CombatEventFactory.CreateCastEvents(allCombatItems.Where(x => x.IsActivation != ArcDPSEnums.Activation.None).ToList(), agentData, skillData);
-            operation.UpdateProgressWithCancellationCheck("Creating Weapon Swap Events");
-            List<WeaponSwapEvent> wepSwaps = CombatEventFactory.CreateWeaponSwapEvents(allCombatItems.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.WeaponSwap).ToList(), agentData, skillData);
+            List<AnimatedCastEvent> animatedCastData = CombatEventFactory.CreateCastEvents(castCombatEvents, agentData, skillData);
             _weaponSwapData = wepSwaps.GroupBy(x => x.Caster).ToDictionary(x => x.Key, x => x.ToList());
             _animatedCastData = animatedCastData.GroupBy(x => x.Caster).ToDictionary(x => x.Key, x => x.ToList());
             _instantCastData = new Dictionary<AgentItem, List<InstantCastEvent>>();
-            var allCastEvents = new List<AbstractCastEvent>(animatedCastData);
-            allCastEvents.AddRange(wepSwaps);
-            _castDataById = allCastEvents.GroupBy(x => x.SkillId).ToDictionary(x => x.Key, x => x.ToList());
-            // buff remove event
-            var buffCombatEvents = allCombatItems.Where(x => x.IsBuffRemove != ArcDPSEnums.BuffRemove.None && x.IsBuff != 0).ToList();
-            buffCombatEvents.AddRange(noStateActiBuffRem.Where(x => x.IsBuff != 0 && x.BuffDmg == 0 && x.Value > 0));
-            buffCombatEvents.AddRange(allCombatItems.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.BuffInitial));
-            buffCombatEvents.Sort((x, y) => x.Time.CompareTo(y.Time));
+            _animatedCastDataById = animatedCastData.GroupBy(x => x.SkillId).ToDictionary(x => x.Key, x => x.ToList());
+            //
             operation.UpdateProgressWithCancellationCheck("Creating Buff Events");
-            List<AbstractBuffEvent> buffEvents = CombatEventFactory.CreateBuffEvents(buffCombatEvents, agentData, skillData);
             _buffDataByDst = buffEvents.GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
             _buffData = buffEvents.GroupBy(x => x.BuffID).ToDictionary(x => x.Key, x => x.ToList());
             // damage events
             operation.UpdateProgressWithCancellationCheck("Creating Damage Events");
-            (List<AbstractHealthDamageEvent> damageData, List<AbstractBreakbarDamageEvent> brkDamageData) = CombatEventFactory.CreateDamageEvents(noStateActiBuffRem.Where(x => (x.IsBuff != 0 && x.Value == 0) || (x.IsBuff == 0)).ToList(), agentData, skillData);
             _damageData = damageData.GroupBy(x => x.From).ToDictionary(x => x.Key, x => x.ToList());
             _damageTakenData = damageData.GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
             _damageDataById = damageData.GroupBy(x => x.SkillId).ToDictionary(x => x.Key, x => x.ToList());
             _breakbarDamageData = brkDamageData.GroupBy(x => x.From).ToDictionary(x => x.Key, x => x.ToList());
             _breakbarDamageTakenData = brkDamageData.GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
-            HasBreakbarDamageData = brkDamageData.Any();
+            //
             /*healing_data = allCombatItems.Where(x => x.getDstInstid() != 0 && x.isStateChange() == ParseEnum.StateChange.Normal && x.getIFF() == ParseEnum.IFF.Friend && x.isBuffremove() == ParseEnum.BuffRemove.None &&
                                          ((x.isBuff() == 1 && x.getBuffDmg() > 0 && x.getValue() == 0) ||
                                          (x.isBuff() == 0 && x.getValue() > 0))).ToList();
@@ -362,12 +388,12 @@ namespace GW2EIEvtcParser.ParsedData
 
         // getters
 
-        public HashSet<long> GetSkills()
+        public IReadOnlyCollection<long> GetSkills()
         {
             return _skillIds;
         }
 
-        public List<AliveEvent> GetAliveEvents(AgentItem key)
+        public IReadOnlyList<AliveEvent> GetAliveEvents(AgentItem key)
         {
             if (_statusEvents.AliveEvents.TryGetValue(key, out List<AliveEvent> list))
             {
@@ -376,7 +402,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<AliveEvent>();
         }
 
-        public List<AttackTargetEvent> GetAttackTargetEvents(AgentItem key)
+        public IReadOnlyList<AttackTargetEvent> GetAttackTargetEvents(AgentItem key)
         {
             if (_statusEvents.AttackTargetEvents.TryGetValue(key, out List<AttackTargetEvent> list))
             {
@@ -385,7 +411,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<AttackTargetEvent>();
         }
 
-        public List<DeadEvent> GetDeadEvents(AgentItem key)
+        public IReadOnlyList<DeadEvent> GetDeadEvents(AgentItem key)
         {
             if (_statusEvents.DeadEvents.TryGetValue(key, out List<DeadEvent> list))
             {
@@ -394,7 +420,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<DeadEvent>();
         }
 
-        public List<DespawnEvent> GetDespawnEvents(AgentItem key)
+        public IReadOnlyList<DespawnEvent> GetDespawnEvents(AgentItem key)
         {
             if (_statusEvents.DespawnEvents.TryGetValue(key, out List<DespawnEvent> list))
             {
@@ -403,7 +429,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<DespawnEvent>();
         }
 
-        public List<DownEvent> GetDownEvents(AgentItem key)
+        public IReadOnlyList<DownEvent> GetDownEvents(AgentItem key)
         {
             if (_statusEvents.DownEvents.TryGetValue(key, out List<DownEvent> list))
             {
@@ -412,7 +438,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<DownEvent>();
         }
 
-        public List<EnterCombatEvent> GetEnterCombatEvents(AgentItem key)
+        public IReadOnlyList<EnterCombatEvent> GetEnterCombatEvents(AgentItem key)
         {
             if (_statusEvents.EnterCombatEvents.TryGetValue(key, out List<EnterCombatEvent> list))
             {
@@ -421,7 +447,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<EnterCombatEvent>();
         }
 
-        public List<ExitCombatEvent> GetExitCombatEvents(AgentItem key)
+        public IReadOnlyList<ExitCombatEvent> GetExitCombatEvents(AgentItem key)
         {
             if (_statusEvents.ExitCombatEvents.TryGetValue(key, out List<ExitCombatEvent> list))
             {
@@ -430,7 +456,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<ExitCombatEvent>();
         }
 
-        public List<GuildEvent> GetGuildEvents(AgentItem key)
+        public IReadOnlyList<GuildEvent> GetGuildEvents(AgentItem key)
         {
             if (_metaDataEvents.GuildEvents.TryGetValue(key, out List<GuildEvent> list))
             {
@@ -439,7 +465,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<GuildEvent>();
         }
 
-        public List<HealthUpdateEvent> GetHealthUpdateEvents(AgentItem key)
+        public IReadOnlyList<HealthUpdateEvent> GetHealthUpdateEvents(AgentItem key)
         {
             if (_statusEvents.HealthUpdateEvents.TryGetValue(key, out List<HealthUpdateEvent> list))
             {
@@ -448,7 +474,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<HealthUpdateEvent>();
         }
 
-        public List<MaxHealthUpdateEvent> GetMaxHealthUpdateEvents(AgentItem key)
+        public IReadOnlyList<MaxHealthUpdateEvent> GetMaxHealthUpdateEvents(AgentItem key)
         {
             if (_statusEvents.MaxHealthUpdateEvents.TryGetValue(key, out List<MaxHealthUpdateEvent> list))
             {
@@ -462,7 +488,7 @@ namespace GW2EIEvtcParser.ParsedData
             return _metaDataEvents.PointOfViewEvent;
         }
 
-        public List<SpawnEvent> GetSpawnEvents(AgentItem key)
+        public IReadOnlyList<SpawnEvent> GetSpawnEvents(AgentItem key)
         {
             if (_statusEvents.SpawnEvents.TryGetValue(key, out List<SpawnEvent> list))
             {
@@ -471,7 +497,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<SpawnEvent>();
         }
 
-        public List<TargetableEvent> GetTargetableEvents(AgentItem key)
+        public IReadOnlyList<TargetableEvent> GetTargetableEvents(AgentItem key)
         {
             if (_statusEvents.TargetableEvents.TryGetValue(key, out List<TargetableEvent> list))
             {
@@ -480,7 +506,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<TargetableEvent>();
         }
 
-        /*public List<TagEvent> GetTagEvents(AgentItem key)
+        /*public IReadOnlyList<TagEvent> GetTagEvents(AgentItem key)
         {
             if (_statusEvents.TagEvents.TryGetValue(key, out List<TagEvent> list))
             {
@@ -489,7 +515,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<TagEvent>();
         }*/
 
-        public List<TeamChangeEvent> GetTeamChangeEvents(AgentItem key)
+        public IReadOnlyList<TeamChangeEvent> GetTeamChangeEvents(AgentItem key)
         {
             if (_statusEvents.TeamChangeEvents.TryGetValue(key, out List<TeamChangeEvent> list))
             {
@@ -498,7 +524,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<TeamChangeEvent>();
         }
 
-        public List<BreakbarStateEvent> GetBreakbarStateEvents(AgentItem key)
+        public IReadOnlyList<BreakbarStateEvent> GetBreakbarStateEvents(AgentItem key)
         {
             if (_statusEvents.BreakbarStateEvents.TryGetValue(key, out List<BreakbarStateEvent> list))
             {
@@ -507,7 +533,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<BreakbarStateEvent>();
         }
 
-        public List<BreakbarPercentEvent> GetBreakbarPercentEvents(AgentItem key)
+        public IReadOnlyList<BreakbarPercentEvent> GetBreakbarPercentEvents(AgentItem key)
         {
             if (_statusEvents.BreakbarPercentEvents.TryGetValue(key, out List<BreakbarPercentEvent> list))
             {
@@ -536,22 +562,22 @@ namespace GW2EIEvtcParser.ParsedData
             return _metaDataEvents.LogEndEvent;
         }
 
-        public List<MapIDEvent> GetMapIDEvents()
+        public IReadOnlyList<MapIDEvent> GetMapIDEvents()
         {
             return _metaDataEvents.MapIDEvents;
         }
 
-        public List<RewardEvent> GetRewardEvents()
+        public IReadOnlyList<RewardEvent> GetRewardEvents()
         {
             return _rewardEvents;
         }
 
-        public List<ErrorEvent> GetErrorEvents()
+        public IReadOnlyList<ErrorEvent> GetErrorEvents()
         {
             return _metaDataEvents.ErrorEvents;
         }
 
-        public List<ShardEvent> GetShardEvents()
+        public IReadOnlyList<ShardEvent> GetShardEvents()
         {
             return _metaDataEvents.ShardEvents;
         }
@@ -565,7 +591,7 @@ namespace GW2EIEvtcParser.ParsedData
             return null;
         }
 
-        public List<BuffInfoEvent> GetBuffInfoEvent(ArcDPSEnums.BuffCategory category)
+        public IReadOnlyList<BuffInfoEvent> GetBuffInfoEvent(ArcDPSEnums.BuffCategory category)
         {
             if (_metaDataEvents.BuffInfoEventsByCategory.TryGetValue(category, out List<BuffInfoEvent> evts))
             {
@@ -583,20 +609,20 @@ namespace GW2EIEvtcParser.ParsedData
             return null;
         }
 
-        public List<AbstractBuffEvent> GetBuffData(long key)
+        public IReadOnlyList<AbstractBuffEvent> GetBuffData(long key)
         {
             if (_buffData.TryGetValue(key, out List<AbstractBuffEvent> res))
             {
-                return res.Where(x => x.BuffID != Buff.NoBuff).ToList();
+                return res;
             }
             return new List<AbstractBuffEvent>(); ;
         }
 
-        public List<BuffRemoveAllEvent> GetBuffRemoveAllData(long key)
+        public IReadOnlyList<BuffRemoveAllEvent> GetBuffRemoveAllData(long key)
         {
             if (_buffRemoveAllData.TryGetValue(key, out List<BuffRemoveAllEvent> res))
             {
-                return res.Where(x => x.BuffID != Buff.NoBuff).ToList();
+                return res;
             }
             return new List<BuffRemoveAllEvent>(); ;
         }
@@ -606,11 +632,11 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<AbstractBuffEvent> GetBuffData(AgentItem key)
+        public IReadOnlyList<AbstractBuffEvent> GetBuffData(AgentItem key)
         {
             if (_buffDataByDst.TryGetValue(key, out List<AbstractBuffEvent> res))
             {
-                return res.Where(x => x.BuffID != Buff.NoBuff).ToList();
+                return res;
             }
             return new List<AbstractBuffEvent>(); ;
         }
@@ -620,7 +646,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<AbstractHealthDamageEvent> GetDamageData(AgentItem key)
+        public IReadOnlyList<AbstractHealthDamageEvent> GetDamageData(AgentItem key)
         {
             if (_damageData.TryGetValue(key, out List<AbstractHealthDamageEvent> res))
             {
@@ -634,7 +660,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<AbstractBreakbarDamageEvent> GetBreakbarDamageData(AgentItem key)
+        public IReadOnlyList<AbstractBreakbarDamageEvent> GetBreakbarDamageData(AgentItem key)
         {
             if (_breakbarDamageData.TryGetValue(key, out List<AbstractBreakbarDamageEvent> res))
             {
@@ -648,7 +674,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Id of the skill
         /// <returns></returns>
-        public List<AbstractHealthDamageEvent> GetDamageData(long key)
+        public IReadOnlyList<AbstractHealthDamageEvent> GetDamageData(long key)
         {
             if (_damageDataById.TryGetValue(key, out List<AbstractHealthDamageEvent> res))
             {
@@ -662,7 +688,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<AnimatedCastEvent> GetAnimatedCastData(AgentItem key)
+        public IReadOnlyList<AnimatedCastEvent> GetAnimatedCastData(AgentItem key)
         {
             if (_animatedCastData.TryGetValue(key, out List<AnimatedCastEvent> res))
             {
@@ -676,7 +702,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<InstantCastEvent> GetInstantCastData(AgentItem key)
+        public IReadOnlyList<InstantCastEvent> GetInstantCastData(AgentItem key)
         {
             if (_instantCastData.TryGetValue(key, out List<InstantCastEvent> res))
             {
@@ -690,7 +716,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<WeaponSwapEvent> GetWeaponSwapData(AgentItem key)
+        public IReadOnlyList<WeaponSwapEvent> GetWeaponSwapData(AgentItem key)
         {
             if (_weaponSwapData.TryGetValue(key, out List<WeaponSwapEvent> res))
             {
@@ -704,13 +730,13 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> ID of the skill
         /// <returns></returns>
-        public List<AbstractCastEvent> GetCastData(long key)
+        public IReadOnlyList<AnimatedCastEvent> GetAnimatedCastData(long key)
         {
-            if (_castDataById.TryGetValue(key, out List<AbstractCastEvent> res))
+            if (_animatedCastDataById.TryGetValue(key, out List<AnimatedCastEvent> res))
             {
                 return res;
             }
-            return new List<AbstractCastEvent>(); ;
+            return new List<AnimatedCastEvent>(); ;
         }
 
         /// <summary>
@@ -718,7 +744,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<AbstractHealthDamageEvent> GetDamageTakenData(AgentItem key)
+        public IReadOnlyList<AbstractHealthDamageEvent> GetDamageTakenData(AgentItem key)
         {
             if (_damageTakenData.TryGetValue(key, out List<AbstractHealthDamageEvent> res))
             {
@@ -732,7 +758,7 @@ namespace GW2EIEvtcParser.ParsedData
         /// </summary>
         /// <param name="key"></param> Agent
         /// <returns></returns>
-        public List<AbstractBreakbarDamageEvent> GetBreakbarDamageTakenData(AgentItem key)
+        public IReadOnlyList<AbstractBreakbarDamageEvent> GetBreakbarDamageTakenData(AgentItem key)
         {
             if (_breakbarDamageTakenData.TryGetValue(key, out List<AbstractBreakbarDamageEvent> res))
             {
@@ -741,20 +767,20 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<AbstractBreakbarDamageEvent>();
         }
 
-        /*public List<CombatItem> getHealingData()
+        /*public IReadOnlyList<CombatItem> getHealingData()
         {
             return _healingData;
         }
 
-        public List<CombatItem> getHealingReceivedData()
+        public IReadOnlyList<CombatItem> getHealingReceivedData()
         {
             return _healingReceivedData;
         }*/
 
 
-        public List<AbstractMovementEvent> GetMovementData(AgentItem key)
+        public IReadOnlyList<AbstractMovementEvent> GetMovementData(AgentItem key)
         {
-            if (_movementData.TryGetValue(key, out List<AbstractMovementEvent> res))
+            if (_statusEvents.MovementEvents.TryGetValue(key, out List<AbstractMovementEvent> res))
             {
                 return res;
             }
