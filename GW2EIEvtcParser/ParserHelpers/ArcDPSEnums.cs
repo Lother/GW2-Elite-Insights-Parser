@@ -119,6 +119,7 @@ namespace GW2EIEvtcParser
             BreakbarPercent = 35,
             Error = 36,
             Tag = 37,
+            BarrierUpdate = 38,
             Unknown
         };
 
@@ -179,7 +180,7 @@ namespace GW2EIEvtcParser
             CondRec = 17,
             AttackSpeed = 18,
             //
-            Unknown,
+            Unknown = short.MaxValue,
             //
             /*ConditionDurationIncrease = 24,
             RetaliationDamageOutput = 25,
@@ -242,7 +243,7 @@ namespace GW2EIEvtcParser
             Trait = 11,
             Enhancement = 13,
             Stance = 16,
-            Unknown
+            Unknown = byte.MaxValue
         }
         internal static BuffCategory GetBuffCategory(byte bt)
         {
@@ -253,7 +254,7 @@ namespace GW2EIEvtcParser
         {
             EffectHappened = 4,
             AnimationCompleted = 5,
-            Unknown
+            Unknown = byte.MaxValue,
         }
         internal static SkillAction GetSkillAction(byte bt)
         {
@@ -528,7 +529,7 @@ namespace GW2EIEvtcParser
             FearDemon = 23264,
             GuiltDemon = 23252,
             //
-            Unknown
+            Unknown = int.MaxValue,
         };
         public static TrashID GetTrashID(int id)
         {
@@ -592,13 +593,18 @@ namespace GW2EIEvtcParser
             AiKeeperOfThePeak = 23254,
             AiKeeperOfThePeak2 = ArcDPSEnums.AiKeeperOfThePeak2,
             // Golems
-            MassiveGolem = 16202,
+            MassiveGolem10M = 16169,
+            MassiveGolem4M = 16202,
+            MassiveGolem1M = 16178,
+            VitalGolem = 16198,
             AvgGolem = 16177,
+            StdGolem = 16199,
             LGolem = 19676,
             MedGolem = 19645,
-            StdGolem = 16199,
+            ConditionGolem = 16174,
+            PowerGolem = 16176,
             //
-            Unknown
+            Unknown = int.MaxValue,
         };
         public static TargetID GetTargetID(int id)
         {
@@ -646,7 +652,8 @@ namespace GW2EIEvtcParser
                 || state == ArcDPSEnums.StateChange.TeamChange || state == ArcDPSEnums.StateChange.AttackTarget
                 || state == ArcDPSEnums.StateChange.Targetable || state == ArcDPSEnums.StateChange.StackActive
                 || state == ArcDPSEnums.StateChange.StackReset || state == ArcDPSEnums.StateChange.BreakbarState
-                || state == ArcDPSEnums.StateChange.BreakbarPercent;
+                || state == ArcDPSEnums.StateChange.BreakbarPercent || state == ArcDPSEnums.StateChange.Tag 
+                || state == ArcDPSEnums.StateChange.BarrierUpdate;
         }
 
         public static bool DstIsAgent(this ArcDPSEnums.StateChange state)
@@ -667,7 +674,7 @@ namespace GW2EIEvtcParser
                 || state == ArcDPSEnums.StateChange.AttackTarget || state == ArcDPSEnums.StateChange.Targetable
                 || state == ArcDPSEnums.StateChange.StackActive || state == ArcDPSEnums.StateChange.StackReset
                 || state == ArcDPSEnums.StateChange.Reward || state == ArcDPSEnums.StateChange.BreakbarState
-                || state == ArcDPSEnums.StateChange.BreakbarPercent;
+                || state == ArcDPSEnums.StateChange.BreakbarPercent || state == ArcDPSEnums.StateChange.BarrierUpdate;
         }
     }
 

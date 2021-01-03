@@ -73,7 +73,7 @@ namespace GW2EIParser
             builder.AddField("Game Data", "ARC: " + log.LogData.ArcVersion + " | " + "GW2 Build: " + log.LogData.GW2Build);
             //
             builder.WithTitle(log.FightData.GetFightName(log));
-            builder.WithTimestamp(DateTime.Now);
+            //builder.WithTimestamp(DateTime.Now);
             builder.WithAuthor("Elite Insights " + ParserVersion.ToString(), "https://github.com/baaron4/GW2-Elite-Insights-Parser/blob/master/GW2EIParser/Content/LI.png?raw=true", "https://github.com/baaron4/GW2-Elite-Insights-Parser");
             builder.WithFooter(log.LogData.LogStartStd + " / " + log.LogData.LogEndStd);
             builder.WithColor(log.FightData.Success ? Color.Green : Color.Red);
@@ -269,7 +269,7 @@ namespace GW2EIParser
                 foreach (AbstractSingleActor actor in playersAndTargets)
                 {
                     // that part can't be //
-                    actor.ComputeBuffMap(log);
+                    actor.GetTrackedBuffs(log);
                 }
                 if (log.CanCombatReplay)
                 {
