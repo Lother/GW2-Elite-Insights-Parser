@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.EIData.Buff;
 
@@ -345,9 +346,19 @@ namespace GW2EIEvtcParser.EIData
                     {
                         continue;
                     }
-                    AbstractBuffSimulator simulator = buff.CreateSimulator(log);
-                    simulator.Simulate(logs, dur);
-                    simulator.Trim(dur);
+                    AbstractBuffSimulator simulator;
+                    try 
+                    {
+                        simulator = buff.CreateSimulator(log, false);
+                        simulator.Simulate(logs, dur);
+                    }
+                    catch (EIBuffSimulatorIDException)
+                    {
+                        // get rid of logs invalid for HasStackIDs false
+                        logs.RemoveAll(x => !x.IsBuffSimulatorCompliant(log.FightData.FightEnd, false));
+                        simulator = buff.CreateSimulator(log, true);
+                        simulator.Simulate(logs, dur);
+                    }   
                     bool updateBoonPresence = boonIds.Contains(boonid);
                     bool updateCondiPresence = condiIds.Contains(boonid);
                     var graphSegments = new List<Segment>();
