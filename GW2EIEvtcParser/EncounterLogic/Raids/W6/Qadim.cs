@@ -8,9 +8,8 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Qadim : RaidLogic
+    internal class Qadim : MythwrightGambit
     {
-        private int _startOffset = 0;
 
         public Qadim(int triggerID) : base(triggerID)
         {
@@ -65,12 +64,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             Extension = "qadim";
             Icon = "https://wiki.guildwars2.com/images/f/f2/Mini_Qadim.png";
             GenericFallBackMethod = FallBackMethod.CombatExit;
+            EncounterCategoryInformation.InSubCategoryOrder = 2;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/gHq0j79.png",
-                            (3903, 3878),
+            return new CombatReplayMap("https://i.imgur.com/f4jfgiX.png",
+                            (1000, 994),
                             (-11676, 8825, -3870, 16582)/*,
                             (-21504, -21504, 24576, 24576),
                             (13440, 14336, 15360, 16256)*/);
@@ -110,7 +110,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             foreach (AgentItem lamp in lampAgents)
             {
                 lamp.OverrideType(AgentItem.AgentType.NPC);
-                lamp.OverrideID((int)ArcDPSEnums.TrashID.QadimLamp);
+                lamp.OverrideID(ArcDPSEnums.TrashID.QadimLamp);
             }
             bool refresh = lampAgents.Count > 0;
             // Pyres
@@ -122,19 +122,19 @@ namespace GW2EIEvtcParser.EncounterLogic
                     (float x, float y, _) = AbstractMovementEvent.UnpackMovementData(position.DstAgent, 0);
                     if ((Math.Abs(x + 8947) < 10 && Math.Abs(y - 14728) < 10) || (Math.Abs(x + 10834) < 10 && Math.Abs(y - 12477) < 10))
                     {
-                        pyre.OverrideID((int)ArcDPSEnums.TrashID.PyreGuardianProtect);
+                        pyre.OverrideID(ArcDPSEnums.TrashID.PyreGuardianProtect);
                         refresh = true;
                         pyre.OverrideName(pyre.Name.Insert(0, "Protect "));
                     }
                     else if ((Math.Abs(x + 4356) < 10 && Math.Abs(y - 12076) < 10) || (Math.Abs(x + 5889) < 10 && Math.Abs(y - 14723) < 10) || (Math.Abs(x + 7851) < 10 && Math.Abs(y - 13550) < 10))
                     {
-                        pyre.OverrideID((int)ArcDPSEnums.TrashID.PyreGuardianStab);
+                        pyre.OverrideID(ArcDPSEnums.TrashID.PyreGuardianStab);
                         refresh = true;
                         pyre.OverrideName(pyre.Name.Insert(0, "Stab "));
                     }
                     else if ((Math.Abs(x + 8951) < 10 && Math.Abs(y - 9429) < 10) || (Math.Abs(x + 5716) < 10 && Math.Abs(y - 9325) < 10) || (Math.Abs(x + 7846) < 10 && Math.Abs(y - 10612) < 10))
                     {
-                        pyre.OverrideID((int)ArcDPSEnums.TrashID.PyreGuardianRetal);
+                        pyre.OverrideID(ArcDPSEnums.TrashID.PyreGuardianRetal);
                         refresh = true;
                         pyre.OverrideName(pyre.Name.Insert(0, "Retal "));
                     }
@@ -159,15 +159,14 @@ namespace GW2EIEvtcParser.EncounterLogic
             CombatItem sanityCheckCast = combatData.FirstOrDefault(x => (x.SkillID == 52528 || x.SkillID == 52333 || x.SkillID == 58814) && x.IsActivation.StartCasting());
             if (startCast == null || sanityCheckCast == null)
             {
-                return fightData.FightOffset;
+                return fightData.LogStart;
             }
             // sanity check
             if (sanityCheckCast.Time - startCast.Time > 0)
             {
-                _startOffset = -(int)(startCast.Time - fightData.FightOffset);
-                fightData.OverrideOffset(startCast.Time);
+                return startCast.Time;
             }
-            return fightData.FightOffset;
+            return fightData.LogStart;
         }
 
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
@@ -221,7 +220,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                            (int) ArcDPSEnums.TrashID.ApocalypseBringer,
                            (int) ArcDPSEnums.TrashID.QadimLamp
                         };
-                    AddTargetsToPhase(phase, ids, log);
+                    AddTargetsToPhaseAndFit(phase, ids, log);
                     if (phase.Targets.Count > 0)
                     {
                         NPC phaseTar = phase.Targets[0];
@@ -272,7 +271,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             int ccRadius = 200;
             switch (target.ID)
             {
@@ -641,13 +640,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             // Proper skipping of phases (if even possible) is not implemented.
             // Right now transitioning to another state while still moving behaves weirdly.
             // Interpolating to find the position to stop in would be necessary.
-
+            int startOffset = -(int)log.FightData.FightStartOffset;
             (int start, int duration, (int x, int y, int z, double angle, double opacity)[] platforms)[] movements =
             {
                 (
                     // Initial position, all platforms tightly packed
 
-                    _startOffset, 0, new[]
+                    startOffset, 0, new[]
                     {
                         (xLeftLeftLeft, yMid, zDefault, 0.0, 1.0),
                         (xLeftLeft, yUpUp, zDefault, Math.PI, 1.0),
@@ -665,7 +664,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 ),
                 (
                     // Hydra phase, all platforms have a small gap between them
-                    _startOffset, 12000, new[]
+                    startOffset, 12000, new[]
                     {
                         (xGapsLeftLeftLeft, yMid, zDefault, 0.0, 1.0),
                         (xGapsLeftLeft, yGapsUpUp, zDefault, Math.PI, 1.0),

@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Adina : RaidLogic
+    internal class Adina : TheKeyOfAhdashim
     {
         public Adina(int triggerID) : base(triggerID)
         {
@@ -19,11 +19,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                 new HitOnPlayerMechanic(56390, "Perilous Pulse", new MechanicPlotlySetting("triangle-right","rgb(255,150,0)"), "Perilous Pulse", "Perilous Pulse", "Perilous Pulse", 0, (de, log) => !de.To.HasBuff(log, 1122, de.Time)),
                 new HitOnPlayerMechanic(56141, "Stalagmites", new MechanicPlotlySetting("pentagon","rgb(255,0,0)"), "Mines", "Hit by mines", "Mines", 0),
                 new HitOnPlayerMechanic(56114, "Diamond Palisade", new MechanicPlotlySetting("star-diamond","rgb(255,150,0)"), "Eye", "Looked at Eye", "Looked at Eye", 0),
-                new HitOnPlayerMechanic(56035, "Quantum Quake", new MechanicPlotlySetting("hourglass","rgb(120,100,0)"), "S.Thrower", "Hit by rotating SandThrower", "SandThrower", 0),
-                new HitOnPlayerMechanic(56381, "Quantum Quake", new MechanicPlotlySetting("hourglass","rgb(120,100,0)"), "S.Thrower", "Hit by rotating SandThrower", "SandThrower", 0),
+                new SkillOnPlayerMechanic(56035, "Quantum Quake", new MechanicPlotlySetting("hourglass","rgb(120,100,0)"), "S.Thrower", "Hit by rotating SandThrower", "SandThrower", 0, (de, log) => de.HasKilled),
+                new SkillOnPlayerMechanic(56381, "Quantum Quake", new MechanicPlotlySetting("hourglass","rgb(120,100,0)"), "S.Thrower", "Hit by rotating SandThrower", "SandThrower", 0, (de, log) => de.HasKilled),
             });
             Extension = "adina";
             Icon = "https://wiki.guildwars2.com/images/a/a0/Mini_Earth_Djinn.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         internal override void EIEvtcParse(FightData fightData, AgentData agentData, List<CombatItem> combatData, List<Player> playerList)
@@ -129,8 +130,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 }
             }
             var mainPhases = new List<PhaseData>();
-            var quantumQuakes = mainTarget.GetCastLogs(log, 0, log.FightData.FightEnd).Where(x => x.SkillId == 56035 || x.SkillId == 56381).ToList();
-            AbstractCastEvent boulderBarrage = mainTarget.GetCastLogs(log, 0, log.FightData.FightEnd).FirstOrDefault(x => x.SkillId == 56648 && x.Time < 6000);
+            var quantumQuakes = mainTarget.GetCastEvents(log, 0, log.FightData.FightEnd).Where(x => x.SkillId == 56035 || x.SkillId == 56381).ToList();
+            AbstractCastEvent boulderBarrage = mainTarget.GetCastEvents(log, 0, log.FightData.FightEnd).FirstOrDefault(x => x.SkillId == 56648 && x.Time < 6000);
             start = boulderBarrage == null ? 0 : boulderBarrage.EndTime;
             end = 0;
             if (phases.Count > 1)
@@ -141,7 +142,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     end = qQ.Time;
                     mainPhases.Add(new PhaseData(start, end, "Phase " + i));
                     PhaseData split = phases[i];
-                    AddTargetsToPhase(split, new List<int> { (int)ArcDPSEnums.TrashID.HandOfErosion, (int)ArcDPSEnums.TrashID.HandOfEruption }, log);
+                    AddTargetsToPhaseAndFit(split, new List<int> { (int)ArcDPSEnums.TrashID.HandOfErosion, (int)ArcDPSEnums.TrashID.HandOfEruption }, log);
                     start = split.End;
                     if (i == phases.Count - 1 && start != log.FightData.FightEnd)
                     {
@@ -162,21 +163,21 @@ namespace GW2EIEvtcParser.EncounterLogic
             phases.AddRange(mainPhases);
             phases.Sort((x, y) => x.Start.CompareTo(y.Start));
             GetCombatMap(log).MatchMapsToPhases(new List<string> {
-                "https://i.imgur.com/3IBkNM6.png",
-                "https://i.imgur.com/iMrhTt6.png",
-                "https://i.imgur.com/zaZftSk.png",
-                "https://i.imgur.com/KkYdspd.png",
-                "https://i.imgur.com/wqgFO7Z.png",
-                "https://i.imgur.com/DroFhFc.png",
-                "https://i.imgur.com/QsEFkNO.png"
+                "https://i.imgur.com/IQn2RJV.png",
+                "https://i.imgur.com/gJ55jKy.png",
+                "https://i.imgur.com/3pO7eCB.png",
+                "https://i.imgur.com/c2Oz5bj.png",
+                "https://i.imgur.com/ZFw590w.png",
+                "https://i.imgur.com/P4SGbrc.png",
+                "https://i.imgur.com/2P7UE8q.png"
             }, phases, log.FightData.FightEnd);
             return phases;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/3IBkNM6.png",
-                            (1436, 1659),
+            return new CombatReplayMap("https://i.imgur.com/IQn2RJV.png",
+                            (866, 1000),
                             (13840, -2698, 15971, -248)/*,
                             (-21504, -21504, 24576, 24576),
                             (33530, 34050, 35450, 35970)*/);

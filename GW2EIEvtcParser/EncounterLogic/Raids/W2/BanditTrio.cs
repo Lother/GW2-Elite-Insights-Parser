@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class BanditTrio : RaidLogic
+    internal class BanditTrio : SalvationPass
     {
         public BanditTrio(int triggerID) : base(triggerID)
         {
@@ -21,6 +21,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             Extension = "trio";
             GenericFallBackMethod = FallBackMethod.None;
             Icon = "https://i.imgur.com/UZZQUdf.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 2;
         }
 
         protected override List<int> GetSuccessCheckIds()
@@ -43,8 +44,8 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/cVuaOc5.png",
-                            (2494, 2277),
+            return new CombatReplayMap("https://i.imgur.com/dDvhEOP.png",
+                            (1000, 913),
                             (-2900, -12251, 2561, -7265)/*,
                             (-12288, -27648, 12288, 27648),
                             (2688, 11906, 3712, 14210)*/);
@@ -170,7 +171,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Berg:

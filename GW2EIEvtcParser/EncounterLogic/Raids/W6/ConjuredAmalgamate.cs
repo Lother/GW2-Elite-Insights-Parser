@@ -6,7 +6,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class ConjuredAmalgamate : RaidLogic
+    internal class ConjuredAmalgamate : MythwrightGambit
     {
         public ConjuredAmalgamate(int triggerID) : base(triggerID)
         {
@@ -30,12 +30,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             Extension = "ca";
             GenericFallBackMethod = FallBackMethod.None;
             Icon = "https://i.imgur.com/eLyIWd2.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/9PJB5Ky.png",
-                            (1414, 2601),
+            return new CombatReplayMap("https://i.imgur.com/lgzr1xD.png",
+                            (544, 1000),
                             (-5064, -15030, -2864, -10830)/*,
                             (-21504, -21504, 24576, 24576),
                             (13440, 14336, 15360, 16256)*/);
@@ -292,7 +293,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(Player p, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = p.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = p.GetCastEvents(log, 0, log.FightData.FightEnd);
             var shieldCast = cls.Where(x => x.SkillId == 52780).ToList();
             foreach (AbstractCastEvent c in shieldCast)
             {

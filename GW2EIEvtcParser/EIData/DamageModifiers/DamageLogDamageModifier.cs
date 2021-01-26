@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.ParsedData;
+using static GW2EIEvtcParser.ParserHelper;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -19,7 +20,7 @@ namespace GW2EIEvtcParser.EIData
         {
             IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
             double gain = GainComputer.ComputeGain(GainPerStack, 1);
-            if (!p.GetHitDamageLogs(null, log, phases[0]).Any(x => DLChecker(x)))
+            if (!p.GetHitDamageEvents(null, log, phases[0].Start, phases[0].End).Any(x => DLChecker(x)))
             {
                 return;
             }
@@ -33,10 +34,10 @@ namespace GW2EIEvtcParser.EIData
                 if (!dict.TryGetValue(Name, out List<DamageModifierStat> list))
                 {
                     var extraDataList = new List<DamageModifierStat>();
-                    for (int i = 0; i < phases.Count; i++)
+                    foreach (PhaseData phase in phases)
                     {
-                        int totalDamage = GetTotalDamage(p, log, target, i);
-                        IReadOnlyList<AbstractHealthDamageEvent> typeHits = GetHitDamageLogs(p, log, target, phases[i]);
+                        int totalDamage = GetTotalDamage(p, log, target, phase.Start, phase.End);
+                        IReadOnlyList<AbstractHealthDamageEvent> typeHits = GetHitDamageEvents(p, log, target, phase.Start, phase.End);
                         var effect = typeHits.Where(x => DLChecker(x)).ToList();
                         extraDataList.Add(new DamageModifierStat(effect.Count, typeHits.Count, gain * effect.Sum(x => x.HealthDamage), totalDamage));
                     }
@@ -44,10 +45,10 @@ namespace GW2EIEvtcParser.EIData
                 }
             }
             data[Name] = new List<DamageModifierStat>();
-            for (int i = 0; i < phases.Count; i++)
+            foreach (PhaseData phase in phases)
             {
-                int totalDamage = GetTotalDamage(p, log, null, i);
-                IReadOnlyList<AbstractHealthDamageEvent> typeHits = GetHitDamageLogs(p, log, null, phases[i]);
+                int totalDamage = GetTotalDamage(p, log, null, phase.Start, phase.End);
+                IReadOnlyList<AbstractHealthDamageEvent> typeHits = GetHitDamageEvents(p, log, null, phase.Start, phase.End);
                 var effect = typeHits.Where(x => DLChecker(x)).ToList();
                 data[Name].Add(new DamageModifierStat(effect.Count, typeHits.Count, gain * effect.Sum(x => x.HealthDamage), totalDamage));
             }

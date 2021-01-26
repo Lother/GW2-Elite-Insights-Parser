@@ -31,6 +31,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "mama";
             Icon = "https://i.imgur.com/9URW7wh.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
@@ -72,7 +73,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                        (int) ArcDPSEnums.TrashID.RedKnight,
                        (int) ArcDPSEnums.TrashID.BlueKnight,
                     };
-                    AddTargetsToPhase(phase, ids, log);
+                    AddTargetsToPhaseAndFit(phase, ids, log);
                     if (phase.Targets.Count > 0)
                     {
                         NPC phaseTar = phase.Targets[0];

@@ -27,6 +27,9 @@ namespace GW2EIEvtcParser.EncounterLogic
         public bool Targetless { get; protected set; } = false;
         protected int GenericTriggerID { get; }
 
+        public EncounterCategory EncounterCategoryInformation { get; protected set; }
+
+
         protected FightLogic(int triggerID)
         {
             GenericTriggerID = triggerID;
@@ -39,6 +42,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 new PlayerStatusMechanic(SkillItem.RespawnId, "Respawn", new MechanicPlotlySetting("cross","rgb(120,120,255)"), "Resp",0)
             };
             _basicMechanicsCount = MechanicList.Count;
+            EncounterCategoryInformation = new EncounterCategory();
         }
 
         // Only used for CSV files
@@ -281,7 +285,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             return new List<ErrorEvent>();
         }
 
-        protected void AddTargetsToPhase(PhaseData phase, List<int> ids, ParsedEvtcLog log)
+        protected void AddTargetsToPhaseAndFit(PhaseData phase, List<int> ids, ParsedEvtcLog log)
         {
             foreach (NPC target in Targets)
             {
@@ -480,7 +484,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal virtual long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
-            return fightData.FightOffset;
+            return fightData.LogStart;
         }
 
         internal virtual void EIEvtcParse(FightData fightData, AgentData agentData, List<CombatItem> combatData, List<Player> playerList)

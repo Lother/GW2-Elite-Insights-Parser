@@ -4,6 +4,7 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -74,6 +75,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "ai";
             Icon = "https://i.imgur.com/3mlCdI9.png";
+            EncounterCategoryInformation.SubCategory = SubFightCategory.SunquaPeak;
         }
 
         internal override string GetLogicName(ParsedEvtcLog log)
@@ -94,9 +96,9 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            var width = 1334;
-            var height = 1621;
-            return new CombatReplayMap("https://i.imgur.com/ARht2dC.png",
+            var width = 823;
+            var height = 1000;
+            return new CombatReplayMap("https://i.imgur.com/zSBL7YP.png",
                             (width, height),
                             CombatReplayMap.ComputeSimpleMapRect(width, height, 6245, 739, 0.5, 0.5 * width / height, 2.25));
         }
@@ -209,7 +211,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     Extension = "drkai";
                     aiAgent.OverrideName("Dark Ai");
-                    aiAgent.OverrideID((int)ArcDPSEnums.TargetID.AiKeeperOfThePeak2);
+                    aiAgent.OverrideID(ArcDPSEnums.TargetID.AiKeeperOfThePeak2);
                     agentData.Refresh();
                 }
             }
@@ -293,7 +295,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         subPhase.AddTarget(elementalAi);
                         phases.Add(subPhase);
                         long invul762Loss = invul762Losses[i].Time;
-                        AbstractCastEvent castEvt = elementalAi.GetCastLogs(log, eleStart, eleEnd).FirstOrDefault(x => x.SkillId == 61385 && x.Time >= invul762Loss);
+                        AbstractCastEvent castEvt = elementalAi.GetCastEvents(log, eleStart, eleEnd).FirstOrDefault(x => x.SkillId == 61385 && x.Time >= invul762Loss);
                         if (castEvt == null)
                         {
                             break;
@@ -322,13 +324,13 @@ namespace GW2EIEvtcParser.EncounterLogic
                     phases.Add(darkPhase);
                 }
                 // sub phases
-                AbstractCastEvent fearToSorrow = darkAi.GetCastLogs(log, darkStart, darkEnd).FirstOrDefault(x => x.SkillId == 61606);
+                AbstractCastEvent fearToSorrow = darkAi.GetCastEvents(log, darkStart, darkEnd).FirstOrDefault(x => x.SkillId == 61606);
                 if (fearToSorrow != null)
                 {
                     var fearPhase = new PhaseData(darkStart + 1, fearToSorrow.Time, "Fear");
                     fearPhase.AddTarget(darkAi);
                     phases.Add(fearPhase);
-                    AbstractCastEvent sorrowToGuilt = darkAi.GetCastLogs(log, darkStart, darkEnd).FirstOrDefault(x => x.SkillId == 61602);
+                    AbstractCastEvent sorrowToGuilt = darkAi.GetCastEvents(log, darkStart, darkEnd).FirstOrDefault(x => x.SkillId == 61602);
                     if (sorrowToGuilt != null)
                     {
                         var sorrowPhase = new PhaseData(fearToSorrow.Time + 1, sorrowToGuilt.Time, "Sorrow");

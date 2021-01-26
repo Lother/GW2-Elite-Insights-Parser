@@ -3,6 +3,7 @@
     public abstract class AbstractDamageEvent : AbstractTimeCombatEvent
     {
         public AgentItem From { get; }
+        public AgentItem CreditedFrom => From.GetFinalMaster();
         public AgentItem To { get; }
 
         public SkillItem Skill { get; }
@@ -27,6 +28,6 @@
             IFF = evtcItem.IFF;
         }
 
-        public abstract bool IsCondi(ParsedEvtcLog log);
+        public abstract bool ConditionDamageBased(ParsedEvtcLog log);
     }
 }

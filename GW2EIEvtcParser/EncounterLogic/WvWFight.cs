@@ -3,6 +3,7 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -17,6 +18,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             _detailed = detailed;
             Extension = _detailed ? "detailed_wvw" : "wvw";
             _defaultName = _detailed ? "Detailed WvW" : "World vs World";
+            EncounterCategoryInformation.Category = FightCategory.WvW;
         }
 
         protected override HashSet<int> GetUniqueTargetIDs()
@@ -61,15 +63,17 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 // EB 8958, 12798, 12030, 15870
                 case 38:
-                    return new CombatReplayMap("https://i.imgur.com/7DnLZ7G.png", (3100, 3250), (-35364, -37800, 36864, 41000)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
+                    //return new CombatReplayMap("https://i.imgur.com/7DnLZ7G.png", (3100, 3250), (-35364, -37800, 36864, 41000)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
+                    return new CombatReplayMap("https://i.imgur.com/t0khtQd.png", (954, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
+                // Green Alpine
                 case 95:
-                    return new CombatReplayMap("https://i.imgur.com/s4wMYgZ.png", (2492, 3574), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (5630, 11518, 8190, 15102)*/);
+                    return new CombatReplayMap("https://i.imgur.com/nVu2ivF.png", (697, 1000), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (5630, 11518, 8190, 15102)*/);
                 // Blue Alpine
                 case 96:
-                    return new CombatReplayMap("https://i.imgur.com/s4wMYgZ.png", (2492, 3574), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (12798, 10878, 15358, 14462)*/);
+                    return new CombatReplayMap("https://i.imgur.com/nVu2ivF.png", (697, 1000), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (12798, 10878, 15358, 14462)*/);
                 // Red Desert
                 case 1099:
-                    return new CombatReplayMap("https://i.imgur.com/IbXfEwV.jpg", (3200, 3200), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (9214, 8958, 12286, 12030)*/);
+                    return new CombatReplayMap("https://i.imgur.com/R5p9fqw.png", (1000, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (9214, 8958, 12286, 12030)*/);
             }
             return base.GetCombatMapInternal(log);
         }
@@ -83,16 +87,22 @@ namespace GW2EIEvtcParser.EncounterLogic
             switch (mapID.MapID)
             {
                 case 38:
+                    EncounterCategoryInformation.SubCategory = SubFightCategory.EternalBattlegrounds;
                     return _defaultName + " - Eternal Battlegrounds";
                 case 95:
+                    EncounterCategoryInformation.SubCategory = SubFightCategory.GreenAlpineBorderlands;
                     return _defaultName + " - Green Alpine Borderlands";
                 case 96:
+                    EncounterCategoryInformation.SubCategory = SubFightCategory.BlueAlpineBorderlands;
                     return _defaultName + " - Blue Alpine Borderlands";
                 case 1099:
+                    EncounterCategoryInformation.SubCategory = SubFightCategory.RedDesertBorderlands;
                     return _defaultName + " - Red Desert Borderlands";
                 case 899:
+                    EncounterCategoryInformation.SubCategory = SubFightCategory.ObsidianSanctum;
                     return _defaultName + " - Obsidian Sanctum";
                 case 968:
+                    EncounterCategoryInformation.SubCategory = SubFightCategory.EdgeOfTheMists;
                     return _defaultName + " - Edge of the Mists";
             }
             return _defaultName;

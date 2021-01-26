@@ -6,7 +6,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Sabir : RaidLogic
+    internal class Sabir : TheKeyOfAhdashim
     {
         public Sabir(int triggerID) : base(triggerID)
         {
@@ -25,6 +25,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             // interesting stuff 56372 (big AoE?)
             Extension = "sabir";
             Icon = "https://wiki.guildwars2.com/images/f/fc/Mini_Air_Djinn.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         protected override List<ArcDPSEnums.TrashID> GetTrashMobsIDS()
@@ -58,7 +59,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 return phases;
             }
-            IReadOnlyList<AbstractCastEvent> cls = mainTarget.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = mainTarget.GetCastEvents(log, 0, log.FightData.FightEnd);
             var wallopingWinds = cls.Where(x => x.SkillId == 56094).ToList();
             long start = 0, end = 0;
             for (int i = 0; i < wallopingWinds.Count; i++)
@@ -87,8 +88,8 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/zs9yPuG.png",
-                            (4365, 3972),
+            return new CombatReplayMap("https://i.imgur.com/wesgoc6.png",
+                            (1000, 910),
                             (-14122, 142, -9199, 4640)/*,
                             (-21504, -21504, 24576, 24576),
                             (33530, 34050, 35450, 35970)*/);
@@ -114,6 +115,17 @@ namespace GW2EIEvtcParser.EncounterLogic
                     break;
 
             }
+        }
+        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        {
+            // Find target
+            AgentItem target = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Sabir).FirstOrDefault();
+            if (target == null)
+            {
+                throw new MissingKeyActorsException("Sabir not found");
+            }
+            CombatItem enterCombat = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.EnterCombat && x.SrcAgent == target.Agent);
+            return enterCombat != null ? enterCombat.Time : fightData.LogStart;
         }
 
         internal override FightData.CMStatus IsCM(CombatData combatData, AgentData agentData, FightData fightData)

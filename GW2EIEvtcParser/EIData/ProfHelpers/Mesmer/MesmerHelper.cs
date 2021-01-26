@@ -5,6 +5,7 @@ using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.EIData.Buff;
 using static GW2EIEvtcParser.EIData.DamageModifier;
+using static GW2EIEvtcParser.ParserHelper;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -18,7 +19,7 @@ namespace GW2EIEvtcParser.EIData
                                     x is BuffApplyEvent bae &&
                                     bae.BuffID == 13017 &&
                                     Math.Abs(bae.AppliedDuration - 2000) <= ParserHelper.ServerDelayConstant &&
-                                    bae.By == brae.To &&
+                                    bae.CreditedBy == brae.To &&
                                     Math.Abs(brae.Time - bae.Time) <= ParserHelper.ServerDelayConstant
                                  );
                 }

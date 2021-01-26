@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Sabetha : RaidLogic
+    internal class Sabetha : SpiritVale
     {
         public Sabetha(int triggerID) : base(triggerID)
         {
@@ -38,7 +38,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     return true;
                }
             }),*/
-            new HitOnPlayerMechanic(31332, "Firestorm", new MechanicPlotlySetting("square","rgb(255,0,0)"), "Flamewall","Firestorm (killed by Flamewall)", "Flamewall",0),
+            new SkillOnPlayerMechanic(31332, "Firestorm", new MechanicPlotlySetting("square","rgb(255,0,0)"), "Flamewall","Firestorm (killed by Flamewall)", "Flamewall",0, (de, log) => de.HasKilled),
             new HitOnPlayerMechanic(31544, "Flak Shot", new MechanicPlotlySetting("hexagram-open","rgb(255,140,0)"), "Flak","Flak Shot (Fire Patches)", "Flak Shot",0),
             new HitOnPlayerMechanic(31643, "Cannon Barrage", new MechanicPlotlySetting("circle","rgb(255,200,0)"), "Cannon","Cannon Barrage (stood in AoE)", "Cannon Shot",0),
             new HitOnPlayerMechanic(31761, "Flame Blast", new MechanicPlotlySetting("triangle-left-open","rgb(255,200,0)"), "Karde Flame","Flame Blast (Karde's Flamethrower)", "Flamethrower (Karde)",0),
@@ -50,12 +50,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "sab";
             Icon = "https://wiki.guildwars2.com/images/5/54/Mini_Sabetha.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 2;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/FwpMbYf.png",
-                            (2790, 2763),
+            return new CombatReplayMap("https://i.imgur.com/HXjxqlu.png",
+                            (1000, 990),
                             (-8587, -162, -1601, 6753)/*,
                             (-15360, -36864, 15360, 39936),
                             (3456, 11012, 4736, 14212)*/);
@@ -87,7 +88,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 PhaseData phase = phases[i];
                 if (i % 2 == 0)
                 {
-                    AddTargetsToPhase(phase, ids, log);
+                    AddTargetsToPhaseAndFit(phase, ids, log);
                     if (phase.Targets.Count > 0)
                     {
                         NPC phaseTar = phase.Targets[0];
@@ -112,7 +113,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     phase.Name = "Phase " + (i + 1) / 2;
                     phase.AddTarget(mainTarget);
-                    AddTargetsToPhase(phase, ids, log);
+                    AddTargetsToPhaseAndFit(phase, ids, log);
                 }
             }
             return phases;
@@ -131,7 +132,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Sabetha:

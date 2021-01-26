@@ -6,7 +6,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class TwistedCastle : RaidLogic
+    internal class TwistedCastle : StrongholdOfTheFaithful
     {
         public TwistedCastle(int triggerID) : base(triggerID)
         {
@@ -23,12 +23,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             GenericFallBackMethod = FallBackMethod.None;
             Targetless = true;
             Icon = "https://i.imgur.com/xpQnu35.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 2;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/2RkzdmL.png",
-                            (1353, 1748),
+            return new CombatReplayMap("https://i.imgur.com/txFtRNN.png",
+                            (774, 1000),
                             (-8058, -4321, 819, 7143)/*,
                             (-12288, -27648, 12288, 27648),
                             (1920, 12160, 2944, 14464)*/);

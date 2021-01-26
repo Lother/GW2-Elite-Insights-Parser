@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class PeerlessQadim : RaidLogic
+    internal class PeerlessQadim : TheKeyOfAhdashim
     {
         public PeerlessQadim(int triggerID) : base(triggerID)
         {
@@ -32,6 +32,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "prlqadim";
             Icon = "https://wiki.guildwars2.com/images/8/8b/Mini_Qadim_the_Peerless.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 1;
         }
 
         protected override List<ArcDPSEnums.TrashID> GetTrashMobsIDS()
@@ -60,8 +61,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                         AbstractBuffEvent ba = pair.Value.LastOrDefault(x => x is BuffApplyEvent && Math.Abs(x.Time - sglRemoval.Time) < 5);
                         if (ba != null)
                         {
-                            res.Add(new BuffRemoveAllEvent(sglRemoval.By, pair.Key, ba.Time - 1, int.MaxValue, ba.BuffSkill, 0, int.MaxValue));
-                            res.Add(new BuffRemoveManualEvent(sglRemoval.By, pair.Key, ba.Time - 1, int.MaxValue, ba.BuffSkill));
+                            res.Add(new BuffRemoveAllEvent(sglRemoval.CreditedBy, pair.Key, ba.Time - 1, int.MaxValue, ba.BuffSkill, 0, int.MaxValue));
+                            res.Add(new BuffRemoveManualEvent(sglRemoval.CreditedBy, pair.Key, ba.Time - 1, int.MaxValue, ba.BuffSkill));
                         }
                     }
                 }
@@ -135,8 +136,8 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/PgkZMYE.png",
-                            (6822, 6822),
+            return new CombatReplayMap("https://i.imgur.com/Q5R4R6q.png",
+                            (1000, 1000),
                             (-968, 7480, 4226, 12676)/*,
                             (-21504, -21504, 24576, 24576),
                             (33530, 34050, 35450, 35970)*/);
@@ -144,7 +145,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             int start = (int)replay.TimeOffsets.start;
             int end = (int)replay.TimeOffsets.end;
             switch (target.ID)
@@ -174,7 +175,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             NPC qadim = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.PeerlessQadim);
                             surgeStart = (int)c.Time;
-                            source = (AbstractSingleActor)log.PlayerList.FirstOrDefault(x => x.AgentItem == c.By) ?? qadim;
+                            source = (AbstractSingleActor)log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy) ?? qadim;
                         }
                         else
                         {
@@ -255,7 +256,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     NPC qadim = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.PeerlessQadim);
                     surgeStart = (int)c.Time;
-                    source = (AbstractSingleActor)log.PlayerList.FirstOrDefault(x => x.AgentItem == c.By) ?? qadim;
+                    source = (AbstractSingleActor)log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy) ?? qadim;
                 }
                 else
                 {
@@ -276,7 +277,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     kinStart = (int)c.Time;
                     //kinSource = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.By);
-                    kinSource = (AbstractSingleActor)log.PlayerList.FirstOrDefault(x => x.AgentItem == c.By) ?? TrashMobs.FirstOrDefault(x => x.AgentItem == c.By);
+                    kinSource = (AbstractSingleActor)log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy) ?? TrashMobs.FirstOrDefault(x => x.AgentItem == c.CreditedBy);
                 }
                 else
                 {

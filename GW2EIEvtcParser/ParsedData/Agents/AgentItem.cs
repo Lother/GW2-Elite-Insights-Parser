@@ -93,6 +93,7 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal AgentItem()
         {
+            UniqueID = AgentCount++;
         }
 
         internal void OverrideType(AgentType type)
@@ -108,6 +109,16 @@ namespace GW2EIEvtcParser.ParsedData
         internal void OverrideID(int id)
         {
             ID = id;
+        }
+
+        internal void OverrideID(ArcDPSEnums.TrashID id)
+        {
+            ID = (int)id;
+        }
+
+        internal void OverrideID(ArcDPSEnums.TargetID id)
+        {
+            ID = (int)id;
         }
 
         internal void OverrideName(string name)

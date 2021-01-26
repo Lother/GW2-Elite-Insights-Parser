@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Dhuum : RaidLogic
+    internal class Dhuum : HallOfChains
     {
         private bool _isBugged;
         private short _reapersSeen;
@@ -41,12 +41,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "dhuum";
             Icon = "https://wiki.guildwars2.com/images/e/e4/Mini_Dhuum.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 3;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/CLTwWBJ.png",
-                            (3763, 3383),
+            return new CombatReplayMap("https://i.imgur.com/7tEZYPd.png",
+                            (1000, 899),
                             (13524, -1334, 18039, 2735)/*,
                             (-21504, -12288, 24576, 12288),
                             (19072, 15484, 20992, 16508)*/);
@@ -75,7 +76,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         private static List<PhaseData> GetInBetweenSoulSplits(ParsedEvtcLog log, NPC dhuum, long mainStart, long mainEnd, bool hasRitual)
         {
-            IReadOnlyList<AbstractCastEvent> cls = dhuum.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = dhuum.GetCastEvents(log, 0, log.FightData.FightEnd);
             var cataCycles = cls.Where(x => x.SkillId == 48398).ToList();
             var gDeathmarks = cls.Where(x => x.SkillId == 48210).ToList();
             if (gDeathmarks.Count < cataCycles.Count)
@@ -119,8 +120,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 return phases;
             }
             // Sometimes the pre event is not in the evtc
-            IReadOnlyList<AbstractCastEvent> castLogs = dhuum.GetCastLogs(log, 0, log.FightData.FightEnd);
-            IReadOnlyList<AbstractCastEvent> dhuumCast = dhuum.GetCastLogs(log, 0, 20000);
+            IReadOnlyList<AbstractCastEvent> castLogs = dhuum.GetCastEvents(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> dhuumCast = dhuum.GetCastEvents(log, 0, 20000);
             if (dhuumCast.Count > 0)
             {
                 // full fight does not contain the pre event
@@ -179,7 +180,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
             // TODO: correct position
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             int start = (int)replay.TimeOffsets.start;
             int end = (int)replay.TimeOffsets.end;
             switch (target.ID)
@@ -362,7 +363,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 if (c is BuffApplyEvent)
                 {
                     shacklesStart = (int)c.Time;
-                    shacklesTarget = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.By);
+                    shacklesTarget = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy);
                 }
                 else
                 {
@@ -384,7 +385,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 if (c is BuffApplyEvent)
                 {
                     shacklesDmgStart = (int)c.Time;
-                    shacklesDmgTarget = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.By);
+                    shacklesDmgTarget = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy);
                 }
                 else
                 {

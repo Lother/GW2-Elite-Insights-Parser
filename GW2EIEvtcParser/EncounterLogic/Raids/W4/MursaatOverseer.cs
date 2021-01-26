@@ -6,7 +6,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class MursaatOverseer : RaidLogic
+    internal class MursaatOverseer : BastionOfThePenitent
     {
         public MursaatOverseer(int triggerID) : base(triggerID)
         {
@@ -24,6 +24,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "mo";
             Icon = "https://wiki.guildwars2.com/images/c/c8/Mini_Mursaat_Overseer.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 1;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
@@ -71,7 +72,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TrashID.Jade:

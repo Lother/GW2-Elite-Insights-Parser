@@ -35,12 +35,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "skorv";
             Icon = "https://i.imgur.com/B1nhJ9m.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/PO3aoJD.png",
-                            (1759, 1783),
+            return new CombatReplayMap("https://i.imgur.com/EhblRgb.png",
+                            (987, 1000),
                             (-22267, 14955, -17227, 20735)/*,
                             (-24576, -24576, 24576, 24576),
                             (11204, 4414, 13252, 6462)*/);

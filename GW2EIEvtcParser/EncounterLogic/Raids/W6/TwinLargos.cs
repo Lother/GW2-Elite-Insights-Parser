@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class TwinLargos : RaidLogic
+    internal class TwinLargos : MythwrightGambit
     {
         public TwinLargos(int triggerID) : base(triggerID)
         {
@@ -31,12 +31,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "twinlargos";
             Icon = "https://i.imgur.com/6O5MT7v.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 1;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/JOoJRXM.png",
-                            (3205, 4191),
+            return new CombatReplayMap("https://i.imgur.com/O8wIWds.png",
+                            (765, 1000),
                             (10846, -3878, 18086, 5622)/*,
                             (-21504, -21504, 24576, 24576),
                             (13440, 14336, 15360, 16256)*/);
@@ -46,8 +47,8 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<int>
             {
-                (int)ArcDPSEnums.TargetID.Kenut,
-                (int)ArcDPSEnums.TargetID.Nikare
+                (int)ArcDPSEnums.TargetID.Nikare,
+                (int)ArcDPSEnums.TargetID.Kenut
             };
         }
 
@@ -216,7 +217,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Nikare:

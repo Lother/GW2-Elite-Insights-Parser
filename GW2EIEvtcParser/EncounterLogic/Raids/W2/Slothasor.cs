@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Slothasor : RaidLogic
+    internal class Slothasor : SalvationPass
     {
         public Slothasor(int triggerID) : base(triggerID)
         {
@@ -30,12 +30,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "sloth";
             Icon = "https://wiki.guildwars2.com/images/e/ed/Mini_Slubling.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/PaKMZ8Z.png",
-                            (1688, 2581),
+            return new CombatReplayMap("https://i.imgur.com/pChxnuf.png",
+                            (654, 1000),
                             (5822, -3491, 9549, 2205)/*,
                             (-12288, -27648, 12288, 27648),
                             (2688, 11906, 3712, 14210)*/);
@@ -66,7 +67,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 return phases;
             }
-            var sleepy = mainTarget.GetCastLogs(log, 0, log.FightData.FightEnd).Where(x => x.SkillId == 34515).ToList();
+            var sleepy = mainTarget.GetCastEvents(log, 0, log.FightData.FightEnd).Where(x => x.SkillId == 34515).ToList();
             long start = 0;
             int i = 1;
             foreach (AbstractCastEvent c in sleepy)
@@ -84,7 +85,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Slothasor:

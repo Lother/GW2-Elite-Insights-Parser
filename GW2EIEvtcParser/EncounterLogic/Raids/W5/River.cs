@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class River : RaidLogic
+    internal class River : HallOfChains
     {
         public River(int triggerID) : base(triggerID)
         {
@@ -20,12 +20,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             GenericFallBackMethod = FallBackMethod.None;
             Extension = "river";
             Icon = "https://wiki.guildwars2.com/images/thumb/7/7b/Gold_River_of_Souls_Trophy.jpg/220px-Gold_River_of_Souls_Trophy.jpg";
+            EncounterCategoryInformation.InSubCategoryOrder = 1;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/YBtiFnH.png",
-                            (4145, 1603),
+            return new CombatReplayMap("https://i.imgur.com/BMqQKqb.png",
+                            (1000, 387),
                             (-12201, -4866, 7742, 2851)/*,
                             (-21504, -12288, 24576, 12288),
                             (19072, 15484, 20992, 16508)*/);
@@ -123,7 +124,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TrashID.HollowedBomber:
-                    var bomberman = target.GetCastLogs(log, 0, log.FightData.FightEnd).Where(x => x.SkillId == 48272).ToList();
+                    var bomberman = target.GetCastEvents(log, 0, log.FightData.FightEnd).Where(x => x.SkillId == 48272).ToList();
                     foreach (AbstractCastEvent bomb in bomberman)
                     {
                         int startCast = (int)bomb.Time;

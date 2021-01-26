@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser
@@ -10,10 +8,7 @@ namespace GW2EIEvtcParser
     public static class ParserHelper
     {
 
-        internal static AgentItem _unknownAgent = new AgentItem();
-        // use this for "null" in AbstractActor dictionaries
-        internal static NPC _nullActor = new NPC(_unknownAgent);
-
+        internal static readonly AgentItem _unknownAgent = new AgentItem();
 
         internal const int PollingRate = 150;
 
@@ -47,6 +42,9 @@ namespace GW2EIEvtcParser
             FractalInstability,
             Unknown
         };
+
+        public enum DamageType { All, Power, Condition };
+        public enum BuffEnum { Self, Group, OffGroup, Squad };
 
         internal static T MaxBy<T, TComparable>(this IEnumerable<T> en, Func<T, TComparable> evaluate) where TComparable : IComparable<TComparable>
         {
@@ -419,6 +417,10 @@ namespace GW2EIEvtcParser
                     return "https://i.imgur.com/ck2IsoS.png";
                 case ArcDPSEnums.TrashID.GamblerClones:
                     return "https://i.imgur.com/zMsBWEx.png";
+                case ArcDPSEnums.TrashID.BloodstoneFragment:
+                case ArcDPSEnums.TrashID.ChargedBloodstone:
+                    return "https://i.imgur.com/PZ2VNAN.png";
+                case ArcDPSEnums.TrashID.BloodstoneShard:
                 case ArcDPSEnums.TrashID.GamblerReal:
                     return "https://i.imgur.com/J6oMITN.png";
                 case ArcDPSEnums.TrashID.Pride:

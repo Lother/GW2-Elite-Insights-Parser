@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Deimos : RaidLogic
+    internal class Deimos : BastionOfThePenitent
     {
 
         private long _deimos10PercentTime = 0;
@@ -48,12 +48,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             Extension = "dei";
             GenericFallBackMethod = FallBackMethod.None;
             Icon = "https://wiki.guildwars2.com/images/e/e0/Mini_Ragged_White_Mantle_Figurehead.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 3;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/GCwOVVE.png",
-                            (4400, 5753),
+            return new CombatReplayMap("https://i.imgur.com/FFs9cFq.png",
+                            (765, 1000),
                             (-9542, 1932, -7004, 5250)/*,
                             (-27648, -9216, 27648, 12288),
                             (11774, 4480, 14078, 5376)*/);
@@ -217,19 +218,18 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             IReadOnlyList<AgentItem> deimosAgents = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Deimos);
-            long offset = fightData.FightOffset;
+            long start = fightData.LogStart;
             foreach (AgentItem deimos in deimosAgents)
             {
                 // enter combat
                 CombatItem enterCombat = combatData.FirstOrDefault(x => x.SrcAgent == deimos.Agent && x.IsStateChange == ArcDPSEnums.StateChange.EnterCombat);
                 if (enterCombat != null)
                 {
-                    offset = Math.Max(offset, enterCombat.Time);
+                    start = Math.Max(start, enterCombat.Time);
 
                 }
             }
-            fightData.OverrideOffset(offset);
-            return fightData.FightOffset;
+            return start;
         }
 
         internal override void EIEvtcParse(FightData fightData, AgentData agentData, List<CombatItem> combatData, List<Player> playerList)
@@ -383,7 +383,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             int start = (int)replay.TimeOffsets.start;
             int end = (int)replay.TimeOffsets.end;
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Deimos:

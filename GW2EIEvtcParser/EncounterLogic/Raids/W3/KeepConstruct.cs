@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class KeepConstruct : RaidLogic
+    internal class KeepConstruct : StrongholdOfTheFaithful
     {
         public KeepConstruct(int triggerID) : base(triggerID)
         {
@@ -55,12 +55,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "kc";
             Icon = "https://wiki.guildwars2.com/images/e/ea/Mini_Keep_Construct.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 1;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/RZbs21b.png",
-                            (1099, 1114),
+            return new CombatReplayMap("https://i.imgur.com/dEwDsOJ.png",
+                            (987, 1000),
                             (-5467, 8069, -2282, 11297)/*,
                             (-12288, -27648, 12288, 27648),
                             (1920, 12160, 2944, 14464)*/);
@@ -214,7 +215,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             int start = (int)replay.TimeOffsets.start;
             int end = (int)replay.TimeOffsets.end;
             switch (target.ID)
@@ -371,6 +372,11 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         }
 
+        internal override FightData.CMStatus IsCM(CombatData combatData, AgentData agentData, FightData fightData)
+        {
+            return combatData.GetSkills().Contains(34958) ? FightData.CMStatus.CM : FightData.CMStatus.NoCM;
+        }
+
         internal override void ComputePlayerCombatReplayActors(Player p, ParsedEvtcLog log, CombatReplay replay)
         {
             // Bombs
@@ -399,7 +405,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 if (c is BuffApplyEvent)
                 {
                     fixationStatueStart = (int)c.Time;
-                    statue = TrashMobs.FirstOrDefault(x => x.AgentItem == c.By);
+                    statue = TrashMobs.FirstOrDefault(x => x.AgentItem == c.CreditedBy);
                 }
                 else
                 {

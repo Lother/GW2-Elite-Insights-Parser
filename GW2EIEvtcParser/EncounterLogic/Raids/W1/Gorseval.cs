@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class Gorseval : RaidLogic
+    internal class Gorseval : SpiritVale
     {
         public Gorseval(int triggerID) : base(triggerID)
         {
@@ -25,12 +25,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "gors";
             Icon = "https://wiki.guildwars2.com/images/d/d1/Mini_Gorseval_the_Multifarious.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 1;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/nTueZcX.png",
-                            (1354, 1415),
+            return new CombatReplayMap("https://i.imgur.com/U9pH5dG.png",
+                            (957, 1000),
                             (-653, -6754, 3701, -2206)/*,
                             (-15360, -36864, 15360, 39936),
                             (3456, 11012, 4736, 14212)*/);
@@ -65,7 +66,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                        (int) ArcDPSEnums.TrashID.ChargedSoul
                     };
-                    AddTargetsToPhase(phase, ids, log);
+                    AddTargetsToPhaseAndFit(phase, ids, log);
                 }
             }
             return phases;
@@ -91,7 +92,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Gorseval:

@@ -7,7 +7,7 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
-    internal class ValeGuardian : RaidLogic
+    internal class ValeGuardian : SpiritVale
     {
         public ValeGuardian(int triggerID) : base(triggerID)
         {
@@ -36,6 +36,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             });
             Extension = "vg";
             Icon = "https://wiki.guildwars2.com/images/f/fb/Mini_Vale_Guardian.png";
+            EncounterCategoryInformation.InSubCategoryOrder = 0;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
@@ -85,7 +86,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                        (int) ArcDPSEnums.TrashID.GreenGuardian,
                        (int) ArcDPSEnums.TrashID.RedGuardian
                     };
-                    AddTargetsToPhase(phase, ids, log);
+                    AddTargetsToPhaseAndFit(phase, ids, log);
                     foreach (NPC t in phase.Targets)
                     {
                         t.OverrideName(t.Character + " " + Math.Log(i, 2));
@@ -110,7 +111,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
         {
-            IReadOnlyList<AbstractCastEvent> cls = target.GetCastLogs(log, 0, log.FightData.FightEnd);
+            IReadOnlyList<AbstractCastEvent> cls = target.GetCastEvents(log, 0, log.FightData.FightEnd);
             var lifespan = ((int)replay.TimeOffsets.start, (int)replay.TimeOffsets.end);
             switch (target.ID)
             {
