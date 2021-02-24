@@ -144,13 +144,15 @@ namespace GW2EIEvtcParser
 
         // Buff Formula
 
+        // this enum is updated regularly to match the in game enum. The matching between the two is simply cosmetic, for clarity while comparing against an updated skill defs
         public enum BuffStackType : byte
         {
             StackingConditionalLoss = 0, // the same thing as Stacking
             Queue = 1,
-            Regeneration = 2,
-            Stacking = 3,
-            Force = 4,
+            Unused = 2,
+            Regeneration = 3,
+            Stacking = 4,
+            Force = 5,
             Unknown,
         };
         internal static BuffStackType GetBuffStackType(byte bt)
@@ -204,6 +206,7 @@ namespace GW2EIEvtcParser
             MagicFind = 92,
             ExperienceFromAll = 100,
             WXP = 112,*/
+            // Custom Ids, matched using a very simple pattern detection, see BuffInfoSolver.cs
             ConditionDurationIncrease = -1,
             DamageFormulaSquaredLevel = -2,
             CriticalChance = -3,

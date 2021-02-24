@@ -7,6 +7,7 @@ using GW2EIEvtcParser;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.ParsedData;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace GW2EIBuilders
 {
@@ -25,6 +26,8 @@ namespace GW2EIBuilders
         private readonly bool _cr;
         private readonly bool _light;
         private readonly bool _externalScripts;
+        private readonly string _externalScriptsPath;
+        private readonly string _externalScriptsCdn;
 
         private readonly string[] _uploadLink;
 
@@ -55,6 +58,73 @@ namespace GW2EIBuilders
             _cr = _log.CanCombatReplay;
             _light = settings.HTMLLightTheme;
             _externalScripts = settings.ExternalHTMLScripts;
+            _externalScriptsPath = settings.ExternalHtmlScriptsPath;
+            _externalScriptsCdn = settings.ExternalHtmlScriptsCdn;
+        }
+
+        private string BuildAssetPath(string path)
+        {
+            if (_externalScripts && path != null)
+            {
+                if (!string.IsNullOrWhiteSpace(_externalScriptsCdn))
+                {
+                    return (_externalScriptsCdn.EndsWith("/") && _externalScriptsCdn.Length > 1 ? _externalScriptsCdn.Substring(0, _externalScriptsCdn.Length - 1) : _externalScriptsCdn);
+                }
+                // Setting: External Scripts Path
+                // overwrite jsPath (create directory) if files should be placed on different location
+                // settings.externalHtmlScriptsPath is set by the user
+                else if (!string.IsNullOrWhiteSpace(_externalScriptsPath))
+                {
+                    string htmlExternalScriptsPath = _externalScriptsPath;
+                    bool validPath = false;
+
+                    if (!Directory.Exists(htmlExternalScriptsPath))
+                    {
+                        try
+                        {
+                            Directory.CreateDirectory(htmlExternalScriptsPath);
+                            validPath = true;
+                        }
+                        catch
+                        {
+                            // something went wrong on creating the external folder (invalid chars?)      
+                            // this will skip the saving in this path and continue with jsscript files in the root path for the report
+                            _log.UpdateProgressWithCancellationCheck("HTML Warning: can't create external script folder");
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            // Verify write access
+                            // https://stackoverflow.com/a/6371533
+                            using (FileStream fs = File.Create(
+                                   Path.Combine(
+                                       _externalScriptsPath,
+                                       "EI-" + Path.GetRandomFileName()
+                                   ),
+                                   1,
+                                   FileOptions.DeleteOnClose)
+                               )
+                            { }
+                            validPath = true;
+                        }
+                        catch
+                        {
+                            _log.UpdateProgressWithCancellationCheck("HTML Warning: can't write in external script folder");
+                            // couldn't write to directory
+                        }
+                    }
+
+                    // if the creation of the folder did not fail or the folder already exists use it to include within the report
+                    if (validPath)
+                    {
+                        return _externalScriptsPath;
+                    }
+                }
+                return path;
+            }
+            return null;
         }
 
         /// <summary>
@@ -66,15 +136,16 @@ namespace GW2EIBuilders
         public void CreateHTML(StreamWriter sw, string path)
         {
             string html = Properties.Resources.tmplMain;
+            string assetPath = BuildAssetPath(path);
             _log.UpdateProgressWithCancellationCheck("HTML: replacing global variables");
             html = html.Replace("${bootstrapTheme}", !_light ? "slate" : "yeti");
 
             _log.UpdateProgressWithCancellationCheck("HTML: building CSS");
-            html = html.Replace("<!--${Css}-->", BuildCss(path));
+            html = html.Replace("<!--${Css}-->", BuildCss(assetPath));
             _log.UpdateProgressWithCancellationCheck("HTML: building JS");
-            html = html.Replace("<!--${Js}-->", BuildEIJs(path));
+            html = html.Replace("<!--${Js}-->", BuildEIJs(assetPath));
             _log.UpdateProgressWithCancellationCheck("HTML: building Combat Replay JS");
-            html = html.Replace("<!--${CombatReplayJS}-->", BuildCombatReplayJS(path));
+            html = html.Replace("<!--${CombatReplayJS}-->", BuildCombatReplayJS(assetPath));
 
             html = html.Replace("'${logDataJson}'", ToJson(LogDataDto.BuildLogData(_log, _usedSkills, _usedBuffs, _usedDamageMods, _cr, _light, _parserVersion, _uploadLink)));
 
@@ -85,30 +156,52 @@ namespace GW2EIBuilders
             return;
         }
 
-        private string BuildCombatReplayJS(string path)
+        private string CreateAssetFile(string assetPath, string fileName, string content)
+        {
+            string filePath;
+            if (string.IsNullOrWhiteSpace(_externalScriptsCdn))
+            {
+                filePath = Path.Combine(assetPath, fileName);
+
+                // always create file in DEBUG
+#if !DEBUG
+                // if the file already exists, skip creation
+                if (File.Exists(filePath))
+                {
+                    return filePath;
+                }
+#endif
+                try
+                {
+                    using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                    using (var scriptWriter = new StreamWriter(fs, NoBOMEncodingUTF8))
+                    {
+                        scriptWriter.Write(content);
+                    }
+                }
+                catch (IOException)
+                {
+                }
+            }
+            else
+            {
+                filePath = assetPath + "/" + fileName;
+            }
+            return filePath;
+        }
+
+        private string BuildCombatReplayJS(string assetPath)
         {
             if (!_cr)
             {
                 return "";
             }
             string scriptContent = _eiCRJS;
-            if (_externalScripts && path != null)
+            if (assetPath != null)
             {
-                string jsFileName = "EliteInsights-CR-" + _scriptVersion + ".js";
-                string jsPath = Path.Combine(path, jsFileName);
-                try
-                {
-                    using (var fs = new FileStream(jsPath, FileMode.Create, FileAccess.Write))
-                    using (var scriptWriter = new StreamWriter(fs, NoBOMEncodingUTF8))
-                    {
-                        scriptWriter.Write(scriptContent);
-                    }
-                }
-                catch (IOException)
-                {
-                }
-                string content = "<script src=\"./" + jsFileName + "?version=" + _scriptVersionRev + "\"></script>\n";
-                return content;
+                string fileName = "EliteInsights-CR-" + _scriptVersion + ".js";
+                string path = CreateAssetFile(assetPath, fileName, scriptContent);
+                return "<script src=\"" + path + "?version=" + _scriptVersionRev + "\"></script>\n";            
             }
             else
             {
@@ -116,26 +209,15 @@ namespace GW2EIBuilders
             }
         }
 
-        private string BuildCss(string path)
+        private string BuildCss(string assetPath)
         {
             string scriptContent = Properties.Resources.css;
 
-            if (_externalScripts && path != null)
+            if (assetPath != null)
             {
-                string cssFilename = "EliteInsights-" + _scriptVersion + ".css";
-                string cssPath = Path.Combine(path, cssFilename);
-                try
-                {
-                    using (var fs = new FileStream(cssPath, FileMode.Create, FileAccess.Write))
-                    using (var scriptWriter = new StreamWriter(fs, NoBOMEncodingUTF8))
-                    {
-                        scriptWriter.Write(scriptContent);
-                    }
-                }
-                catch (IOException)
-                {
-                }
-                return "<link rel=\"stylesheet\" type=\"text/css\" href=\"./" + cssFilename + "?version=" + _scriptVersionRev + "\">";
+                string fileName = "EliteInsights-" + _scriptVersion + ".css";
+                string path = CreateAssetFile(assetPath, fileName, scriptContent);
+                return "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + path + "?version=" + _scriptVersionRev + "\">";             
             }
             else
             {
@@ -143,26 +225,15 @@ namespace GW2EIBuilders
             }
         }
 
-        private string BuildEIJs(string path)
+        private string BuildEIJs(string assetPath)
         {
             string scriptContent = _eiJS;
 
-            if (_externalScripts && path != null)
+            if (assetPath != null)
             {
-                string scriptFilename = "EliteInsights-" + _scriptVersion + ".js";
-                string scriptPath = Path.Combine(path, scriptFilename);
-                try
-                {
-                    using (var fs = new FileStream(scriptPath, FileMode.Create, FileAccess.Write))
-                    using (var scriptWriter = new StreamWriter(fs, NoBOMEncodingUTF8))
-                    {
-                        scriptWriter.Write(scriptContent);
-                    }
-                }
-                catch (IOException)
-                {
-                }
-                return "<script src=\"./" + scriptFilename + "?version=" + _scriptVersionRev + "\"></script>";
+                string fileName = "EliteInsights-" + _scriptVersion + ".js";
+                string path = CreateAssetFile(assetPath, fileName, scriptContent);
+                return "<script src=\"" + path + "?version=" + _scriptVersionRev + "\"></script>";
             }
             else
             {
@@ -179,7 +250,6 @@ namespace GW2EIBuilders
             };
             return JsonConvert.SerializeObject(value, settings);
         }
-
 
         internal static string GetLink(string name)
         {

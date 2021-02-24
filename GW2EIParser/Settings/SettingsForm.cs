@@ -38,6 +38,11 @@ namespace GW2EIParser.Setting
             BtnResetTraitList.Enabled = !busy;
             BtnLoadSettings.Enabled = !busy;
             GroupWebhookSettings.Enabled = !busy;
+            TxtCustomSaveLocation.Enabled = !busy;
+            BtnCustomSaveLocSelect.Enabled = !busy;
+            TxtHtmlExternalScriptsPath.Enabled = !busy;
+            TxtHtmlExternalScriptsCdn.Enabled = !busy;
+            BtnHtmlExternalScriptPathSelect.Enabled = !busy;
         }
 
         private void SetUIEnable()
@@ -47,13 +52,18 @@ namespace GW2EIParser.Setting
             PanelJson.Enabled = Properties.Settings.Default.SaveOutJSON;
             PanelXML.Enabled = Properties.Settings.Default.SaveOutXML;
             GroupRawSettings.Enabled = Properties.Settings.Default.SaveOutJSON || Properties.Settings.Default.SaveOutXML;
+            TxtHtmlExternalScriptsPath.Enabled = Properties.Settings.Default.HtmlExternalScripts;
+            LblHtmlExternalScriptsPath.Enabled = Properties.Settings.Default.HtmlExternalScripts;
+            TxtHtmlExternalScriptsCdn.Enabled = Properties.Settings.Default.HtmlExternalScripts;
+            LblHtmlExternalScriptsCdn.Enabled = Properties.Settings.Default.HtmlExternalScripts;
+            BtnHtmlExternalScriptPathSelect.Enabled = Properties.Settings.Default.HtmlExternalScripts;
         }
 
         private void SetValues()
         {
 
             ChkDefaultOutputLoc.Checked = Properties.Settings.Default.SaveAtOut;
-            TxtCustomSaveLoc.Text = Properties.Settings.Default.OutLocation;
+            TxtCustomSaveLocation.Text = Properties.Settings.Default.OutLocation;
             NumericCustomTooShort.Value = Properties.Settings.Default.CustomTooShort;
             ChkOutputHtml.Checked = Properties.Settings.Default.SaveOutHTML;
             ChkOutputCsv.Checked = Properties.Settings.Default.SaveOutCSV;
@@ -86,8 +96,9 @@ namespace GW2EIParser.Setting
             ChkMultiLogs.Checked = Properties.Settings.Default.ParseMultipleLogs;
             ChkRawTimelineArrays.Checked = Properties.Settings.Default.RawTimelineArrays;
             ChkDetailledWvW.Checked = Properties.Settings.Default.DetailledWvW;
-
             ChkHtmlExternalScripts.Checked = Properties.Settings.Default.HtmlExternalScripts;
+            TxtHtmlExternalScriptsPath.Text = Properties.Settings.Default.HtmlExternalScriptsPath;
+            TxtHtmlExternalScriptsCdn.Text = Properties.Settings.Default.HtmlExternalScriptsCdn;            
 
             SetUIEnable();
         }
@@ -102,22 +113,30 @@ namespace GW2EIParser.Setting
             Properties.Settings.Default.SaveAtOut = ChkDefaultOutputLoc.Checked;
         }
 
-        private void BtnFolderSelectClick(object sender, EventArgs e)
+        private void BtnCustomSaveLocationSelectClick(object sender, EventArgs e)
         {
-            using (var fbd = new FolderBrowserDialog())
+            try
             {
-                DialogResult result = fbd.ShowDialog();
-
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
+                using (var fbd = new FolderBrowserDialog())
                 {
-                    TxtCustomSaveLoc.Text = fbd.SelectedPath;
+                    if (!string.IsNullOrWhiteSpace(Properties.Settings.Default.OutLocation) && Directory.Exists(Properties.Settings.Default.OutLocation))
+                    {
+                        fbd.ShowNewFolderButton = true;
+                        fbd.SelectedPath = Properties.Settings.Default.OutLocation;
+                    }
+                    DialogResult result = fbd.ShowDialog();
+                    if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath) && Directory.Exists(fbd.SelectedPath))
+                    {
+                        TxtCustomSaveLocation.Text = fbd.SelectedPath;
+                    }
                 }
             }
+            catch { }
         }
 
         private void TxtCustomSaveLocationTextChanged(object sender, EventArgs e)
         {
-            Properties.Settings.Default.OutLocation = TxtCustomSaveLoc.Text;
+            Properties.Settings.Default.OutLocation = TxtCustomSaveLocation.Text.Trim();
         }
 
         private void NumericCustomTooShortValueChanged(object sender, EventArgs e)
@@ -212,6 +231,7 @@ namespace GW2EIParser.Setting
         {
             Properties.Settings.Default.SkipFailedTries = ChkSkipFailedTries.Checked;
         }
+
         private void ChkOutputJSONCheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.SaveOutJSON = ChkOutputJson.Checked;
@@ -237,6 +257,11 @@ namespace GW2EIParser.Setting
         private void ChkHtmlExternalScriptsCheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.HtmlExternalScripts = ChkHtmlExternalScripts.Checked;
+            LblHtmlExternalScriptsPath.Enabled = ChkHtmlExternalScripts.Checked;
+            TxtHtmlExternalScriptsPath.Enabled = ChkHtmlExternalScripts.Checked;
+            LblHtmlExternalScriptsCdn.Enabled = ChkHtmlExternalScripts.Checked;
+            TxtHtmlExternalScriptsCdn.Enabled = ChkHtmlExternalScripts.Checked;
+            BtnHtmlExternalScriptPathSelect.Enabled = ChkHtmlExternalScripts.Checked;
         }
 
         private void RadioThemeLightCheckedChanged(object sender, EventArgs e)
@@ -306,6 +331,7 @@ namespace GW2EIParser.Setting
         {
             Properties.Settings.Default.AddPoVProf = ChkAddPoVProf.Checked;
         }
+
         private void ChkCompressRawCheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.CompressRaw = ChkCompressRaw.Checked;
@@ -378,6 +404,37 @@ namespace GW2EIParser.Setting
         private void ChkRawTimelineArraysCheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.RawTimelineArrays = ChkRawTimelineArrays.Checked;
+        }
+
+        private void TxtHtmlExternalScriptsPathTextChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.HtmlExternalScriptsPath = TxtHtmlExternalScriptsPath.Text.Trim();
+        }
+
+        private void TxtHtmlExternalScriptCdnUrlTextChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.HtmlExternalScriptsCdn = TxtHtmlExternalScriptsCdn.Text.Trim();
+        }
+
+        private void BtnHtmlExternalScriptPathSelectClick(object sender, EventArgs e)
+        {
+            try
+            {
+                using(var fbd = new FolderBrowserDialog())
+                {
+                    if (!string.IsNullOrWhiteSpace(Properties.Settings.Default.HtmlExternalScriptsPath) && Directory.Exists(Properties.Settings.Default.HtmlExternalScriptsPath))
+                    {
+                        fbd.ShowNewFolderButton = true;
+                        fbd.SelectedPath = Properties.Settings.Default.HtmlExternalScriptsPath;
+                    }
+                    DialogResult result = fbd.ShowDialog();
+                    if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath) && Directory.Exists(fbd.SelectedPath))
+                    {
+                        TxtHtmlExternalScriptsPath.Text = fbd.SelectedPath;
+                    }
+                }       
+            }
+            catch { }
         }
     }
 }

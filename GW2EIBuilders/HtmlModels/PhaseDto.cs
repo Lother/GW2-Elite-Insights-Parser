@@ -15,6 +15,8 @@ namespace GW2EIBuilders.HtmlModels
         public List<int> Targets { get; set; } = new List<int>();
         public bool BreakbarPhase { get; set; }
 
+        public bool Dummy { get; set; }
+
         public List<List<object>> DpsStats { get; set; }
         public List<List<List<object>>> DpsStatsTargets { get; set; }
         public List<List<List<object>>> DmgStatsTargets { get; set; }
@@ -47,6 +49,7 @@ namespace GW2EIBuilders.HtmlModels
         public List<BuffData> DefBuffGenSquadStats { get; set; }
 
         public List<BuffData> PersBuffStats { get; set; }
+        public List<BuffData> GearBuffStats { get; set; }
 
         // active
         public List<BuffData> BoonActiveStats { get; set; }
@@ -74,6 +77,7 @@ namespace GW2EIBuilders.HtmlModels
         public List<BuffData> DefBuffGenActiveSquadStats { get; set; }
 
         public List<BuffData> PersBuffActiveStats { get; set; }
+        public List<BuffData> GearBuffActiveStats { get; set; }
 
         public List<DamageModData> DmgModifiersCommon { get; set; }
         public List<DamageModData> DmgModifiersItem { get; set; }
@@ -98,6 +102,7 @@ namespace GW2EIBuilders.HtmlModels
             Start = phaseData.Start / 1000.0;
             End = phaseData.End / 1000.0;
             BreakbarPhase = phaseData.BreakbarPhase;
+            Dummy = phaseData.Dummy;
             foreach (NPC target in phaseData.Targets)
             {
                 Targets.Add(log.FightData.Logic.Targets.IndexOf(target));
