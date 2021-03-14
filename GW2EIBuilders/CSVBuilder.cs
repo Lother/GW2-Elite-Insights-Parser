@@ -23,7 +23,7 @@ namespace GW2EIBuilders
 
         private readonly List<Player> _noFakePlayers;
 
-        public CSVBuilder(ParsedEvtcLog log, CSVSettings settings, Version parserVersion, string[] uploadresult = null)
+        public CSVBuilder(ParsedEvtcLog log, CSVSettings settings, Version parserVersion, UploadResults uploadResults)
         {
             if (settings == null)
             {
@@ -32,12 +32,12 @@ namespace GW2EIBuilders
             _log = log;
             _parserVersion = parserVersion;
             _delimiter = settings.Delimiter;
-            _phases = log.FightData.GetPhases(log);
+            _phases = log.FightData.GetNonDummyPhases(log);
             _noFakePlayers = log.PlayerList.Where(x => !x.IsFakeActor).ToList();
 
             _statistics = log.StatisticsHelper;
 
-            _uploadResult = uploadresult ?? new string[] { "", "", "" };
+            _uploadResult = uploadResults.ToArray();
             _legacyTarget = log.FightData.Logic.GetLegacyTarget();
             if (_legacyTarget == null)
             {

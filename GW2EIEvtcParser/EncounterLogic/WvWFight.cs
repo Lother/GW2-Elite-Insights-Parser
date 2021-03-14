@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
@@ -47,7 +48,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                     CanBeSubPhase = false
                 });
                 phases[1].AddTargets(Targets);
-                phases[1].RemoveTarget(mainTarget);
+                if (phases[1].Targets.Any())
+                {
+                    phases[1].RemoveTarget(mainTarget);
+                }
                 phases[0].Dummy = true;
             }
             return phases;
@@ -122,9 +126,33 @@ namespace GW2EIEvtcParser.EncounterLogic
             var aList = agentData.GetAgentByType(AgentItem.AgentType.EnemyPlayer).ToList();
             if (_detailed)
             {
+                var set = new HashSet<string>();
                 foreach (AgentItem a in aList)
                 {
-                    _targets.Add(new NPC(a));
+                    var npc = new NPC(a);
+                    if (!set.Contains(npc.Character))
+                    {
+                        _targets.Add(npc);
+                        set.Add(npc.Character);
+                    }
+                    else
+                    {
+                        // we merge
+                        NPC mainNPC = _targets.FirstOrDefault(x => x.Character == npc.Character);
+                        foreach (CombatItem c in combatData)
+                        {
+                            if (c.IsStateChange.SrcIsAgent() && c.SrcAgent == npc.Agent)
+                            {
+                                c.OverrideSrcAgent(mainNPC.Agent);
+                            }
+                            if (c.IsStateChange.DstIsAgent() && c.DstAgent == npc.Agent)
+                            {
+                                c.OverrideDstAgent(mainNPC.Agent);
+                            }
+                        }
+                        agentData.SwapMasters(npc.AgentItem, mainNPC.AgentItem);
+                        mainNPC.AgentItem.OverrideAwareTimes(Math.Min(npc.FirstAware, mainNPC.FirstAware), Math.Max(npc.LastAware, mainNPC.LastAware));
+                    }
                 }
             }
             else
