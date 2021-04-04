@@ -10,7 +10,25 @@ namespace GW2EIEvtcParser.EIData
     {
         protected override void Sort(ParsedEvtcLog log, List<BuffStackItem> stacks)
         {
-            // no sort
+            // if there are no elements nothing to sort
+            // 1 element - is already sorted
+            // 2 elements - is already sorted as the ticking stack can't be disturbed
+            if (stacks.Count > 2)
+            {
+                BuffStackItem first = stacks.First();
+                stacks.Sort((x, y) =>
+                {
+                    if (x == first)
+                    {
+                        return -1;
+                    }
+                    if (y == first)
+                    {
+                        return 1;
+                    }
+                    return -x.TotalDuration.CompareTo(y.TotalDuration);
+                });
+            }
         }
 
         public override bool StackEffect(ParsedEvtcLog log, BuffStackItem stackItem, List<BuffStackItem> stacks, List<BuffSimulationItemWasted> wastes)
@@ -20,11 +38,9 @@ namespace GW2EIEvtcParser.EIData
                 throw new InvalidDataException("Queue logic based must have a >1 capacity");
             }
             BuffStackItem first = stacks[0];
-            stacks.RemoveAt(0);
-            BuffStackItem minItem = stacks.MinBy(x => x.TotalDuration);
+            BuffStackItem minItem = stacks.Where(x => x != first).MinBy(x => x.TotalDuration);
             if (minItem.TotalDuration > stackItem.TotalDuration + ParserHelper.BuffSimulatorDelayConstant)
             {
-                stacks.Insert(0, first);
                 return false;
             }
             wastes.Add(new BuffSimulationItemWasted(minItem.Src, minItem.Duration, minItem.Start));
@@ -36,7 +52,6 @@ namespace GW2EIEvtcParser.EIData
                 }
             }
             stacks[stacks.IndexOf(minItem)] = stackItem;
-            stacks.Insert(0, first);
             Sort(log, stacks);
             return true;
         }

@@ -401,8 +401,8 @@ namespace GW2EIEvtcParser
                 case ArcDPSEnums.TargetID.ConditionGolem:
                 case ArcDPSEnums.TargetID.MedGolem:
                     return "https://wiki.guildwars2.com/images/c/cb/Mini_Mister_Mittens.png";
-                case ArcDPSEnums.TargetID.TwistedCastle:
-                    return "https://i.imgur.com/ZBm5Uga.png";
+                //case ArcDPSEnums.TargetID.DummyTarget:
+                    //return "https://i.imgur.com/ZBm5Uga.png";
             }
             switch (ArcDPSEnums.GetTrashID(id))
             {
@@ -613,9 +613,14 @@ namespace GW2EIEvtcParser
             ".evtc.zip",
         };
 
-        private static readonly HashSet<string> _tmpFiles = new HashSet<string>()
+        private static readonly HashSet<string> _tmpCompressedFiles = new HashSet<string>()
         {
             ".tmp.zip"
+        };
+
+        private static readonly HashSet<string> _tmpFiles = new HashSet<string>()
+        {
+            ""
         };
 
         private static readonly HashSet<string> _supportedFiles = new HashSet<string>(_compressedFiles)
@@ -665,6 +670,18 @@ namespace GW2EIEvtcParser
                 i++;
             }
             return -1;
+        }
+
+        public static bool IsTemporaryCompressedFormat(string fileName)
+        {
+            foreach (string format in _tmpCompressedFiles)
+            {
+                if (fileName.EndsWith(format, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public static bool IsTemporaryFormat(string fileName)

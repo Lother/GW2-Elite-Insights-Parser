@@ -46,6 +46,23 @@ namespace GW2EIEvtcParser.EIData
 
         // Status
 
+        private int _health = -2;
+
+        public int GetHealth(CombatData combatData)
+        {
+            if (_health == -2)
+            {
+                IReadOnlyList<MaxHealthUpdateEvent> maxHpUpdates = combatData.GetMaxHealthUpdateEvents(AgentItem);
+                _health = maxHpUpdates.Count > 0 ? maxHpUpdates.Max(x => x.MaxHealth) : -1;
+            }
+            return _health;
+        }
+
+        internal void SetManualHealth(int health)
+        {
+            _health = health;
+        }
+
         public (IReadOnlyList<(long start, long end)>, IReadOnlyList<(long start, long end)>, IReadOnlyList<(long start, long end)>) GetStatus(ParsedEvtcLog log)
         {
             if (_deads == null)
@@ -426,6 +443,7 @@ namespace GW2EIEvtcParser.EIData
                     catch (EIBuffSimulatorIDException)
                     {
                         // get rid of logs invalid for HasStackIDs false
+                        log.UpdateProgressWithCancellationCheck("Failed id based simulation on " + Character + " for " + buff.Name);
                         buffEvents.RemoveAll(x => !x.IsBuffSimulatorCompliant(log.FightData.FightEnd, false));
                         simulator = buff.CreateSimulator(log, true);
                         simulator.Simulate(buffEvents, dur);
@@ -557,7 +575,7 @@ namespace GW2EIEvtcParser.EIData
             if (CombatReplay.NoActors)
             {
                 CombatReplay.NoActors = false;
-                if (!IsFakeActor)
+                if (!IsDummyActor)
                 {
                     InitAdditionalCombatReplayData(log);
                 }

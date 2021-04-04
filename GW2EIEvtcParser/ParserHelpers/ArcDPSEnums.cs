@@ -120,6 +120,7 @@ namespace GW2EIEvtcParser
             Error = 36,
             Tag = 37,
             BarrierUpdate = 38,
+            StatReset = 39,
             Unknown
         };
 
@@ -280,7 +281,7 @@ namespace GW2EIEvtcParser
         }
 
         // Custom ids
-        private const int TwilightCastle = -1;
+        private const int DummyTarget = -1;
         private const int HandOfErosion = -2;
         private const int HandOfEruption = -3;
         private const int PyreGuardianProtect = -4;
@@ -545,7 +546,7 @@ namespace GW2EIEvtcParser
         public enum TargetID : int
         {
             WorldVersusWorld = 1,
-            TwistedCastle = TwilightCastle,
+            DummyTarget = ArcDPSEnums.DummyTarget,
             // Raid
             ValeGuardian = 15438,
             Gorseval = 15429,
