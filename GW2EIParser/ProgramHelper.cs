@@ -91,6 +91,111 @@ namespace GW2EIParser
             }
             return builder.Build();
         }
+        internal static EmbedBuilder GetEmbedBuilderLother()
+        {
+            var builder = new EmbedBuilder();
+            builder.WithAuthor("AEG WvW Report", "https://wiki.guildwars2.com/images/5/51/Catmander_tag_%28white%29.png", "https://lother.dev/wvw/");
+            return builder;
+        }
+
+        private static Embed BuildEmbedLother(ParsedEvtcLog log, string dpsReportPermalink)
+        {
+            EmbedBuilder builder = GetEmbedBuilderLother();
+            //
+            builder.AddField("Encounter Duration", log.FightData.DurationString);
+            var players = new List<AbstractSingleActor>(log.PlayerList.Where(x => !x.IsFakeActor));
+            IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
+            string s = "";
+            int totalDamage = 0;
+            int totalDps = 0;
+            int totalDowns = 0;
+            int totalDeaths = 0;
+            var boonStrips = new List<KeyValuePair<string,int>>();
+            var condiCleanse = new List<KeyValuePair<string, int>>();
+            var dps = new List<KeyValuePair<string, (int,int)>>();
+            foreach (Player player in players) {
+                string name = $"{player.Character} ({player.Prof.Substring(0,3)})";
+                FinalDPS dpss = player.GetDPSStats(log, phases[0].Start, phases[0].End);
+                totalDamage += dpss.Damage;
+                totalDps += dpss.Dps;
+                dps.Add(new KeyValuePair<string, (int, int)>(name, (dpss.Damage, dpss.Dps)));
+                FinalDefensesAll def = player.GetDefenseStats(log, phases[0].Start, phases[0].End);
+                totalDowns += def.DownCount;
+                totalDeaths += def.DeadCount;
+                FinalPlayerSupport sp = player.GetPlayerSupportStats(log, phases[0].Start, phases[0].End);
+                condiCleanse.Add(new KeyValuePair<string, int>(name, sp.CondiCleanse));
+                boonStrips.Add(new KeyValuePair<string, int >(name, sp.BoonStrips));
+            }
+            dps = dps.OrderByDescending(x => x.Value.Item1).ToList().GetRange(0, 10);
+            condiCleanse = condiCleanse.OrderByDescending(x => x.Value).ToList().GetRange(0, 10);
+            boonStrips = boonStrips.OrderByDescending(x => x.Value).ToList().GetRange(0, 10);
+
+            builder.AddField("Squad Summary", "```CSS\n" +
+               $" Player   Damage          DPS      Downs    Deaths\n"+
+               $"--------  --------------  -------  -------  -------\n" +
+               $"   {players.Count,-2}     {totalDamage.ToString("N0"),14}  {totalDps.ToString("N0"),7}     {totalDowns,-2}       {totalDeaths,-2}\n" +
+                "```");
+            string dpsString = "";
+            string condiCleanseString = "";
+            string boonStripsString = "";
+            int c;
+            c = 1;
+            foreach (KeyValuePair<string, (int, int)> d in dps) {
+                dpsString += $"{c,2}   {d.Key,24}  {d.Value.Item1.ToString("N0"),9}  {d.Value.Item2.ToString("N0"),7}\n";
+                c++;
+            }
+            c = 1;
+            foreach (KeyValuePair<string, int> cc in condiCleanse)
+            {
+                condiCleanseString += $"{c,2}   {cc.Key,24}  {cc.Value, 6}\n";
+                c++;
+            }
+            c = 1;
+            foreach (KeyValuePair<string, int> bs in boonStrips)
+            {
+                boonStripsString += $"{c,2}   {bs.Key,24}  {bs.Value,5}\n";
+                c++;
+            }
+
+            builder.AddField("Damage Summary", "```CSS\n" +
+               $" #  Player                    Damage     DPS    \n" +
+               $"--- ------------------------  ---------  -------\n" +
+                dpsString +
+                "```");
+            builder.AddField("Cleanse Summary", "```CSS\n" +
+               $" #  Player                     Cleanses\n" +
+               $"--- ------------------------  ----------\n" +
+                condiCleanseString +
+                "```");
+            builder.AddField("Strips Summary", "```CSS\n" +
+               $" #  Player                     Strips\n" +
+               $"--- ------------------------  --------\n" +
+                boonStripsString +
+                "```");
+            /*
+            var playerByGroup = log.PlayerList.Where(x => !x.IsFakeActor).GroupBy(x => x.Group).ToDictionary(x => x.Key, x => x.ToList());
+            var hasGroups = playerByGroup.Count > 1;
+            foreach (KeyValuePair<int, List<Player>> pair in playerByGroup)
+            {
+                var groupField = new List<string>();
+                foreach (Player p in pair.Value)
+                {
+                    groupField.Add(p.Character + " - " + p.Prof);
+                }
+                builder.AddField(hasGroups ? "Group " + pair.Key : "Party Composition", String.Join("\n", groupField));
+            }
+            //*/
+            //
+            builder.WithTitle(log.FightData.GetFightName(log));
+            //builder.WithTimestamp(DateTime.Now);
+            builder.WithFooter(log.LogData.LogStartStd + " / " + log.LogData.LogEndStd);
+            builder.WithColor(log.FightData.Success ? Color.Green : Color.Red);
+            if (dpsReportPermalink.Length > 0)
+            {
+                builder.WithUrl(dpsReportPermalink);
+            }
+            return builder.Build();
+        }
 
         private static bool HasFormat()
         {
@@ -162,7 +267,16 @@ namespace GW2EIParser
                 {
                     operation.UpdateProgressWithCancellationCheck(trace);
                 }
-                if (Properties.Settings.Default.SendEmbedToWebhook && Properties.Settings.Default.UploadToDPSReports)
+                string result = log.FightData.Success ? "kill" : "fail";
+                string encounterLengthTerm = Properties.Settings.Default.AddDuration ? "_" + (log.FightData.FightEnd / 1000).ToString() + "s" : "";
+                string PoVClassTerm = Properties.Settings.Default.AddPoVProf ? "_" + log.LogData.PoV.Prof.ToLower() : "";
+                string fName = fInfo.Name.Split('.')[0];
+                fName = $"{fName}{PoVClassTerm}_{log.FightData.Logic.Extension}{encounterLengthTerm}_{result}.html";
+                string URI = "https://lother.dev/wvw/" + fName;
+                if (Properties.Settings.Default.SendEmbedToWebhook){
+                    operation.UpdateProgressWithCancellationCheck(new WebhookController(Properties.Settings.Default.WebhookURL, BuildEmbedLother(log, URI)).SendMessage());
+                }
+                /*if (Properties.Settings.Default.SendEmbedToWebhook && Properties.Settings.Default.UploadToDPSReports)
                 {
                     if (Properties.Settings.Default.SendSimpleMessageToWebhook)
                     {
@@ -176,7 +290,7 @@ namespace GW2EIParser
                 if (uploadStrings[0].Contains("https"))
                 {
                     operation.DPSReportLink = uploadStrings[0];
-                }
+                }*/
                 //Creating File
                 GenerateFiles(log, operation, uploadStrings, fInfo);
             }
