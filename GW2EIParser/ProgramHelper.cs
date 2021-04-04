@@ -131,9 +131,9 @@ namespace GW2EIParser
             boonStrips = boonStrips.OrderByDescending(x => x.Value).ToList().GetRange(0, 10);
 
             builder.AddField("Squad Summary", "```CSS\n" +
-               $" Player   Damage          DPS      Downs    Deaths\n"+
-               $"--------  --------------  -------  -------  -------\n" +
-               $"   {players.Count,-2}     {totalDamage.ToString("N0"),14}  {totalDps.ToString("N0"),7}     {totalDowns,-2}       {totalDeaths,-2}\n" +
+               $" Player   Damage       DPS      Downs    Deaths\n"+
+               $"--------  -----------  -------  -------  -------\n" +
+               $"   {players.Count,-2}     {totalDamage.ToString("N0"),11}  {totalDps.ToString("N0"),7}     {totalDowns,-2}       {totalDeaths,-2}\n" +
                 "```");
             string dpsString = "";
             string condiCleanseString = "";
@@ -141,35 +141,35 @@ namespace GW2EIParser
             int c;
             c = 1;
             foreach (KeyValuePair<string, (int, int)> d in dps) {
-                dpsString += $"{c,2}   {d.Key,24}  {d.Value.Item1.ToString("N0"),9}  {d.Value.Item2.ToString("N0"),7}\n";
+                dpsString += $"{c,2}.  {d.Key,24}  {d.Value.Item1.ToString("N0"),9}  {d.Value.Item2.ToString("N0"),7}\n";
                 c++;
             }
             c = 1;
             foreach (KeyValuePair<string, int> cc in condiCleanse)
             {
-                condiCleanseString += $"{c,2}   {cc.Key,24}  {cc.Value, 6}\n";
+                condiCleanseString += $"{c,2}.  {cc.Key,24}  {cc.Value, 6}\n";
                 c++;
             }
             c = 1;
             foreach (KeyValuePair<string, int> bs in boonStrips)
             {
-                boonStripsString += $"{c,2}   {bs.Key,24}  {bs.Value,5}\n";
+                boonStripsString += $"{c,2}.  {bs.Key,24}  {bs.Value,5}\n";
                 c++;
             }
 
             builder.AddField("Damage Summary", "```CSS\n" +
-               $" #  Player                    Damage     DPS    \n" +
-               $"--- ------------------------  ---------  -------\n" +
+               $" #  Player                     Damage     DPS    \n" +
+               $"--- -------------------------  ---------  -------\n" +
                 dpsString +
                 "```");
             builder.AddField("Cleanse Summary", "```CSS\n" +
                $" #  Player                     Cleanses\n" +
-               $"--- ------------------------  ----------\n" +
+               $"--- -------------------------  ----------\n" +
                 condiCleanseString +
                 "```");
             builder.AddField("Strips Summary", "```CSS\n" +
                $" #  Player                     Strips\n" +
-               $"--- ------------------------  --------\n" +
+               $"--- -------------------------  --------\n" +
                 boonStripsString +
                 "```");
             /*
