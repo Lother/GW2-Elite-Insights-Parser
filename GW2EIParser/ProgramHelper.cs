@@ -92,6 +92,136 @@ namespace GW2EIParser
             return builder.Build();
         }
 
+        private static Embed BuildEmbedLother(ParsedEvtcLog log, string dpsReportPermalink)
+        {
+            EmbedBuilder builder = GetEmbedBuilder();
+            //
+            builder.AddField("Encounter Duration", log.FightData.DurationString);
+            var players = new List<AbstractSingleActor>(log.PlayerList.Where(x => !x.IsFakeActor));
+            var target = new List<AbstractSingleActor>(log.FightData.Logic.Targets.Where(x=>x.Character.Length>0));
+            IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
+            string s = "";
+            int totalDamage = 0;
+            long totalDamageTaken = 0;
+            int totalBarrier = 0;
+            int totalDps = 0;
+            int totalCondiCleanse = 0;
+            int totalBoonStrips = 0;
+            int totalDowns = 0;
+            int totalDowneds = 0;
+            int totalKill = 0;
+            int totalDeaths = 0;
+            var boonStrips = new List<KeyValuePair<string,int>>();
+            var condiCleanse = new List<KeyValuePair<string, int>>();
+            var dps = new List<KeyValuePair<string, (int,int)>>();
+            foreach (Player player in players) {
+                string name = $"{player.Character} ({player.Prof.Substring(0,3)})";
+                int playerDamage = 0;
+                int playerDps = 0;
+                foreach (NPC n in target) {
+                    FinalDPS adps = player.GetDPSStats(n,log, phases[0].Start, phases[0].End);
+                    playerDamage += adps.Damage;
+                    playerDps += adps.Dps;
+                    FinalGameplayStats gps = player.GetGameplayStats(n, log, phases[0].Start, phases[0].End);
+                    totalKill += gps.Killed;
+                    totalDowneds += gps.Downed;
+                }
+                dps.Add(new KeyValuePair<string, (int, int)>(name, (playerDamage, playerDps)));
+                totalDamage += playerDamage;
+                totalDps += playerDps;
+
+                FinalDefensesAll def = player.GetDefenseStats(log, phases[0].Start, phases[0].End);
+                totalDowns += def.DownCount;
+                totalDeaths += def.DeadCount;
+                totalDamageTaken += def.DamageTaken;
+                totalBarrier += def.DamageBarrier;
+                FinalPlayerSupport sp = player.GetPlayerSupportStats(log, phases[0].Start, phases[0].End);
+                condiCleanse.Add(new KeyValuePair<string, int>(name, sp.CondiCleanse));
+                boonStrips.Add(new KeyValuePair<string, int >(name, sp.BoonStrips));
+                totalCondiCleanse += sp.CondiCleanse;
+                totalBoonStrips += sp.BoonStrips;
+            }
+            int length = (dps.Count >= 10) ? 10 : dps.Count;
+            dps = dps.OrderByDescending(x => x.Value.Item1).ToList().GetRange(0, length);
+            condiCleanse = condiCleanse.OrderByDescending(x => x.Value).ToList().GetRange(0, length);
+            boonStrips = boonStrips.OrderByDescending(x => x.Value).ToList().GetRange(0, length);
+            if (totalDamage < 300000) {
+                return null;
+            }
+            builder.AddField("Squad Summary", "```CSS\n" +
+               $" Player      Damage      DPS     Downs   Deaths\n"+
+               $"--------  -----------  -------  -------  -------\n" +
+               $"   {players.Count,-2}     {totalDamage.ToString("N0"),11}  {totalDps.ToString("N0"),7}     {totalDowns,-2}       {totalDeaths,-2}\n" +
+               $"DamageTaken    Barrier    Cleanses  Strips\n" +
+               $"-----------  -----------  --------  ------\n" +
+               $"{totalDamageTaken.ToString("N0"),11}  {totalBarrier.ToString("N0"),11}    {totalCondiCleanse,-4}     {totalBoonStrips,-4}\n" +
+               $" Enemy    Downeds   Kill\n" +
+               $"--------  -------  ------\n" +
+               $"   {target.Count-1,-3}        {totalDowneds,-3}      {totalKill,-3}\n" +
+                "```");
+            string dpsString = "";
+            string condiCleanseString = "";
+            string boonStripsString = "";
+            int c;
+            c = 1;
+            foreach (KeyValuePair<string, (int, int)> d in dps) {
+                dpsString += $"{c,2}.  {d.Key,24}  {d.Value.Item1.ToString("N0"),9}  {d.Value.Item2.ToString("N0"),7}\n";
+                c++;
+            }
+            c = 1;
+            foreach (KeyValuePair<string, int> cc in condiCleanse)
+            {
+                condiCleanseString += $"{c,2}.  {cc.Key,24}  {cc.Value, 6}\n";
+                c++;
+            }
+            c = 1;
+            foreach (KeyValuePair<string, int> bs in boonStrips)
+            {
+                boonStripsString += $"{c,2}.  {bs.Key,24}  {bs.Value,5}\n";
+                c++;
+            }
+
+            builder.AddField("Damage Summary", "```CSS\n" +
+               $" #  Player                      Damage      DPS  \n" +
+               $"--- -------------------------  ---------  -------\n" +
+                dpsString +
+                "```");
+            builder.AddField("Cleanse Summary", "```CSS\n" +
+               $" #  Player                      Cleanses\n" +
+               $"--- -------------------------  ----------\n" +
+                condiCleanseString +
+                "```");
+            builder.AddField("Strips Summary", "```CSS\n" +
+               $" #  Player                      Strips\n" +
+               $"--- -------------------------  --------\n" +
+                boonStripsString +
+                "```");
+
+            /*
+            var playerByGroup = log.PlayerList.Where(x => !x.IsFakeActor).GroupBy(x => x.Group).ToDictionary(x => x.Key, x => x.ToList());
+            var hasGroups = playerByGroup.Count > 1;
+            foreach (KeyValuePair<int, List<Player>> pair in playerByGroup)
+            {
+                var groupField = new List<string>();
+                foreach (Player p in pair.Value)
+                {
+                    groupField.Add(p.Character + " - " + p.Prof);
+                }
+                builder.AddField(hasGroups ? "Group " + pair.Key : "Party Composition", String.Join("\n", groupField));
+            }
+            //*/
+            //
+            builder.WithTitle(log.FightData.GetFightName(log));
+            //builder.WithTimestamp(DateTime.Now);
+            builder.WithFooter(log.LogData.LogStartStd + " / " + log.LogData.LogEndStd);
+            builder.WithColor(log.FightData.Success ? Color.Green : Color.Red);
+            if (dpsReportPermalink.Length > 0)
+            {
+                builder.WithUrl(dpsReportPermalink);
+            }
+            return builder.Build();
+        }
+
         private static bool HasFormat()
         {
             return Properties.Settings.Default.SaveOutCSV || Properties.Settings.Default.SaveOutHTML || Properties.Settings.Default.SaveOutXML || Properties.Settings.Default.SaveOutJSON;
@@ -170,7 +300,7 @@ namespace GW2EIParser
                     } 
                     else
                     {
-                        operation.UpdateProgressWithCancellationCheck(new WebhookController(Properties.Settings.Default.WebhookURL, BuildEmbed(log, uploadStrings[0])).SendMessage());
+                        operation.UpdateProgressWithCancellationCheck(new WebhookController(Properties.Settings.Default.WebhookURL, BuildEmbedLother(log, uploadStrings[0])).SendMessage());
                     }
                 }
                 if (uploadStrings[0].Contains("https"))

@@ -66,8 +66,9 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
             switch (mapID.MapID)
             {
-                // EB
+                // EB 8958, 12798, 12030, 15870
                 case 38:
+                    //return new CombatReplayMap("https://i.imgur.com/7DnLZ7G.png", (3100, 3250), (-35364, -37800, 36864, 41000)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
                     return new CombatReplayMap("https://i.imgur.com/t0khtQd.png", (954, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
                 // Green Alpine
                 case 95:
