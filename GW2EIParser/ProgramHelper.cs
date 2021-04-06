@@ -145,9 +145,7 @@ namespace GW2EIParser
             dps = dps.OrderByDescending(x => x.Value.Item1).ToList().GetRange(0, length);
             condiCleanse = condiCleanse.OrderByDescending(x => x.Value).ToList().GetRange(0, length);
             boonStrips = boonStrips.OrderByDescending(x => x.Value).ToList().GetRange(0, length);
-            if (totalDamage < 300000) {
-                return null;
-            }
+
             builder.AddField("Squad Summary", "```CSS\n" +
                $" Player      Damage      DPS     Downs   Deaths\n"+
                $"--------  -----------  -------  -------  -------\n" +
