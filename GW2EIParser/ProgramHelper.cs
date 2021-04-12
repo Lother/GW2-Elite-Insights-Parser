@@ -114,8 +114,38 @@ namespace GW2EIParser
             var boonStrips = new List<KeyValuePair<string,int>>();
             var condiCleanse = new List<KeyValuePair<string, int>>();
             var dps = new List<KeyValuePair<string, (int,int)>>();
+            var prof = new Dictionary<string,string>();
+
+            prof.Add("Guardian", "Gdn");
+            prof.Add("Dragonhunter", "Dgh");
+            prof.Add("Warrio", "War");
+            prof.Add("Berserker", "Brs");
+            prof.Add("Engineer", "Eng");
+            prof.Add("Scrapper", "Scr");
+            prof.Add("Ranger", "Rgr");
+            prof.Add("Druid", "Dru");
+            prof.Add("Thief", "Thf");
+            prof.Add("Daredevil", "Dar");
+            prof.Add("Elementalist", "Ele");
+            prof.Add("Tempest", "Tmp");
+            prof.Add("Mesmer", "Mes");
+            prof.Add("Chronomancer", "Chr");
+            prof.Add("Necromancer", "Nec");
+            prof.Add("Reaper", "Rea");
+            prof.Add("Revenant", "Rev");
+            prof.Add("Herald", "Her");
+            prof.Add("Firebrand", "Fbd");
+            prof.Add("Spellbreaker", "Spb");
+            prof.Add("Holosmith", "Hls");
+            prof.Add("Soulbeast", "Slb");
+            prof.Add("Deadeye", "Ded");
+            prof.Add("Weaver", "Wea");
+            prof.Add("Mirage", "Mir");
+            prof.Add("Scourge", "Scg");
+            prof.Add("Renegade", "Ren");
+
             foreach (Player player in players) {
-                string name = $"{player.Character} ({player.Prof.Substring(0,3)})";
+                string name = $"{player.Character} ({prof[player.Prof]})";
                 int playerDamage = 0;
                 int playerDps = 0;
                 foreach (NPC n in target) {
@@ -163,35 +193,35 @@ namespace GW2EIParser
             int c;
             c = 1;
             foreach (KeyValuePair<string, (int, int)> d in dps) {
-                dpsString += $"{c,2}.  {d.Key,24}  {d.Value.Item1.ToString("N0"),9}  {d.Value.Item2.ToString("N0"),7}\n";
+                dpsString += $"{c,2}.  {d.Key,25}  {d.Value.Item1.ToString("N0"),9}  {d.Value.Item2.ToString("N0"),7}\n";
                 c++;
             }
             c = 1;
             foreach (KeyValuePair<string, int> cc in condiCleanse)
             {
-                condiCleanseString += $"{c,2}.  {cc.Key,24}  {cc.Value, 6}\n";
+                condiCleanseString += $"{c,2}.  {cc.Key,25}  {cc.Value, 6}\n";
                 c++;
             }
             c = 1;
             foreach (KeyValuePair<string, int> bs in boonStrips)
             {
-                boonStripsString += $"{c,2}.  {bs.Key,24}  {bs.Value,5}\n";
+                boonStripsString += $"{c,2}.  {bs.Key,25}  {bs.Value,5}\n";
                 c++;
             }
 
             builder.AddField("Damage Summary", "```CSS\n" +
-               $" #  Player                      Damage      DPS  \n" +
-               $"--- -------------------------  ---------  -------\n" +
+               $" #  Player                       Damage      DPS  \n" +
+               $"--- --------------------------  ---------  -------\n" +
                 dpsString +
                 "```");
             builder.AddField("Cleanse Summary", "```CSS\n" +
-               $" #  Player                      Cleanses\n" +
-               $"--- -------------------------  ----------\n" +
+               $" #  Player                       Cleanses\n" +
+               $"--- --------------------------  ----------\n" +
                 condiCleanseString +
                 "```");
             builder.AddField("Strips Summary", "```CSS\n" +
-               $" #  Player                      Strips\n" +
-               $"--- -------------------------  --------\n" +
+               $" #  Player                       Strips\n" +
+               $"--- --------------------------  --------\n" +
                 boonStripsString +
                 "```");
 
@@ -209,13 +239,17 @@ namespace GW2EIParser
             }
             //*/
             //
-            builder.WithTitle(log.FightData.GetFightName(log));
             //builder.WithTimestamp(DateTime.Now);
+
             builder.WithFooter(log.LogData.LogStartStd + " / " + log.LogData.LogEndStd);
             builder.WithColor(log.FightData.Success ? Color.Green : Color.Red);
-            if (dpsReportPermalink.Length > 0)
+            if (dpsReportPermalink.Length > 0 && dpsReportPermalink != "Upload process failed" )
             {
                 builder.WithUrl(dpsReportPermalink);
+                builder.WithTitle(log.FightData.GetFightName(log));
+            }
+            else {
+                builder.WithTitle(log.FightData.GetFightName(log) + $"({dpsReportPermalink})");
             }
             return builder.Build();
         }
