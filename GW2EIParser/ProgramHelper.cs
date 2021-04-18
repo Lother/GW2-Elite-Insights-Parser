@@ -97,6 +97,8 @@ namespace GW2EIParser
             EmbedBuilder builder = GetEmbedBuilder();
             //
             builder.AddField("Encounter Duration", log.FightData.DurationString);
+            builder.AddField("Recorded By", log.LogData.PoVName);
+
             var players = new List<AbstractSingleActor>(log.PlayerList.Where(x => !x.IsFakeActor));
             var target = new List<AbstractSingleActor>(log.FightData.Logic.Targets.Where(x=>x.Character.Length>0));
             IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
@@ -143,9 +145,14 @@ namespace GW2EIParser
             prof.Add("Mirage", "Mir");
             prof.Add("Scourge", "Scg");
             prof.Add("Renegade", "Ren");
-
+            
             foreach (Player player in players) {
-                string name = $"{player.Character} ({prof[player.Prof]})";
+                string name;
+                if (prof.ContainsKey(player.Prof)){ 
+                    name = $"{player.Character} ({prof[player.Prof]})";
+                }else{
+                    name = $"{player.Character} ({player.Prof.Substring(0,5)})";
+                }
                 int playerDamage = 0;
                 int playerDps = 0;
                 foreach (NPC n in target) {
