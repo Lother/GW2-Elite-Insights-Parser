@@ -660,6 +660,27 @@ namespace GW2EIBuilders.Properties {
         /// <summary>
         ///   Looks up a localized string similar to &lt;template&gt;
         ///    &lt;div&gt;
+        ///        &lt;buff-table-component :key=&quot;&apos;conditions-stats-table&apos;&quot; :condition=&quot;true&quot; :generation=&quot;false&quot;
+        ///            :id=&quot;&apos;conditions-buff-stats-table&apos;&quot; :buffs=&quot;conditions&quot; :playerdata=&quot;buffData&quot; :sums=&quot;[]&quot; :playerindex=&quot;playerindex&quot; :hidecustom=&quot;false&quot;&gt;
+        ///        &lt;/buff-table-component&gt;
+        ///    &lt;/div&gt;
+        ///&lt;/template&gt;
+        ///
+        ///&lt;script&gt;
+        ///    Vue.component(&quot;conditions-table-component&quot;, {
+        ///        props: [&apos;phaseindex&apos;, &apos;playerindex&apos;, &apos;activeduration&apos;],
+        ///        template: `${template}`,
+        ///        data: fun [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string tmplConditionsTable {
+            get {
+                return ResourceManager.GetString("tmplConditionsTable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;template&gt;
+        ///    &lt;div&gt;
         ///        &lt;div v-if=&quot;player.minions.length &gt; 0&quot;&gt;
         ///            &lt;ul class=&quot;nav nav-tabs&quot;&gt;
         ///                &lt;li&gt;
