@@ -116,6 +116,7 @@ namespace GW2EIParser
             var boonStrips = new List<KeyValuePair<string,int>>();
             var condiCleanse = new List<KeyValuePair<string, int>>();
             var dps = new List<KeyValuePair<string, (int,int)>>();
+            var tag = new List<string>();
             var prof = new Dictionary<string,string>();
 
             prof.Add("Guardian", "Gdn");
@@ -153,6 +154,9 @@ namespace GW2EIParser
                 }else{
                     name = $"{player.Character} ({player.Prof.Substring(0,5)})";
                 }
+                if (player.HasCommanderTag) {
+                    tag.Add($"{player.Character} ({player.Account})");
+                }
                 int playerDamage = 0;
                 int playerDps = 0;
                 foreach (NPC n in target) {
@@ -182,6 +186,9 @@ namespace GW2EIParser
             dps = dps.OrderByDescending(x => x.Value.Item1).ToList().GetRange(0, length);
             condiCleanse = condiCleanse.OrderByDescending(x => x.Value).ToList().GetRange(0, length);
             boonStrips = boonStrips.OrderByDescending(x => x.Value).ToList().GetRange(0, length);
+            if (tag.Count > 0) {
+                builder.AddField("Commander",string.Join("\n",tag));
+            }
 
             builder.AddField("Squad Summary", "```CSS\n" +
                $" Player      Damage      DPS     Downs   Deaths\n"+
