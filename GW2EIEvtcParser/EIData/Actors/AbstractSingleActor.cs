@@ -117,10 +117,6 @@ namespace GW2EIEvtcParser.EIData
             if (_barrierUpdates == null)
             {
                 _barrierUpdates = Segment.FromStates(log.CombatData.GetBarrierUpdateEvents(AgentItem).Select(x => x.ToState()).ToList(), 0, log.FightData.FightEnd);
-                if (!_barrierUpdates.Any(x => x.Value > 0))
-                {
-                    _barrierUpdates.Clear();
-                }
             }
             return _barrierUpdates;
         }
@@ -378,6 +374,50 @@ namespace GW2EIEvtcParser.EIData
             {
                 return false;
             }
+        }
+
+        public double GetCurrentHealthPercent(ParsedEvtcLog log, long time)
+        {
+            IReadOnlyList<Segment> hps = GetHealthUpdates(log);
+            if (!hps.Any())
+            {
+                return -1.0;
+            }
+            foreach (Segment seg in hps)
+            {
+                if (seg.Intersect(time - ParserHelper.ServerDelayConstant, time + ParserHelper.ServerDelayConstant))
+                {
+                    return seg.Value;
+                }
+            }
+            return -1.0;
+        }
+
+        public double GetCurrentBarrierPercent(ParsedEvtcLog log, long time)
+        {
+            IReadOnlyList<Segment> hps = GetBarrierUpdates(log);
+            if (!hps.Any())
+            {
+                return -1.0;
+            }
+            foreach (Segment seg in hps)
+            {
+                if (seg.Intersect(time - ParserHelper.ServerDelayConstant, time + ParserHelper.ServerDelayConstant))
+                {
+                    return seg.Value;
+                }
+            }
+            return -1.0;
+        }
+
+        public Point3D GetCurrentPosition(ParsedEvtcLog log, long time)
+        {
+            IReadOnlyList<Point3D> positions = GetCombatReplayPolledPositions(log);
+            if (!positions.Any())
+            {
+                return null;
+            }
+            return positions.FirstOrDefault(x => x.Time >= time);
         }
 
         public IReadOnlyCollection<Buff> GetTrackedBuffs(ParsedEvtcLog log)
@@ -728,7 +768,7 @@ namespace GW2EIEvtcParser.EIData
             if (DamageEvents == null)
             {
                 DamageEvents = new List<AbstractHealthDamageEvent>();
-                DamageEvents.AddRange(log.CombatData.GetDamageData(AgentItem).Where(x => x.IFF != ArcDPSEnums.IFF.Friend));
+                DamageEvents.AddRange(log.CombatData.GetDamageData(AgentItem).Where(x => !x.ToFriendly));
                 IReadOnlyDictionary<long, Minions> minionsList = GetMinions(log);
                 foreach (Minions mins in minionsList.Values)
                 {
@@ -766,7 +806,7 @@ namespace GW2EIEvtcParser.EIData
             if (BreakbarDamageEvents == null)
             {
                 BreakbarDamageEvents = new List<AbstractBreakbarDamageEvent>();
-                BreakbarDamageEvents.AddRange(log.CombatData.GetBreakbarDamageData(AgentItem).Where(x => x.IFF != ArcDPSEnums.IFF.Friend));
+                BreakbarDamageEvents.AddRange(log.CombatData.GetBreakbarDamageData(AgentItem).Where(x => !x.ToFriendly));
                 IReadOnlyDictionary<long, Minions> minionsList = GetMinions(log);
                 foreach (Minions mins in minionsList.Values)
                 {

@@ -120,7 +120,9 @@ namespace GW2EIEvtcParser
             Error = 36,
             Tag = 37,
             BarrierUpdate = 38,
-            StatReset = 39,
+            StatReset = 39, 
+            Extension = 40,
+            APIDelayed = 40,
             Unknown
         };
 
@@ -150,7 +152,7 @@ namespace GW2EIEvtcParser
         {
             StackingConditionalLoss = 0, // the same thing as Stacking
             Queue = 1,
-            Unused = 2,
+            CappedDuration = 2,
             Regeneration = 3,
             Stacking = 4,
             Force = 5,

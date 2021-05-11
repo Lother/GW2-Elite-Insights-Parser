@@ -564,7 +564,7 @@ namespace GW2EIEvtcParser
             {
                 return false;
             }
-            return combatItem.IsStateChange != ArcDPSEnums.StateChange.Unknown && combatItem.IsStateChange != ArcDPSEnums.StateChange.StatReset;
+            return combatItem.IsStateChange != ArcDPSEnums.StateChange.Unknown && combatItem.IsStateChange != ArcDPSEnums.StateChange.StatReset && combatItem.IsStateChange != ArcDPSEnums.StateChange.APIDelayed && combatItem.IsStateChange != ArcDPSEnums.StateChange.Extension;
         }
         private static void UpdateAgentData(AgentItem ag, long logTime, ushort instid)
         {
@@ -624,7 +624,7 @@ namespace GW2EIEvtcParser
                     playerAgent.OverrideAwareTimes(_logStartTime, _logEndTime);
                 }
                 bool skip = false;
-                var player = new Player(playerAgent, _fightData.Logic.Mode == FightLogic.ParseMode.Instanced5 || _fightData.Logic.Mode == FightLogic.ParseMode.sPvP, false);
+                var player = new Player(playerAgent, _fightData.Logic.Mode == FightLogic.ParseMode.Instanced5 || _fightData.Logic.Mode == FightLogic.ParseMode.sPvP);
                 foreach (Player p in _playerList)
                 {
                     if (p.Account == player.Account)// same player
