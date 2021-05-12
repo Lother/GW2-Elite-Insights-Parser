@@ -9,11 +9,7 @@ namespace GW2EIEvtcParser.ParsedData
     {
 
         private static int AgentCount = 0;
-        public enum AgentType { NPC, Gadget, Player, EnemyPlayer}
-
-        public bool IsPlayer => Type == AgentType.Player || Type == AgentType.EnemyPlayer;
-        public bool IsFriendlyPlayer => Type == AgentType.Player;
-        public bool IsNPC => Type == AgentType.NPC || Type == AgentType.Gadget;
+        public enum AgentType { NPC, Gadget, Player, EnemyPlayer }
 
         // Fields
         public ulong Agent { get; }
@@ -32,9 +28,6 @@ namespace GW2EIEvtcParser.ParsedData
         public ushort Concentration { get; }
         public uint HitboxWidth { get; }
         public uint HitboxHeight { get; }
-
-        public bool IsDummy { get; }
-        public bool IsNotInSquadPlayer { get; }
 
         public bool HasCommanderTag { get; protected set; }
 
@@ -61,15 +54,8 @@ namespace GW2EIEvtcParser.ParsedData
                     string[] splitStr = Name.Split('\0');
                     if (splitStr.Length < 2 || (splitStr[1].Length == 0 || splitStr[2].Length == 0 || splitStr[0].Contains("-")))
                     {
-                        if (!splitStr[0].Any(char.IsDigit))
-                        {
-                            IsNotInSquadPlayer = true;
-                        } 
-                        else
-                        {
-                            Name = Prof + " " + Name;
-                            Type = AgentType.EnemyPlayer;
-                        }
+                        Name = Prof + " " + Name;
+                        Type = AgentType.EnemyPlayer;
                     }
                 }
             }
@@ -79,12 +65,11 @@ namespace GW2EIEvtcParser.ParsedData
             }
         }
 
-        internal AgentItem(ulong agent, string name, string prof, int id, ushort instid, AgentType type, ushort toughness, ushort healing, ushort condition, ushort concentration, uint hbWidth, uint hbHeight, long firstAware, long lastAware, bool isDummy) : this(agent, name, prof, id, type, toughness, healing, condition, concentration, hbWidth, hbHeight)
+        internal AgentItem(ulong agent, string name, string prof, int id, ushort instid, AgentType type, ushort toughness, ushort healing, ushort condition, ushort concentration, uint hbWidth, uint hbHeight, long firstAware, long lastAware) : this(agent, name, prof, id, type, toughness, healing, condition, concentration, hbWidth, hbHeight)
         {
             InstID = instid;
             FirstAware = firstAware;
             LastAware = lastAware;
-            IsDummy = isDummy;
         }
 
         internal AgentItem(AgentItem other)
@@ -104,7 +89,6 @@ namespace GW2EIEvtcParser.ParsedData
             InstID = other.InstID;
             Master = other.Master;
             HasCommanderTag = other.HasCommanderTag;
-            IsDummy = other.IsDummy;
         }
 
         internal AgentItem()
@@ -236,24 +220,6 @@ namespace GW2EIEvtcParser.ParsedData
         {
             AbstractSingleActor actor = log.FindActor(this);
             return actor.HasBuff(log, buffId, time);
-        }
-
-        public double GetCurrentHealthPercent(ParsedEvtcLog log, long time)
-        {
-            AbstractSingleActor actor = log.FindActor(this);
-            return actor.GetCurrentHealthPercent(log, time);
-        }
-
-        public double GetCurrentBarrierPercent(ParsedEvtcLog log, long time)
-        {
-            AbstractSingleActor actor = log.FindActor(this);
-            return actor.GetCurrentBarrierPercent(log, time);
-        }
-
-        public Point3D GetCurrentPosition(ParsedEvtcLog log, long time)
-        {
-            AbstractSingleActor actor = log.FindActor(this);
-            return actor.GetCurrentPosition(log, time);
         }
     }
 }

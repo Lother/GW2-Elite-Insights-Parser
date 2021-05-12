@@ -64,7 +64,6 @@ namespace GW2EIBuilders.JsonModels
             damageModDesc.Description = item.Tooltip;
             damageModDesc.NonMultiplier = !item.Multiplier;
             damageModDesc.SkillBased = item.SkillBased;
-            damageModDesc.Approximate = item.Approximate;
             return damageModDesc;
         }
 

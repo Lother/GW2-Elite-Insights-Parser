@@ -115,7 +115,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         private static void FallBackPhases(NPC target, List<PhaseData> phases, ParsedEvtcLog log, bool firstPhaseAt0)
         {
-            IReadOnlyCollection<AgentItem> pAgents = log.PlayerAgents;
+            HashSet<AgentItem> pAgents = log.PlayerAgents;
             // clean Nikare related bugs
             switch (phases.Count)
             {

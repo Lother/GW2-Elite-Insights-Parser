@@ -121,10 +121,6 @@ namespace GW2EIJSON
             /// True if the modifier is skill based
             /// </summary>
             public bool SkillBased { get; set; }
-            /// <summary>
-            /// True if the modifier is an approximation
-            /// </summary>
-            public bool Approximate { get; set; }
         }
         
         /// <summary>

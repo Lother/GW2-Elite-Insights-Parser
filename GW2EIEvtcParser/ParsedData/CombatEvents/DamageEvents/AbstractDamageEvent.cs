@@ -8,11 +8,7 @@
 
         public SkillItem Skill { get; }
         public long SkillId => Skill.ID;
-        private readonly ArcDPSEnums.IFF _iff;
-
-        public bool ToFriendly => _iff == ArcDPSEnums.IFF.Friend;
-        public bool ToFoe => _iff == ArcDPSEnums.IFF.Foe;
-        public bool ToUnknown => _iff == ArcDPSEnums.IFF.Unknown;
+        public ArcDPSEnums.IFF IFF { get; }
 
         //private int _damage;
         public bool IsOverNinety { get; }
@@ -28,8 +24,8 @@
             IsOverNinety = evtcItem.IsNinety > 0;
             AgainstUnderFifty = evtcItem.IsFifty > 0;
             IsMoving = evtcItem.IsMoving > 0;
-            IsFlanking = evtcItem.IsFlanking > 0; 
-            _iff = evtcItem.IFF;
+            IsFlanking = evtcItem.IsFlanking > 0;
+            IFF = evtcItem.IFF;
         }
 
         public abstract bool ConditionDamageBased(ParsedEvtcLog log);

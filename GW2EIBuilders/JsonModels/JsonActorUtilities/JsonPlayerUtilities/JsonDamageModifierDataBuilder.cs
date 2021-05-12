@@ -33,34 +33,20 @@ namespace GW2EIBuilders.JsonModels
         }
 
 
-        public static List<JsonDamageModifierData> GetDamageModifiers(List<IReadOnlyDictionary<string, DamageModifierStat>> damageModDicts, ParsedEvtcLog log, Dictionary<string, JsonLog.DamageModDesc> damageModDesc)
+        public static List<JsonDamageModifierData> GetDamageModifiers(Dictionary<string, List<DamageModifierStat>> damageModDict, ParsedEvtcLog log, Dictionary<string, JsonLog.DamageModDesc> damageModDesc)
         {
             var dict = new Dictionary<int, List<JsonDamageModifierItem>>();
-            foreach (IReadOnlyDictionary<string, DamageModifierStat> damageModDict in damageModDicts)
+            foreach (string key in damageModDict.Keys)
             {
-                foreach (string key in damageModDict.Keys)
+                DamageModifier dMod = log.DamageModifiers.DamageModifiersByName[key];
+                int iKey = dMod.ID;
+                string nKey = "d" + iKey;
+                if (!damageModDesc.ContainsKey(nKey))
                 {
-                    DamageModifier dMod = log.DamageModifiers.DamageModifiersByName[key];
-                    int iKey = dMod.ID;
-                    string nKey = "d" + iKey;
-                    if (!damageModDesc.ContainsKey(nKey))
-                    {
-                        damageModDesc[nKey] = JsonLogBuilder.BuildDamageModDesc(dMod);
-                    }
-                    if (dict.TryGetValue(iKey, out List<JsonDamageModifierItem> list))
-                    {
-                        list.Add(BuildJsonDamageModifierItem(damageModDict[key]));
-                    }
-                    else
-                    {
-                        dict[iKey] = new List<JsonDamageModifierItem>
-                        {
-                            BuildJsonDamageModifierItem(damageModDict[key])
-                        };
-                    }
+                    damageModDesc[nKey] = JsonLogBuilder.BuildDamageModDesc(dMod);
                 }
+                dict[iKey] = damageModDict[key].Select(x => BuildJsonDamageModifierItem(x)).ToList();
             }
-
             var res = new List<JsonDamageModifierData>();
             foreach (KeyValuePair<int, List<JsonDamageModifierItem>> pair in dict)
             {
@@ -69,13 +55,13 @@ namespace GW2EIBuilders.JsonModels
             return res;
         }
 
-        public static List<JsonDamageModifierData>[] GetDamageModifiersTarget(Player player, ParsedEvtcLog log, Dictionary<string, JsonLog.DamageModDesc> damageModDesc, IReadOnlyList<PhaseData> phases)
+        public static List<JsonDamageModifierData>[] GetDamageModifiersTarget(Player player, ParsedEvtcLog log, Dictionary<string, JsonLog.DamageModDesc> damageModDesc)
         {
             var res = new List<JsonDamageModifierData>[log.FightData.Logic.Targets.Count];
             for (int i = 0; i < log.FightData.Logic.Targets.Count; i++)
             {
                 NPC tar = log.FightData.Logic.Targets[i];
-                res[i] = GetDamageModifiers(phases.Select(x => player.GetDamageModifierStats(tar, log, x.Start, x.End)).ToList(), log, damageModDesc); ;
+                res[i] = GetDamageModifiers(player.GetDamageModifierStats(log, tar), log, damageModDesc);
             }
             return res;
         }

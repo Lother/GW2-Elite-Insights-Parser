@@ -16,7 +16,6 @@ namespace GW2EIEvtcParser.EIData
         private static readonly HealingLogic _healingLogic = new HealingLogic();
         private static readonly ForceOverrideLogic _forceOverrideLogic = new ForceOverrideLogic();
         private static readonly OverrideLogic _overrideLogic = new OverrideLogic();
-        private static readonly CappedDurationLogic _cappedDurationLogic = new CappedDurationLogic();
 
         // Constructor
         protected BuffSimulator(ParsedEvtcLog log, Buff buff) : base(log, buff)
@@ -25,9 +24,6 @@ namespace GW2EIEvtcParser.EIData
             {
                 case BuffStackType.Queue:
                     _logic = _queueLogic;
-                    break;
-                case BuffStackType.CappedDuration:
-                    _logic = _cappedDurationLogic;
                     break;
                 case BuffStackType.Regeneration:
                     _logic = _healingLogic;
@@ -45,7 +41,7 @@ namespace GW2EIEvtcParser.EIData
             }
         }
 
-        protected bool IsFull => _logic.IsFull(BuffStack, Buff.Capacity);
+        protected bool IsFull => Buff.Capacity == BuffStack.Count;
 
         protected override void Clear()
         {
@@ -63,7 +59,8 @@ namespace GW2EIEvtcParser.EIData
             // Replace lowest value
             else
             {
-                if (!_logic.FindLowestValue(Log, toAdd, BuffStack, WasteSimulationResult))
+                bool found = _logic.StackEffect(Log, toAdd, BuffStack, WasteSimulationResult);
+                if (!found)
                 {
                     OverstackSimulationResult.Add(new BuffSimulationItemOverstack(src, duration, start));
                 }
@@ -88,7 +85,8 @@ namespace GW2EIEvtcParser.EIData
             // Replace lowest value
             else
             {
-                if (!_logic.FindLowestValue(Log, toAdd, BuffStack, WasteSimulationResult))
+                bool found = _logic.StackEffect(Log, toAdd, BuffStack, WasteSimulationResult);
+                if (!found)
                 {
                     OverstackSimulationResult.Add(new BuffSimulationItemOverstack(src, duration, time));
                 }

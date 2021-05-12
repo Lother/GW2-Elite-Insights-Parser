@@ -63,7 +63,7 @@
 
 <script>
     Vue.component("simplerotation-component", {
-        props: ["actorindex", "phaseindex", "target"],
+        props: ["playerindex", "phaseindex"],
         template: `${template}`,
         data: function () {
             return {
@@ -77,7 +77,7 @@
         },
         computed: {
             rotation: function () {
-                return this.target ? logData.targets[this.actorindex].details.rotation[this.phaseindex] : logData.players[this.actorindex].details.rotation[this.phaseindex];
+                return logData.players[this.playerindex].details.rotation[this.phaseindex];
             }
         },
         methods: {
