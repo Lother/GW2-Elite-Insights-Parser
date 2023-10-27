@@ -1,4 +1,5 @@
 ﻿using GW2EIEvtcParser.EIData;
+using static GW2EIEvtcParser.ArcDPSEnums;
 
 namespace GW2EIEvtcParser.ParsedData
 {
@@ -13,14 +14,14 @@ namespace GW2EIEvtcParser.ParsedData
             BuffInstance = evtcItem.Pad;
         }
 
-        internal AbstractBuffApplyEvent(AgentItem by, AgentItem to, long time, SkillItem buffSkill, uint id) : base(buffSkill, time)
+        internal AbstractBuffApplyEvent(AgentItem by, AgentItem to, long time, SkillItem buffSkill, IFF iff, uint id) : base(buffSkill, time, iff)
         {
             By = by;
             To = to;
             BuffInstance = id;
         }
 
-        internal override bool IsBuffSimulatorCompliant(bool hasStackIDs)
+        internal override bool IsBuffSimulatorCompliant(bool useBuffInstanceSimulator)
         {
             return BuffID != SkillIDs.NoBuff;
         }

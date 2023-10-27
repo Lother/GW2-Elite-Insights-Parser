@@ -19,8 +19,6 @@ namespace GW2EIBuilders.HtmlModels
         public List<int> Targets { get; set; } = new List<int>();
         public bool BreakbarPhase { get; set; }
 
-        public bool Dummy { get; set; }
-
         public List<List<object>> DpsStats { get; set; }
         public List<List<List<object>>> DpsStatsTargets { get; set; }
         public List<List<List<object>>> OffensiveStatsTargets { get; set; }
@@ -57,6 +55,9 @@ namespace GW2EIBuilders.HtmlModels
         public List<BuffData> ConditionsStats { get; set; }
         public List<BuffData> PersBuffStats { get; set; }
         public List<BuffData> GearBuffStats { get; set; }
+        public List<BuffData> NourishmentStats { get; set; }
+        public List<BuffData> EnhancementStats { get; set; }
+        public List<BuffData> OtherConsumableStats { get; set; }
         public List<BuffData> DebuffStats { get; set; }
 
         // active
@@ -113,7 +114,6 @@ namespace GW2EIBuilders.HtmlModels
             Start = phase.Start / 1000.0;
             End = phase.End / 1000.0;
             BreakbarPhase = phase.BreakbarPhase;
-            Dummy = phase.Dummy;
             foreach (AbstractSingleActor target in phase.Targets)
             {
                 Targets.Add(log.FightData.Logic.Targets.IndexOf(target));
@@ -174,13 +174,13 @@ namespace GW2EIBuilders.HtmlModels
             }
             StatisticsHelper statistics = log.StatisticsHelper;
 
-            DpsStats = PhaseDto.BuildDPSData(log, phase);
-            DpsStatsTargets = PhaseDto.BuildDPSTargetsData(log, phase);
-            OffensiveStatsTargets = PhaseDto.BuildOffensiveStatsTargetsData(log, phase);
-            OffensiveStats = PhaseDto.BuildOffensiveStatsData(log, phase);
-            GameplayStats = PhaseDto.BuildGameplayStatsData(log, phase);
-            DefStats = PhaseDto.BuildDefenseData(log, phase);
-            SupportStats = PhaseDto.BuildSupportData(log, phase);
+            DpsStats = BuildDPSData(log, phase);
+            DpsStatsTargets = BuildDPSTargetsData(log, phase);
+            OffensiveStatsTargets = BuildOffensiveStatsTargetsData(log, phase);
+            OffensiveStats = BuildOffensiveStatsData(log, phase);
+            GameplayStats = BuildGameplayStatsData(log, phase);
+            DefStats = BuildDefenseData(log, phase);
+            SupportStats = BuildSupportData(log, phase);
             //
             BoonStats = BuffData.BuildBuffUptimeData(log, statistics.PresentBoons, phase);
             BoonDictionaries = BuffData.BuildBuffDictionariesData(log, statistics.PresentBoons, phase);
@@ -189,6 +189,9 @@ namespace GW2EIBuilders.HtmlModels
             DefBuffStats = BuffData.BuildBuffUptimeData(log, statistics.PresentDefbuffs, phase);
             PersBuffStats = BuffData.BuildPersonalBuffUptimeData(log, persBuffDict, phase);
             GearBuffStats = BuffData.BuildBuffUptimeData(log, statistics.PresentGearbuffs, phase);
+            NourishmentStats = BuffData.BuildBuffUptimeData(log, statistics.PresentNourishements, phase);
+            EnhancementStats = BuffData.BuildBuffUptimeData(log, statistics.PresentEnhancements, phase);
+            OtherConsumableStats = BuffData.BuildBuffUptimeData(log, statistics.PresentOtherConsumables, phase);
             DebuffStats = BuffData.BuildBuffUptimeData(log, statistics.PresentDebuffs, phase);
             ConditionsStats = BuffData.BuildBuffUptimeData(log, statistics.PresentConditions, phase);
             BoonGenSelfStats = BuffData.BuildBuffGenerationData(log, statistics.PresentBoons, phase, BuffEnum.Self);
@@ -314,6 +317,17 @@ namespace GW2EIBuilders.HtmlModels
                     stats.AgainstMovingCount, // 14
                     stats.ConnectedDamageCount, // 15
                     stats.TotalDamageCount, // 16
+                    stats.DownContribution, // 17
+                    stats.ConnectedDmg, // 18
+                    stats.ConnectedDirectDmg, // 19
+
+                    stats.ConnectedPowerCount, // 20
+                    stats.ConnectedPowerAbove90HPCount, // 21
+                    stats.ConnectedConditionCount, // 22
+                    stats.ConnectedConditionAbove90HPCount, // 23
+                    stats.AgainstDownedCount, // 24
+                    stats.AgainstDownedDamage, // 25
+                    stats.TotalDmg, // 26
                 };
             return data;
         }
@@ -348,41 +362,42 @@ namespace GW2EIBuilders.HtmlModels
 
         private static List<object> GetDefenseStatData(FinalDefensesAll defenses, PhaseData phase)
         {
-            var data = new List<object>
-                {
-                    defenses.DamageTaken,
-                    defenses.DamageBarrier,
-                    defenses.MissedCount,
-                    defenses.InterruptedCount,
-                    defenses.InvulnedCount,
-                    defenses.EvadedCount,
-                    defenses.BlockedCount,
-                    defenses.DodgeCount,
-                };
-
+            int downCount = 0;
+            string downTooltip = "0% Downed";
             if (defenses.DownDuration > 0)
             {
                 var downDuration = TimeSpan.FromMilliseconds(defenses.DownDuration);
-                data.Add(defenses.DownCount);
-                data.Add(downDuration.TotalSeconds + " seconds downed, " + Math.Round((downDuration.TotalMilliseconds / phase.DurationInMS) * 100, 1) + "% Downed");
+                downCount = (defenses.DownCount);
+                downTooltip = (downDuration.TotalSeconds + " seconds downed, " + Math.Round((downDuration.TotalMilliseconds / phase.DurationInMS) * 100, 1) + "% Downed");
             }
-            else
-            {
-                data.Add(0);
-                data.Add("0% downed");
-            }
-
+            int deadCount = 0;
+            string deadTooltip = "100% Alive";
             if (defenses.DeadCount > 0)
             {
                 var deathDuration = TimeSpan.FromMilliseconds(defenses.DeadDuration);
-                data.Add(defenses.DeadCount);
-                data.Add(deathDuration.TotalSeconds + " seconds dead, " + (100.0 - Math.Round((deathDuration.TotalMilliseconds / phase.DurationInMS) * 100, 1)) + "% Alive");
+                deadCount = (defenses.DeadCount);
+                deadTooltip = (deathDuration.TotalSeconds + " seconds dead, " + (100.0 - Math.Round((deathDuration.TotalMilliseconds / phase.DurationInMS) * 100, 1)) + "% Alive");
             }
-            else
-            {
-                data.Add(0);
-                data.Add("100% Alive");
-            }
+            var data = new List<object>
+                {
+                    defenses.DamageTaken, // 0
+                    defenses.DamageBarrier,// 1
+                    defenses.MissedCount,// 2
+                    defenses.InterruptedCount,// 3
+                    defenses.InvulnedCount,// 4
+                    defenses.EvadedCount,// 5
+                    defenses.BlockedCount,// 6
+                    defenses.DodgeCount,// 7
+                    defenses.ConditionCleanses,// 8
+                    defenses.ConditionCleansesTime,// 9
+                    defenses.BoonStrips,// 10
+                    defenses.BoonStripsTime,// 11
+                    downCount, // 12
+                    downTooltip,// 13
+                    deadCount,// 14
+                    deadTooltip,// 15
+                    defenses.DownedDamageTaken // 16
+                };
             return data;
         }
         public static List<List<object>> BuildDPSData(ParsedEvtcLog log, PhaseData phase)

@@ -3,6 +3,11 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
+using GW2EIEvtcParser.Exceptions;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -13,44 +18,57 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-            new HitOnPlayerMechanic(48066, "King's Wrath", new MechanicPlotlySetting(Symbols.TriangleLeft,Colors.LightBlue), "Cone Hit","King's Wrath (Auto Attack Cone Part)", "Cone Auto Attack",0),
-            new HitOnPlayerMechanic(47531, "Numbing Breach", new MechanicPlotlySetting(Symbols.AsteriskOpen,Colors.LightBlue), "Cracks","Numbing Breach (Ice Cracks in the Ground)", "Cracks",0),
-            new PlayerBuffApplyMechanic(FrozenWind, "Frozen Wind", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Green), "Green","Frozen Wind (Stood in Green)", "Green Stack",0),
+            new PlayerDstHitMechanic(KingsWrath, "King's Wrath", new MechanicPlotlySetting(Symbols.TriangleLeft,Colors.LightBlue), "Cone Hit","King's Wrath (Auto Attack Cone Part)", "Cone Auto Attack",0),
+            new PlayerDstHitMechanic(NumbingBreach, "Numbing Breach", new MechanicPlotlySetting(Symbols.AsteriskOpen,Colors.LightBlue), "Cracks","Numbing Breach (Ice Cracks in the Ground)", "Cracks",0),
+            new PlayerDstBuffApplyMechanic(FrozenWind, "Frozen Wind", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Green), "Green","Frozen Wind (Stood in Green)", "Green Stack",0),
             }
             );
             Extension = "brokenking";
-            Icon = "https://wiki.guildwars2.com/images/3/37/Mini_Broken_King.png";
+            Icon = EncounterIconStatueOfIce;
             EncounterCategoryInformation.InSubCategoryOrder = 2;
             EncounterID |= 0x000003;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/JRPskkX.png",
+            return new CombatReplayMap(CombatReplayStatueOfIce,
                             (999, 890),
                             (2497, 5388, 7302, 9668)/*,
                             (-21504, -12288, 24576, 12288),
                             (19072, 15484, 20992, 16508)*/);
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
+            AgentItem brokenKing = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.BrokenKing).FirstOrDefault();
+            if (brokenKing == null)
+            {
+                throw new MissingKeyActorsException("Broken King not found");
+            }
             long startToUse = GetGenericFightOffset(fightData);
             CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
             if (logStartNPCUpdate != null)
             {
-                startToUse = logStartNPCUpdate.Time;
+                CombatItem initialCast = combatData.FirstOrDefault(x => x.StartCasting() && x.SkillID == BrokenKingFirstCast && x.SrcMatchesAgent(brokenKing));
+                if (initialCast != null)
+                {
+                    startToUse = initialCast.Time;
+                } 
+                else
+                {
+                    startToUse = GetPostLogStartNPCUpdateDamageEventTime(fightData, agentData, combatData, logStartNPCUpdate.Time, brokenKing);
+                }
             }
             return startToUse;
         }
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
-            var green = log.CombatData.GetBuffData(SkillIDs.FrozenWind).Where(x => x.To == p.AgentItem && x is BuffApplyEvent).ToList();
+            var green = log.CombatData.GetBuffData(FrozenWind).Where(x => x.To == p.AgentItem && x is BuffApplyEvent).ToList();
             foreach (AbstractBuffEvent c in green)
             {
                 int duration = 45000;
-                AbstractBuffEvent removedBuff = log.CombatData.GetBuffRemoveAllData(SkillIDs.FrozenWind).FirstOrDefault(x => x.To == p.AgentItem && x.Time > c.Time && x.Time < c.Time + duration);
+                AbstractBuffEvent removedBuff = log.CombatData.GetBuffRemoveAllData(FrozenWind).FirstOrDefault(x => x.To == p.AgentItem && x.Time > c.Time && x.Time < c.Time + duration);
                 int start = (int)c.Time;
                 int end = start + duration;
                 if (removedBuff != null)
@@ -67,7 +85,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.BrokenKing:
-                    var Cone = cls.Where(x => x.SkillId == 48066).ToList();
+                    var Cone = cls.Where(x => x.SkillId == KingsWrath).ToList();
                     foreach (AbstractCastEvent c in Cone)
                     {
                         int start = (int)c.Time;
@@ -79,8 +97,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             continue;
                         }
-                        replay.Decorations.Add(new PieDecoration(true, 0, range, facing, angle, (start, end), "rgba(0,100,255,0.2)", new AgentConnector(target)));
-                        replay.Decorations.Add(new PieDecoration(true, 0, range, facing, angle, (start + 1900, end), "rgba(0,100,255,0.3)", new AgentConnector(target)));
+                        var connector = new AgentConnector(target);
+                        var rotationConnector = new AngleConnector(facing);
+                        replay.Decorations.Add(new PieDecoration(true, 0, range, angle, (start, end), "rgba(0,100,255,0.2)", connector).UsingRotationConnector(rotationConnector));
+                        replay.Decorations.Add(new PieDecoration(true, 0, range, angle, (start + 1900, end), "rgba(0,100,255,0.3)", connector).UsingRotationConnector(rotationConnector));
                     }
                     break;
                 default:
@@ -93,12 +113,12 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(48218, 48218), // Biting Aura
+                new DamageCastFinder(BitingAura, BitingAura), // Biting Aura
             };
         }
         internal override void CheckSuccess(CombatData combatData, AgentData agentData, FightData fightData, IReadOnlyCollection<AgentItem> playerAgents)
         {
-            SetSuccessByDeath(combatData, fightData, playerAgents, true, (int)ArcDPSEnums.TargetID.BrokenKing);
+            NoBouncyChestGenericCheckSucess(combatData, agentData, fightData, playerAgents);
         }
 
         internal override string GetLogicName(CombatData combatData, AgentData agentData)

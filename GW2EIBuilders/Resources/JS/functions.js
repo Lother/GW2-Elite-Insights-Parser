@@ -53,6 +53,7 @@ function findSkill(isBuff, id) {
     } else {
         skill = logData.skillMap["s" + id] || {};
     }
+    skill.id = id;
     if (!apiRenderServiceOkay) {
         buildFallBackURL(skill);
     }
@@ -306,7 +307,8 @@ function computeRotationData(rotationData, images, data, phase, actor, yAxis) {
             rotaTrace.x.push(clampedWidth - 0.001);
             rotaTrace.base.push(clampedX);
             rotaTrace.y.push(1.2);
-            rotaTrace.text.push(name + ' at ' + x + 's for ' + originalDuration + 'ms');
+            var text = `${name} at ${x}s`;
+            rotaTrace.text.push(endType === RotationStatus.INSTANT ? text : text + ` for ${originalDuration}ms`);
             rotaTrace.width.push(aa ? 0.5 : 1.0);
             rotaTrace.marker.color.push(fillColor);
 
@@ -693,55 +695,83 @@ function computeBuffData(buffData, data) {
     return 0;
 }
 
-function _initTable (id, cell, order, orderCallBack) {
-    var table = $(id);
-    if (!table.length) {
-        return;
+function computeTargetDPS(target, damageData, lim, phasebreaks, cacheID, times, graphMode) {
+    if (target.dpsGraphCache.has(cacheID)) {
+        return target.dpsGraphCache.get(cacheID);
     }
-    var data = {
-        order: [
-            [cell, order]
-        ]
-    };
-    if ($.fn.dataTable.isDataTable(id)) {
-        table.DataTable().destroy();
+    var totalDamage = 0;
+    var totalDPS = [0];
+    var maxDPS = 0;
+    var left = 0, right = 0;
+    var end = times.length;
+    if (graphMode === GraphType.CenteredDPS) {
+        lim /= 2;
     }
-    table.DataTable(data);
-    if (orderCallBack) {
-        table.DataTable().on('order.dt', orderCallBack);
-    }
-    //}
-};
-
-function initializeTable(tableid, sortdata) {
-    _initTable(
-        "#" + tableid,
-        sortdata.index,
-        sortdata.order,
-        function () {
-            var order = $("#" + tableid)
-                .DataTable()
-                .order();
-                sortdata.order = order[0][1];
-                sortdata.index = order[0][0];
+    for (var j = 0; j < end; j++) {
+        var time = times[j];
+        if (lim > 0) {
+            left = Math.max(Math.round(time - lim), 0);
+        } else if (phasebreaks && phasebreaks[j]) {
+            left = j;
         }
-    );
+        right = j;
+        if (graphMode === GraphType.CenteredDPS) {
+            if (lim > 0) {
+                right = Math.min(Math.round(time + lim), end - 1);
+            } else if (phasebreaks) {
+                for (var i = left + 1; i < phasebreaks.length; i++) {
+                    if (phasebreaks[i]) {
+                        right = i;
+                        break;
+                    }
+                }
+            } else {
+                right = end - 1;
+            }
+        }
+        var div = graphMode !== GraphType.Damage ? Math.max(times[right] - times[left], 1) : 1;
+        totalDamage = damageData[right] - damageData[left];
+        totalDPS[j] = Math.round(totalDamage / (div));
+        maxDPS = Math.max(maxDPS, totalDPS[j]);
+    }
+    if (maxDPS < 1e-6) {
+        maxDPS = 10;
+    }
+    var res = {
+        dps: totalDPS,
+        maxDPS: maxDPS
+    };
+    target.dpsGraphCache.set(cacheID, res);
+    return res;
 }
 
-function updateTable(tableid) {
-    var divID = "#" + tableid;
-    var table = $(divID);
-    if ($.fn.dataTable.isDataTable(divID)) {
-        table.DataTable().rows().invalidate('dom');
-        table.DataTable().draw();
+function addTargetLayout(data, target, states, percentName, graphName, visible) {
+    if (!states) {
+        return 0;
     }
-    //}
-};
+    var texts = [];
+    var times = [];
+    for (var j = 0; j < states.length; j++) {
+        texts[j] = states[j][1] + "% " + percentName;
+        times[j] = states[j][0];
+    }
+    var res = {
+        x: times,
+        text: texts,
+        mode: 'lines',
+        line: {
+            dash: 'dashdot',
+            shape: 'hv'
+        },
+        hoverinfo: 'text',
+        visible: visible ? true : 'legendonly',
+        name: target.name + ' ' + graphName,
+        yaxis: 'y3'
+    };
+    data.push(res);
+    return 1;
+}
 
-function refreshTable(tableid, sortdata) {
-    initializeTable(tableid, sortdata);
-    updateTable(tableid);
-};
 
 /*function getActorGraphLayout(images, boonYs, stackingBoons) {
     var layout = {

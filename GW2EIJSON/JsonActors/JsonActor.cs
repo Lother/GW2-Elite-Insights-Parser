@@ -35,7 +35,7 @@ namespace GW2EIJSON
         /// </summary>
         public uint Toughness { get; set; }
         /// <summary>
-        /// Height of the hitbox
+        /// Height of the hitbox, please not that the center of the box is at the feet of the agent
         /// </summary>
         public uint HitboxHeight { get; set; }
         /// <summary>
@@ -46,6 +46,14 @@ namespace GW2EIJSON
         /// ID of the actor in the instance
         /// </summary>
         public ushort InstanceID { get; set; }
+
+        /// <summary>
+        /// The team ID of the actor. \n
+        /// Mainly useful for WvW logs to differentiate targets from different servers. \n
+        /// In PvE logs, the situation is always a simple Friend vs Foe situation. \
+        /// If value is equal to 0 then no information regarding TeamID was present for given actor.
+        /// </summary>
+        public ulong TeamID { get; set; }
         
         /// <summary>
         /// List of minions

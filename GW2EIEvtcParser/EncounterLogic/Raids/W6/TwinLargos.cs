@@ -4,7 +4,12 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -14,31 +19,31 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-            new PlayerBuffApplyMechanic(Waterlogged, "Waterlogged", new MechanicPlotlySetting(Symbols.HexagonOpen,Colors.LightBlue), "Debuff","Waterlogged (stacking water debuff)", "Waterlogged",0),
-            new HitOnPlayerMechanic(52876, "Vapor Rush", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.LightBlue), "Charge","Vapor Rush (Triple Charge)", "Vapor Rush Charge",0),
-            new HitOnPlayerMechanic(52812, "Tidal Pool", new MechanicPlotlySetting(Symbols.Circle,Colors.LightBlue), "Pool","Tidal Pool", "Tidal Pool",0),
-            new EnemyCastStartMechanic(51977, "Aquatic Barrage Start", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "CC","Breakbar", "Breakbar",0),
-            new EnemyCastEndMechanic(51977, "Aquatic Barrage End", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Breakbar broken", "CCed",0),
-            new HitOnPlayerMechanic(53018, "Sea Swell", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkPurple), "Wave","Sea Swell (Shockwave)", "Shockwave",0),
-            new HitOnPlayerMechanic(53130, "Geyser", new MechanicPlotlySetting(Symbols.Hexagon,Colors.Teal), "KB/Launch","Geyser (Launching Aoes)", "Launch Field",0),
-            new PlayerBuffApplyMechanic(TidalPool, "Tidal Pool", new MechanicPlotlySetting(Symbols.Diamond,Colors.Teal), "Poison","Expanding Water Field", "Water Poison",0),
-            new HitOnPlayerMechanic(AquaticDetainmentHit, "Aquatic Detainment", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Blue), "Float","Aquatic Detainment (Float Bubble)", "Float Bubble",6000),
-            new HitOnPlayerMechanic(52130, "Aquatic Vortex", new MechanicPlotlySetting(Symbols.StarSquareOpenDot,Colors.LightBlue), "Tornado","Aquatic Vortex (Water Tornados)", "Tornado",0),
-            new HitOnPlayerMechanic(51965, "Vapor Jet", new MechanicPlotlySetting(Symbols.Square,Colors.Pink), "Steal","Vapor Jet (Boon Steal)", "Boon Steal",0),
-            new EnemyBuffApplyMechanic(EnragedTwinLargos, "Enraged", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.Red), "Enrage","Enraged", "Enrage",0),
-            new PlayerBuffApplyMechanic(AquaticAuraKenut, "Aquatic Aura Kenut", new MechanicPlotlySetting(Symbols.SquareOpen,Colors.Teal), "Ken Aura","Increasing Damage Debuff on Kenut's Last Platform", "Kenut Aura Debuff",0),
-            new PlayerBuffApplyMechanic(AquaticAuraNikare, "Aquatic Aura Nikare", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Teal), "Nik Aura","Increasing Damage Debuff on Nikare's Last Platform", "Nikare Aura Debuff",0),
-            new HitOnPlayerMechanic(51999, "Cyclone Burst", new MechanicPlotlySetting(Symbols.YUpOpen,Colors.Pink), "Y Field","Cyclone Burst (triangular rotating fields on Kenut)", "Cyclone Burst",0),
+            new PlayerDstBuffApplyMechanic(Waterlogged, "Waterlogged", new MechanicPlotlySetting(Symbols.HexagonOpen,Colors.LightBlue), "Debuff","Waterlogged (stacking water debuff)", "Waterlogged",0),
+            new PlayerDstHitMechanic(VaporRush, "Vapor Rush", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.LightBlue), "Charge","Vapor Rush (Triple Charge)", "Vapor Rush Charge",0),
+            new PlayerDstHitMechanic(TidalPoolSkill, "Tidal Pool", new MechanicPlotlySetting(Symbols.Circle,Colors.LightBlue), "Pool","Tidal Pool", "Tidal Pool",0),
+            new EnemyCastStartMechanic(AquaticBarrage, "Aquatic Barrage Start", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "CC","Breakbar", "Breakbar",0),
+            new EnemyCastEndMechanic(AquaticBarrage, "Aquatic Barrage End", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Breakbar broken", "CCed",0),
+            new PlayerDstHitMechanic(SeaSwell, "Sea Swell", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkPurple), "Wave","Sea Swell (Shockwave)", "Shockwave",0),
+            new PlayerDstHitMechanic(Geyser, "Geyser", new MechanicPlotlySetting(Symbols.Hexagon,Colors.Teal), "KB/Launch","Geyser (Launching Aoes)", "Launch Field",0),
+            new PlayerDstBuffApplyMechanic(TidalPoolBuff, "Tidal Pool", new MechanicPlotlySetting(Symbols.Diamond,Colors.Teal), "Poison","Expanding Water Field", "Water Poison",0),
+            new PlayerDstHitMechanic(AquaticDetainmentHit, "Aquatic Detainment", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Blue), "Float","Aquatic Detainment (Float Bubble)", "Float Bubble",6000),
+            new PlayerDstHitMechanic(AquaticVortex, "Aquatic Vortex", new MechanicPlotlySetting(Symbols.StarSquareOpenDot,Colors.LightBlue), "Tornado","Aquatic Vortex (Water Tornados)", "Tornado",0),
+            new PlayerDstHitMechanic(VaporJet, "Vapor Jet", new MechanicPlotlySetting(Symbols.Square,Colors.Pink), "Steal","Vapor Jet (Boon Steal)", "Boon Steal",0),
+            new EnemyDstBuffApplyMechanic(EnragedTwinLargos, "Enraged", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.Red), "Enrage","Enraged", "Enrage",0),
+            new PlayerDstBuffApplyMechanic(AquaticAuraKenut, "Aquatic Aura Kenut", new MechanicPlotlySetting(Symbols.SquareOpen,Colors.Teal), "Ken Aura","Increasing Damage Debuff on Kenut's Last Platform", "Kenut Aura Debuff",0),
+            new PlayerDstBuffApplyMechanic(AquaticAuraNikare, "Aquatic Aura Nikare", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Teal), "Nik Aura","Increasing Damage Debuff on Nikare's Last Platform", "Nikare Aura Debuff",0),
+            new PlayerDstHitMechanic(CycloneBurst, "Cyclone Burst", new MechanicPlotlySetting(Symbols.YUpOpen,Colors.Pink), "Y Field","Cyclone Burst (triangular rotating fields on Kenut)", "Cyclone Burst",0),
             });
             Extension = "twinlargos";
-            Icon = "https://i.imgur.com/6O5MT7v.png";
+            Icon = EncounterIconTwinLargos;
             EncounterCategoryInformation.InSubCategoryOrder = 1;
             EncounterID |= 0x000002;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/O8wIWds.png",
+            return new CombatReplayMap(CombatReplayTwinLargos,
                             (765, 1000),
                             (10846, -3878, 18086, 5622)/*,
                             (-21504, -21504, 24576, 24576),
@@ -58,14 +63,18 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(52779, 52779), // Nikare Aquatic Aura
-                new DamageCastFinder(52005, 52005), // Kenut Aquatic Aura
+                new DamageCastFinder(NikareAquaticAura, NikareAquaticAura),
+                new DamageCastFinder(KenutAquaticAura, KenutAquaticAura),
             };
         }
 
-        protected override List<int> GetSuccessCheckIds()
+        protected override List<int> GetSuccessCheckIDs()
         {
-            return GetTargetsIDs();
+            return new List<int>
+            {
+                (int)ArcDPSEnums.TargetID.Nikare,
+                (int)ArcDPSEnums.TargetID.Kenut
+            };
         }
 
         internal override List<AbstractHealthDamageEvent> SpecialDamageEventProcess(CombatData combatData, SkillData skillData)
@@ -199,13 +208,13 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor nikare = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Nikare);
+            AbstractSingleActor nikare = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Nikare));
             if (nikare == null)
             {
                 throw new MissingKeyActorsException("Nikare not found");
             }
             phases[0].AddTarget(nikare);
-            AbstractSingleActor kenut = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Kenut);
+            AbstractSingleActor kenut = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Kenut));
             if (kenut != null)
             {
                 phases[0].AddTarget(kenut);
@@ -233,13 +242,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 case (int)ArcDPSEnums.TargetID.Nikare:
                     //CC
-                    var barrageN = cls.Where(x => x.SkillId == 51977).ToList();
+                    var barrageN = cls.Where(x => x.SkillId == AquaticBarrage).ToList();
                     foreach (AbstractCastEvent c in barrageN)
                     {
                         replay.Decorations.Add(new CircleDecoration(true, 0, 250, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
                     //Platform wipe (CM only)
-                    var aquaticDomainN = cls.Where(x => x.SkillId == 52374).ToList();
+                    var aquaticDomainN = cls.Where(x => x.SkillId == AquaticDomain).ToList();
                     foreach (AbstractCastEvent c in aquaticDomainN)
                     {
                         int start = (int)c.Time;
@@ -250,13 +259,13 @@ namespace GW2EIEvtcParser.EncounterLogic
                     break;
                 case (int)ArcDPSEnums.TargetID.Kenut:
                     //CC
-                    var barrageK = cls.Where(x => x.SkillId == 51977).ToList();
+                    var barrageK = cls.Where(x => x.SkillId == AquaticBarrage).ToList();
                     foreach (AbstractCastEvent c in barrageK)
                     {
                         replay.Decorations.Add(new CircleDecoration(true, 0, 250, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
                     //Platform wipe (CM only)
-                    var aquaticDomainK = cls.Where(x => x.SkillId == 52374).ToList();
+                    var aquaticDomainK = cls.Where(x => x.SkillId == AquaticDomain).ToList();
                     foreach (AbstractCastEvent c in aquaticDomainK)
                     {
                         int start = (int)c.Time;
@@ -264,7 +273,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int radius = 800;
                         replay.Decorations.Add(new CircleDecoration(true, end, radius, (start, end), "rgba(255, 255, 0, 0.3)", new AgentConnector(target)));
                     }
-                    var shockwave = cls.Where(x => x.SkillId == 53018).ToList();
+                    var shockwave = cls.Where(x => x.SkillId == SeaSwell).ToList();
                     foreach (AbstractCastEvent c in shockwave)
                     {
                         int start = (int)c.Time;
@@ -273,7 +282,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int radius = 1200;
                         replay.Decorations.Add(new CircleDecoration(false, start + delay + duration, radius, (start + delay, start + delay + duration), "rgba(100, 200, 255, 0.5)", new AgentConnector(target)));
                     }
-                    var boonSteal = cls.Where(x => x.SkillId == 51965).ToList();
+                    var boonSteal = cls.Where(x => x.SkillId == VaporJet).ToList();
                     foreach (AbstractCastEvent c in boonSteal)
                     {
                         int start = (int)c.Time;
@@ -284,9 +293,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                         Point3D facing = replay.Rotations.FirstOrDefault(x => x.Time >= start);
                         if (facing != null)
                         {
-                            float rotation = Point3D.GetRotationFromFacing(facing);
-                            replay.Decorations.Add(new RotatedRectangleDecoration(false, 0, width, height, rotation, width / 2, (start + delay, start + delay + duration), "rgba(255, 175, 0, 0.8)", new AgentConnector(target)));
-                            replay.Decorations.Add(new RotatedRectangleDecoration(true, 0, width, height, rotation, width / 2, (start + delay, start + delay + duration), "rgba(255, 175, 0, 0.2)", new AgentConnector(target)));
+                            var positionConnector = (AgentConnector)new AgentConnector(target).WithOffset(new Point3D(width / 2, 0), true);
+                            var rotationConnextor = new AngleConnector(facing);
+                            replay.Decorations.Add(new RectangleDecoration(false, 0, width, height, (start + delay, start + delay + duration), "rgba(255, 175, 0, 0.8)", positionConnector).UsingRotationConnector(rotationConnextor));
+                            replay.Decorations.Add(new RectangleDecoration(true, 0, width, height, (start + delay, start + delay + duration), "rgba(255, 175, 0, 0.2)", positionConnector).UsingRotationConnector(rotationConnextor));
                         }
                     }
                     break;
@@ -298,47 +308,32 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
             // Water "Poison Bomb"
-            List<AbstractBuffEvent> waterToDrop = GetFilteredList(log.CombatData, TidalPool, p, true, true);
-            int toDropStart = 0;
-            foreach (AbstractBuffEvent c in waterToDrop)
+            var waterToDrop = p.GetBuffStatus(log, TidalPoolBuff, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+            foreach (Segment seg in waterToDrop)
             {
                 int timer = 5000;
                 int duration = 83000;
                 int debuffRadius = 100;
                 int radius = 500;
-                if (c is BuffApplyEvent)
+                int toDropStart = (int)seg.Start;
+                int toDropEnd = (int)seg.End;
+                replay.Decorations.Add(new CircleDecoration(false, 0, debuffRadius, seg, "rgba(255, 100, 0, 0.4)", new AgentConnector(p)));
+                replay.Decorations.Add(new CircleDecoration(true, toDropStart + timer, debuffRadius, seg, "rgba(255, 100, 0, 0.4)", new AgentConnector(p)));
+                ParametricPoint3D poisonNextPos = replay.PolledPositions.FirstOrDefault(x => x.Time >= toDropEnd);
+                ParametricPoint3D poisonPrevPos = replay.PolledPositions.LastOrDefault(x => x.Time <= toDropEnd);
+                if (poisonNextPos != null || poisonPrevPos != null)
                 {
-                    toDropStart = (int)c.Time;
+                    replay.Decorations.Add(new CircleDecoration(true, toDropStart + duration, radius, (toDropEnd, toDropEnd + duration), "rgba(100, 100, 100, 0.3)", new InterpolatedPositionConnector(poisonPrevPos, poisonNextPos, toDropEnd), debuffRadius));
+                    replay.Decorations.Add(new CircleDecoration(false, toDropStart + duration, radius, (toDropEnd, toDropEnd + duration), "rgba(230, 230, 230, 0.4)", new InterpolatedPositionConnector(poisonPrevPos, poisonNextPos, toDropEnd), debuffRadius));
                 }
-                else
-                {
-                    int toDropEnd = (int)c.Time;
-                    replay.Decorations.Add(new CircleDecoration(false, 0, debuffRadius, (toDropStart, toDropEnd), "rgba(255, 100, 0, 0.4)", new AgentConnector(p)));
-                    replay.Decorations.Add(new CircleDecoration(true, toDropStart + timer, debuffRadius, (toDropStart, toDropEnd), "rgba(255, 100, 0, 0.4)", new AgentConnector(p)));
-                    ParametricPoint3D poisonNextPos = replay.PolledPositions.FirstOrDefault(x => x.Time >= toDropEnd);
-                    ParametricPoint3D poisonPrevPos = replay.PolledPositions.LastOrDefault(x => x.Time <= toDropEnd);
-                    if (poisonNextPos != null || poisonPrevPos != null)
-                    {
-                        replay.Decorations.Add(new CircleDecoration(true, toDropStart + duration, radius, (toDropEnd, toDropEnd + duration), "rgba(100, 100, 100, 0.3)", new InterpolatedPositionConnector(poisonPrevPos, poisonNextPos, toDropEnd), debuffRadius));
-                        replay.Decorations.Add(new CircleDecoration(false, toDropStart + duration, radius, (toDropEnd, toDropEnd + duration), "rgba(230, 230, 230, 0.4)", new InterpolatedPositionConnector(poisonPrevPos, poisonNextPos, toDropEnd), debuffRadius));
-                    }
-                }
+                replay.AddOverheadIcon(seg, p, ParserIcons.TidalPoolOverhead);
             }
             // Bubble (Aquatic Detainment)
-            List<AbstractBuffEvent> bubble = GetFilteredList(log.CombatData, AquaticDetainmentEffect, p, true, true);
-            int bubbleStart = 0;
-            foreach (AbstractBuffEvent c in bubble)
+            var bubble = p.GetBuffStatus(log, AquaticDetainmentBuff, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+            int bubbleRadius = 100;
+            foreach (Segment seg in bubble)
             {
-                int radius = 100;
-                if (c is BuffApplyEvent)
-                {
-                    bubbleStart = Math.Max((int)c.Time, 0);
-                }
-                else
-                {
-                    int bubbleEnd = (int)c.Time;
-                    replay.Decorations.Add(new CircleDecoration(true, 0, radius, (bubbleStart, bubbleEnd), "rgba(0, 200, 255, 0.3)", new AgentConnector(p)));
-                }
+                replay.Decorations.Add(new CircleDecoration(true, 0, bubbleRadius, seg, "rgba(0, 200, 255, 0.3)", new AgentConnector(p)));
             }
         }
 
@@ -349,17 +344,38 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            AbstractSingleActor nikare = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Nikare);
-            AbstractSingleActor kenut = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Kenut);
+            AbstractSingleActor nikare = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Nikare));
             if (nikare == null)
             {
                 throw new MissingKeyActorsException("Nikare not found");
             }
+            bool nikareHasCastAquaticDomain = combatData.GetAnimatedCastData(nikare.AgentItem).Any(x => x.SkillId == AquaticDomain);
+            if (nikareHasCastAquaticDomain) // aquatic domain only present in CM
+            {
+                return FightData.EncounterMode.CM;
+            }
+            FightData.EncounterMode mode = (nikare.GetHealth(combatData) > 18e6) ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal; //Health of Nikare;
+            AbstractSingleActor kenut = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Kenut));
             if (kenut != null)
             {
-                return kenut.GetHealth(combatData) > 16e6 || nikare.GetHealth(combatData) > 18e6 ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal; // Kenut or nikare hp
+                if (combatData.GetAnimatedCastData(kenut.AgentItem).Any(x => x.SkillId == AquaticDomain)) // aquatic domain only present in CM
+                {
+                    return FightData.EncounterMode.CM;
+                }
+                if (mode != FightData.EncounterMode.CM && kenut.GetHealth(combatData) > 16e6) // Health of Kenut
+                {
+                    mode = FightData.EncounterMode.CM;
+                }
+                if (mode == FightData.EncounterMode.CM && combatData.GetDamageTakenData(kenut.AgentItem).Any(x => x.CreditedFrom.IsPlayer && x.HealthDamage > 0) && !nikareHasCastAquaticDomain) // Kenut engaged but nikare never cast Aquatic Domain -> normal mode
+                {
+                    mode = FightData.EncounterMode.Normal;
+                }
             }
-            return (nikare.GetHealth(combatData) > 18e6) ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal; //Health of Nikare
+            if (mode == FightData.EncounterMode.CM && combatData.GetHealthUpdateEvents(nikare.AgentItem).Any(x => x.HPPercent < 70) && !nikareHasCastAquaticDomain) // Nikare went below 70% but never cast Aquatic Domain
+            {
+                mode = FightData.EncounterMode.Normal;
+            }
+            return mode;
         }
     }
 }

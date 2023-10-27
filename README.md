@@ -135,7 +135,9 @@ Note it may take some time for each file to parse and they will not be ready to 
 
 -__DPSReportUserToken__: dps.report user token.
 
--__UploadToRaidar__: if true, the log will be uploaded to raidar (not used).
+-__UploadToRaidar__: if true, the log will be uploaded to raidar (deprecated, service not available).
+
+-__UploadToWingman__: if true, the log will be uploaded to Wingman uploadProcessed API.
 
 -__WebhookURL__: Webhook URL to send an embed or simple message to.
 
@@ -144,6 +146,8 @@ Note it may take some time for each file to parse and they will not be ready to 
 -__SendSimpleMessageToWebhook__: if true, only the dps.reports link will be sent to the webhook.
 
 ## HTML Overview
+
+For a more detailed look, please check the following guide: https://snowcrows.com/en/guides/starting-to-raid/reading-logs.
 
 ### Header
 
@@ -293,22 +297,10 @@ It is possible to filter the table by:
 
 ## JSON Overview 
 
-The Json documentation can be found [here](https://baaron4.github.io/GW2-Elite-Insights-Parser/Json/index.html)
+The Json documentation can be found [here](https://baaron4.github.io/GW2-Elite-Insights-Parser/Json/index.html).
 
 # Contributors
-## Developers
-- baaron4
-- EliphasNUIT
-- cordbleibaum
-- QuiCM
-- amgine
-- Linus
-- Sejsel
-- Flomix
-- Stonos
-- Hobinjk
 
-## Other stuffs
-- Linus (arena maps/ icons for combat replay)
+Thank you to all our [contributors](https://github.com/baaron4/GW2-Elite-Insights-Parser/graphs/contributors).
 
-
+Special thanks to Linus and TBTerra for creating images for the Combat Replay arenas.

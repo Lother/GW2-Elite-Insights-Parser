@@ -81,42 +81,45 @@ namespace GW2EIBuilders.HtmlModels.HTMLCharts
             }
         }
 
-        public static List<BuffChartDataDto> BuildBoonGraphData(ParsedEvtcLog log, AbstractSingleActor p, PhaseData phase, Dictionary<long, Buff> usedBuffs)
+        private static List<BuffChartDataDto> BuildBuffGraphData(ParsedEvtcLog log, AbstractSingleActor p, PhaseData phase, Dictionary<long, BuffsGraphModel> buffGraphData, Dictionary<long, Buff> usedBuffs)
         {
             var list = new List<BuffChartDataDto>();
-            var boonGraphData = p.GetBuffGraphs(log).ToDictionary(x => x.Key, x => x.Value);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentBoons, boonGraphData, phase, usedBuffs);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentConditions, boonGraphData, phase, usedBuffs);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentOffbuffs, boonGraphData, phase, usedBuffs);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentSupbuffs, boonGraphData, phase, usedBuffs);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentDefbuffs, boonGraphData, phase, usedBuffs);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentDebuffs, boonGraphData, phase, usedBuffs);
-            BuildBoonGraphData(list, log.StatisticsHelper.PresentGearbuffs, boonGraphData, phase, usedBuffs);
-            foreach (BuffsGraphModel bgm in boonGraphData.Values)
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentBoons, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentConditions, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentOffbuffs, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentSupbuffs, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentDefbuffs, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentDebuffs, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(list, log.StatisticsHelper.PresentGearbuffs, buffGraphData, phase, usedBuffs);
+            var footList = new List<BuffChartDataDto>();
+            BuildBoonGraphData(footList, log.StatisticsHelper.PresentNourishements, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(footList, log.StatisticsHelper.PresentEnhancements, buffGraphData, phase, usedBuffs);
+            BuildBoonGraphData(footList, log.StatisticsHelper.PresentOtherConsumables, buffGraphData, phase, usedBuffs);
+            foreach (BuffsGraphModel bgm in buffGraphData.Values)
             {
+                if (bgm.Buff.Classification == Buff.BuffClassification.Hidden)
+                {
+                    continue;
+                }
                 BuffChartDataDto graph = BuildBuffGraph(bgm, phase, usedBuffs);
                 if (graph != null)
                 {
                     list.Add(graph);
                 }
             }
-            if (p.GetType() == typeof(Player))
-            {
-                foreach (AbstractSingleActor mainTarget in log.FightData.GetMainTargets(log))
-                {
-                    boonGraphData = mainTarget.GetBuffGraphs(log);
-                    foreach (BuffsGraphModel bgm in boonGraphData.Values.Reverse().Where(x => x.Buff.Name == "Compromised" || x.Buff.Name == "Unnatural Signet" || x.Buff.Name == "Fractured - Enemy" || x.Buff.Name == "Erratic Energy"))
-                    {
-                        BuffChartDataDto graph = BuildBuffGraph(bgm, phase, usedBuffs);
-                        if (graph != null)
-                        {
-                            list.Add(graph);
-                        }
-                    }
-                }
-            }
+            list.AddRange(footList);
             list.Reverse();
             return list;
+        }
+
+        public static List<BuffChartDataDto> BuildBuffGraphData(ParsedEvtcLog log, AbstractSingleActor p, PhaseData phase, Dictionary<long, Buff> usedBuffs)
+        {
+            return BuildBuffGraphData(log, p, phase, p.GetBuffGraphs(log).ToDictionary(x => x.Key, x => x.Value), usedBuffs);
+        }
+
+        public static List<BuffChartDataDto> BuildBuffGraphData(ParsedEvtcLog log, AbstractSingleActor p, AbstractSingleActor by, PhaseData phase, Dictionary<long, Buff> usedBuffs)
+        {
+            return BuildBuffGraphData(log, p, phase, p.GetBuffGraphs(log, by).ToDictionary(x => x.Key, x => x.Value), usedBuffs);
         }
     }
 }

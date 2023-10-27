@@ -9,20 +9,20 @@
                             {{instanceBuff.stack > 1 ? instanceBuff.stack + ' x' : ''}}
                             <img :data-original-title="instanceBuff.buff.name + (instanceBuff.buff.description ? '<br> ' + instanceBuff.buff.description : '')"
                                  :src="instanceBuff.buff.icon" class="icon icon-hover" />
-                        </span>                      
+                        </span>
                     </div>
-                    <img class="icon-xl" :src="encounter.icon" :alt="encounter.name">
+                    <img class="encounter-icon" :src="encounter.icon" :alt="encounter.name">
                 </div>
                 <div class="ml-3 d-flex flex-column justify-content-center">
                     <div class="mb-2" v-for="target in encounter.targets">
                         <div v-if="encounter.targets.length > 1" class="small" style="text-align:center;">
                             {{target.name}}
                         </div>
-                        <div v-if="target.health > 0" class="super-small" style="text-align:center;">                        
+                        <div v-if="target.health > 0" class="super-small" style="text-align:center;">
                             {{ target.health }} Health
                         </div>
-                        <div :style="{'background': getGradient(target.hpLeft ? target.hpLeft : 0), 'height': '10px', 'width': '100%', 'border-radius': '5px'}">     
-                        </div>                 
+                        <div :style="{'background': getGradient(target.hpLeft ? target.hpLeft : 0), 'height': '10px', 'width': '100%', 'border-radius': '5px'}">
+                        </div>
                         <div class="small" style="text-align:center;">
                             {{ target.hpLeft ? target.hpLeft : 0 }}% remaining
                         </div>
@@ -31,6 +31,7 @@
                         Result: {{resultStatus.text}}
                     </div>
                     <div class="mb-2">Duration: {{ encounter.duration }}</div>
+                    <div class="mb-2" v-if="fractalScale > 0">Fractal Scale: {{ fractalScale }}</div>
                 </div>
             </div>
         </div>
@@ -56,9 +57,11 @@
         computed: {
             encounter: function () {
                 var targets = [];
-                for (var i = 0; i < logData.phases[0].targets.length; i++) {
-                    var targetData = logData.targets[logData.phases[0].targets[i]];
-                    targets.push(targetData);
+                if (logData.phases[0].targets.length < 10 && !logData.targetless) {
+                    for (var i = 0; i < logData.phases[0].targets.length; i++) {
+                        var targetData = logData.targets[logData.phases[0].targets[i]];
+                        targets.push(targetData);
+                    }
                 }
 
                 var encounter = {
@@ -68,6 +71,9 @@
                     targets: targets
                 };
                 return encounter;
+            },
+            fractalScale: function () {
+                return logData.fractalScale;
             },
             resultStatus: function () {
                 return logData.success ? { text: 'Success', class: ["text-success"] } : { text: 'Failure', class: ["text-warning"] };

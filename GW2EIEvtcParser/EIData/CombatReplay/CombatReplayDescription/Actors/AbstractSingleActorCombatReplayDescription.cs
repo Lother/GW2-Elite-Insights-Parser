@@ -1,19 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace GW2EIEvtcParser.EIData
 {
-    public abstract class AbstractSingleActorCombatReplayDescription
+    public abstract class AbstractSingleActorCombatReplayDescription : AbstractCombatReplayDescription
     {
         public string Img { get; }
-        public string Type { get; }
         public int ID { get; }
         public IReadOnlyList<float> Positions { get; }
+        public IReadOnlyList<float> Angles { get; }
         public IReadOnlyList<long> Dead { get; private set; }
         public IReadOnlyList<long> Down { get; private set; }
         public IReadOnlyList<long> Dc { get; private set; }
-        public long Start { get; }
-        public long End { get; }
+        public IReadOnlyList<long> BreakbarActive { get; private set; }
 
         public long HitboxWidth { get; }
 
@@ -42,6 +42,8 @@ namespace GW2EIEvtcParser.EIData
             ID = actor.UniqueID;
             var positions = new List<float>();
             Positions = positions;
+            var angles = new List<float>();
+            Angles = angles;
             Type = GetActorType(actor, log);
             HitboxWidth = actor.AgentItem.HitboxWidth;
             foreach (Point3D pos in replay.PolledPositions)
@@ -49,6 +51,10 @@ namespace GW2EIEvtcParser.EIData
                 (float x, float y) = map.GetMapCoord(pos.X, pos.Y);
                 positions.Add(x);
                 positions.Add(y);
+            }
+            foreach (Point3D facing in replay.PolledRotations)
+            {
+                angles.Add(-Point3D.GetRotationFromFacing(facing));
             }
         }
         protected void SetStatus(ParsedEvtcLog log, AbstractSingleActor a)
@@ -75,6 +81,19 @@ namespace GW2EIEvtcParser.EIData
             {
                 dc.Add(seg.Start);
                 dc.Add(seg.End);
+            }
+        }
+
+        protected void SetBreakbarStatus(ParsedEvtcLog log, AbstractSingleActor a)
+        {
+            var active = new List<long>();
+            BreakbarActive = active;
+            (_, IReadOnlyList<Segment> actives, _, _) = a.GetBreakbarStatus(log);
+
+            foreach (Segment seg in actives)
+            {
+                active.Add(seg.Start);
+                active.Add(seg.End);
             }
         }
 

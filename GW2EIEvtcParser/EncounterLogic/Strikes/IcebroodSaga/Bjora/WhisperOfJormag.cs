@@ -4,7 +4,12 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -14,45 +19,53 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-                new HitOnPlayerMechanic(59159, "Chains of Frost Hit", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "H.Chains","Hit by Chains of Frost", "Chains of Frost",50),
-                new HitOnPlayerMechanic(59441, "Lethal Coalescence Soaked", new MechanicPlotlySetting(Symbols.Hexagram,Colors.Red), "S.Lethal.Coal.","Soaked Lethal Coalescence Damage", "Soaked Lethal Coalescence",50),
-                new HitOnPlayerMechanic(59102, "Spreading Ice (Own)", new MechanicPlotlySetting(Symbols.Circle,Colors.Orange), "S.Ice","Hit by own spreading ice", "Spreading Ice (Own)",50),
-                new HitOnPlayerMechanic(59468, "Spreading Ice (Others)", new MechanicPlotlySetting(Symbols.TriangleUp,Colors.LightOrange), "S.Ice.O","Hit by other's spreading ice", "Spreading Ice (Others)",50),
-                new HitOnPlayerMechanic(59076, "Icy Slice", new MechanicPlotlySetting(Symbols.Hexagram,Colors.Orange), "I.Slice","Hit by Icy Slice", "Icy Slice",50),
-                new HitOnPlayerMechanic(59255, "Ice Tempest", new MechanicPlotlySetting(Symbols.Square,Colors.Orange), "I.Tornado","Hit by Ice Tornadoes", "Ice Tempest",50),
-                new PlayerBuffApplyMechanic(ChainsOfFrostApplication, "Chains of Frost", new MechanicPlotlySetting(Symbols.Circle,Colors.Blue), "F.Chains","Selected for Chains of Frost", "Chains of Frost",500),
-                new PlayerBuffRemoveMechanic(WhisperTeleportBack, "Teleport Back", new MechanicPlotlySetting(Symbols.Circle,Colors.LightBlue), "TP In","Teleported back to the arena", "Teleport Back",500),
-                new PlayerBuffRemoveMechanic(WhisperTeleportOut, "Teleport Out", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightBlue), "TP Out","Teleported outside of the arena", "Teleport Out",500),
-                new EnemyCastStartMechanic(59102, "Spreading Ice", new MechanicPlotlySetting(Symbols.Hexagram,Colors.DarkRed), "S.Ice.C","Cast Spreading Ice", "Cast Spreading Ice",0),
-                new EnemyCastStartMechanic(59159, "Chains of Frost", new MechanicPlotlySetting(Symbols.Hexagram,Colors.LightRed), "F.Chains.C","Cast Chains of Frost", "Cast Chains of Frost",0),
+                new PlayerDstHitMechanic(ChainsOfFrostHit, "Chains of Frost", new MechanicPlotlySetting(Symbols.DiamondTall, Colors.Red), "H.Chains", "Hit by Chains of Frost", "Chains of Frost", 0),
+                new PlayerDstHitMechanic(SlitheringRime, "Slithering Rime", new MechanicPlotlySetting(Symbols.CircleX, Colors.Red), "SlitRime.H", "Hit by Slithering Rime (Orbs)", "Slithering Rime", 0),
+                new PlayerDstHitMechanic(LethalCoalescenceSoaked, "Lethal Coalescence Soaked", new MechanicPlotlySetting(Symbols.Circle, Colors.Green), "S.Lethal.Coal.", "Soaked Lethal Coalescence Damage", "Soaked Lethal Coalescence", 50),
+                new PlayerDstHitMechanic(SpreadingIceOwn, "Spreading Ice (Own)", new MechanicPlotlySetting(Symbols.Circle, Colors.Orange), "S.Ice", "Hit by own Spreading Ice", "Spreading Ice (Own)", 50),
+                new PlayerDstHitMechanic(SpreadingIceOthers, "Spreading Ice (Others)", new MechanicPlotlySetting(Symbols.TriangleUp, Colors.LightOrange), "S.Ice.O", "Hit by other's Spreading Ice", "Spreading Ice (Others)", 50),
+                new PlayerDstHitMechanic(IcySlice, "Icy Slice", new MechanicPlotlySetting(Symbols.Hexagram, Colors.Orange), "I.Slice", "Hit by Icy Slice", "Icy Slice", 50),
+                new PlayerDstHitMechanic(IceTempest, "Ice Tempest", new MechanicPlotlySetting(Symbols.Square, Colors.Orange), "I.Tornado", "Hit by Ice Tempest (Tornadoes)", "Ice Tempest", 50),
+                new PlayerDstHitMechanic(FrigidVortexDamage, "Frigid Vortex", new MechanicPlotlySetting(Symbols.Star, Colors.Pink), "FrigVor.H", "Hit by Frigid Vortex", "Frigid Vortex Hit", 50),
+                new PlayerDstHitMechanic(new long[] { IceShatterWhisper4, IceShatterWhisper2, IceShatterWhisper1, IceShatterWhisper3 }, "Ice Shatter", new MechanicPlotlySetting(Symbols.Circle, Colors.Teal), "IceShatt.H", "Hit by Ice Shatter (Large AoEs)", "Ice Shatter", 150),
+                new PlayerDstBuffApplyMechanic(ChainsOfFrostApplication, "Chains of Frost", new MechanicPlotlySetting(Symbols.DiamondTall, Colors.LightRed), "F.Chains", "Selected for Chains of Frost", "Chains of Frost", 500),
+                new PlayerDstBuffApplyMechanic(LethalCoalescenceBuff, "Lethal Coalescence", new MechanicPlotlySetting(Symbols.CircleOpenDot, Colors.Green), "LethalCoa.A", "Selected for Lethal Coalescence (Green)", "Lethal Coalescence", 500),
+                new PlayerDstBuffApplyMechanic(FrigidVortexBuff, "Frigid Vortex", new MechanicPlotlySetting(Symbols.Star, Colors.LightBlue), "FrigVor.A", "Frigid Vortex Applied", "Frigid Vortex Buff", 0),
+                new PlayerDstBuffRemoveMechanic(WhisperTeleportBack, "Teleport Back", new MechanicPlotlySetting(Symbols.Circle, Colors.LightBlue), "TP In", "Teleported back to the arena", "Teleport Back", 500),
+                new PlayerDstBuffRemoveMechanic(WhisperTeleportOut, "Teleport Out", new MechanicPlotlySetting(Symbols.CircleOpen, Colors.LightBlue), "TP Out", "Teleported outside of the arena", "Teleport Out", 500),
+                new EnemyCastStartMechanic(SpreadingIceOwn, "Spreading Ice", new MechanicPlotlySetting(Symbols.Hexagram, Colors.DarkRed), "S.Ice.C", "Cast Spreading Ice", "Cast Spreading Ice", 0),
+                new EnemyCastStartMechanic(ChainsOfFrostHit, "Chains of Frost", new MechanicPlotlySetting(Symbols.Hexagram, Colors.LightRed), "F.Chains.C", "Cast Chains of Frost", "Cast Chains of Frost", 0),
+                new EnemyCastStartMechanic(FrigidVortexSkill, "Frigid Vortex", new MechanicPlotlySetting(Symbols.Star, Colors.Magenta), "Frigid Vortex", "Cast Frigid Vortex", "Cast Frigid Vortex", 50),
+                new EnemyCastStartMechanic(LethalCoalescenceSoaked, "Lethal Coalescence", new MechanicPlotlySetting(Symbols.Circle, Colors.DarkGreen), "Lethal Coalescence", "Cast Lethal Coalescence", "Cast Lethal Coalescence", 50),
+                new EnemyCastStartMechanic(new long[] { ViciousSlam1, ViciousSlam2 }, "Vicious Slam",  new MechanicPlotlySetting(Symbols.TriangleUp, Colors.White), "Vicious Slam", "Cast Vicious Slam (Launch)", "Vicious Slam (Launch)", 150),
             }
             );
             Extension = "woj";
-            Icon = "https://i.imgur.com/8GLwgfL.png";
+            Icon = EncounterIconWhisperOfJormag;
             EncounterCategoryInformation.InSubCategoryOrder = 3;
             EncounterID |= 0x000005;
         }
 
-        /*protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
+        protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/sXvx6AL.png",
-                            (729, 581),
-                            (-32118, -11470, -28924, -8274),
+            return new CombatReplayMap(CombatReplayWhisperOfJormag,
+                            (1682, 1682),
+                            (-3287, -1772, 3313, 4828)/*,
                             (-0, -0, 0, 0),
-                            (0, 0, 0, 0));
-        }*/
+                            (0, 0, 0, 0)*/);
+        }
         internal override List<InstantCastFinder> GetInstantCastFinders()
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(59202, 59202), // Frostbite Aura
+                new DamageCastFinder(FrostbiteAuraWhisperOfJormag, FrostbiteAuraWhisperOfJormag),
             };
         }
 
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor woj = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.WhisperOfJormag);
+            AbstractSingleActor woj = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.WhisperOfJormag));
             if (woj == null)
             {
                 throw new MissingKeyActorsException("Whisper of Jormag not found");
@@ -63,8 +76,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 return phases;
             }
             long start, end;
-            var tpOutEvents = log.CombatData.GetBuffData(SkillIDs.WhisperTeleportOut).Where(x => x is BuffRemoveAllEvent).ToList();
-            var tpBackEvents = log.CombatData.GetBuffData(SkillIDs.WhisperTeleportBack).Where(x => x is BuffRemoveAllEvent).ToList();
+            var tpOutEvents = log.CombatData.GetBuffData(WhisperTeleportOut).Where(x => x is BuffRemoveAllEvent).ToList();
+            var tpBackEvents = log.CombatData.GetBuffData(WhisperTeleportBack).Where(x => x is BuffRemoveAllEvent).ToList();
             // 75% tp happened
             if (tpOutEvents.Count > 0)
             {
@@ -110,13 +123,24 @@ namespace GW2EIEvtcParser.EncounterLogic
             return new List<ArcDPSEnums.TrashID>
             {
                 ArcDPSEnums.TrashID.WhisperEcho,
-                ArcDPSEnums.TrashID.DoppelgangerGuardian1,
+                ArcDPSEnums.TrashID.DoppelgangerElementalist,
+                ArcDPSEnums.TrashID.DoppelgangerElementalist2,
+                ArcDPSEnums.TrashID.DoppelgangerEngineer,
+                ArcDPSEnums.TrashID.DoppelgangerEngineer2,
+                ArcDPSEnums.TrashID.DoppelgangerGuardian,
                 ArcDPSEnums.TrashID.DoppelgangerGuardian2,
-                ArcDPSEnums.TrashID.DoppelgangerNecro,
+                ArcDPSEnums.TrashID.DoppelgangerMesmer,
+                ArcDPSEnums.TrashID.DoppelgangerMesmer2,
+                ArcDPSEnums.TrashID.DoppelgangerNecromancer,
+                ArcDPSEnums.TrashID.DoppelgangerNecromancer2,
+                ArcDPSEnums.TrashID.DoppelgangerRanger,
+                ArcDPSEnums.TrashID.DoppelgangerRanger2,
                 ArcDPSEnums.TrashID.DoppelgangerRevenant,
-                ArcDPSEnums.TrashID.DoppelgangerThief1,
+                ArcDPSEnums.TrashID.DoppelgangerRevenant2,
+                ArcDPSEnums.TrashID.DoppelgangerThief,
                 ArcDPSEnums.TrashID.DoppelgangerThief2,
                 ArcDPSEnums.TrashID.DoppelgangerWarrior,
+                ArcDPSEnums.TrashID.DoppelgangerWarrior2,
             };
         }
     }

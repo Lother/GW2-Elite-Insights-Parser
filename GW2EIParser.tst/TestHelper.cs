@@ -20,7 +20,7 @@ namespace GW2EIParser.tst
             NamingStrategy = new CamelCaseNamingStrategy()
         };
         private static readonly Version Version = new Version(1, 0);
-        private static readonly EvtcParserSettings parserSettings = new EvtcParserSettings(false, true, true, true, true, 2200, true);
+        private static readonly EvtcParserSettings parserSettings = new EvtcParserSettings(false, false, true, true, true, 2200, true);
         private static readonly HTMLSettings htmlSettings = new HTMLSettings(false, false);
         private static readonly RawFormatSettings rawSettings = new RawFormatSettings(true);
         private static readonly CSVSettings csvSettings = new CSVSettings(",");
@@ -49,7 +49,7 @@ namespace GW2EIParser.tst
             var parser = new EvtcParser(parserSettings, apiController);
 
             var fInfo = new FileInfo(location);
-            ParsedEvtcLog parsedLog = parser.ParseLog(new TestOperationController(), fInfo, out GW2EIEvtcParser.ParserHelpers.ParsingFailureReason failureReason, true);
+            ParsedEvtcLog parsedLog = parser.ParseLog(new TestOperationController(), fInfo, out GW2EIEvtcParser.ParserHelpers.ParsingFailureReason failureReason, false);
             if (failureReason != null)
             {
                 failureReason.Throw();

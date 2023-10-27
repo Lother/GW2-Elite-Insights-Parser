@@ -32,13 +32,13 @@ namespace GW2EIBuilders
             _log = log;
             _parserVersion = parserVersion;
             _delimiter = settings.Delimiter;
-            _phases = log.FightData.GetNonDummyPhases(log);
+            _phases = log.FightData.GetPhases(log);
             _noFakePlayers = log.PlayerList.ToList();
 
             _statistics = log.StatisticsHelper;
 
             _uploadResult = uploadResults.ToArray();
-            _legacyTarget = log.FightData.Logic.GetLegacyTarget();
+            _legacyTarget = log.FightData.Logic.Targets.OfType<NPC>().FirstOrDefault();
             if (_legacyTarget == null)
             {
                 throw new InvalidDataException("No Targets found for csv");
@@ -645,7 +645,7 @@ namespace GW2EIBuilders
                     WriteCell(p.Character);
                     foreach (Mechanic mech in presMech)
                     {
-                        int count = _log.MechanicData.GetMechanicLogs(_log, mech).Count(x => x.Actor == p && phase.InInterval(x.Time));
+                        int count = _log.MechanicData.GetMechanicLogs(_log, mech, p, phase.Start, phase.End).Count;
                         WriteCell(count.ToString());
                     }
                     NewLine();

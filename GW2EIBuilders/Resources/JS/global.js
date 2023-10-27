@@ -3,14 +3,6 @@
 
 let apiRenderServiceOkay = true;
 
-$.extend($.fn.dataTable.defaults, {
-    searching: false,
-    ordering: true,
-    paging: false,
-    retrieve: true,
-    dom: "t"
-});
-
 const quickColor = {
     r: 220,
     g: 20,
@@ -63,21 +55,6 @@ if (!String.prototype.includes) {
     });
 }
 
-/*var lazyTableUpdater = null;
-if ('IntersectionObserver' in window) {
-    lazyTableUpdater = new IntersectionObserver(function (entries, observer) {
-        entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-                var id = entry.target.id;
-                var table = $("#" + id);
-                if ($.fn.dataTable.isDataTable(table)) {
-                    table.DataTable().rows().invalidate('dom').draw();
-                }
-                observer.unobserve(entry.target);
-            }
-        });
-    });
-}*/
 const themes = {
     "yeti": "https://cdnjs.cloudflare.com/ajax/libs/bootswatch/4.1.1/yeti/bootstrap.min.css",
     "slate": "https://cdnjs.cloudflare.com/ajax/libs/bootswatch/4.1.1/slate/bootstrap.min.css"
@@ -199,6 +176,22 @@ const specToBase = {
     Weaver: "Elementalist",
     Catalyst: "Elementalist"
 };
+
+const SkillDecorationCategory = {
+    "Show On Select" : 1 << 0,
+    "Important Buffs": 1 << 1,
+    "Projectile Management": 1 << 2,
+    "Heal": 1 << 3,
+    "Cleanse": 1 << 4,
+    "Strip": 1 << 5,
+    "Portal": 1 << 6,
+};
+
+let AllSkillDecorations = 0;
+for (let key in SkillDecorationCategory) {
+    AllSkillDecorations |= SkillDecorationCategory[key];
+}
+let DefaultSkillDecorations = AllSkillDecorations;
 
 const RotationStatus = {
     UNKNOWN: 0,

@@ -16,6 +16,7 @@ namespace GW2EIEvtcParser.EIData
         private HashSet<Buff> _trackedBuffs;
         private BuffDictionary _buffMap;
         private Dictionary<long, BuffsGraphModel> _buffGraphs { get; set; }
+        private Dictionary<AgentItem,Dictionary<long, BuffsGraphModel>> _buffGraphsPerAgent { get; set; }
         private CachingCollection<BuffDistribution> _buffDistribution;
         private CachingCollection<Dictionary<long, long>> _buffPresence;
         private CachingCollectionCustom<BuffEnum, Dictionary<long, FinalActorBuffs>[]> _buffStats;
@@ -62,7 +63,7 @@ namespace GW2EIEvtcParser.EIData
             return res;
         }
 
-        public Dictionary<long, long> GetBuffPresence(ParsedEvtcLog log, long start, long end)
+        public IReadOnlyDictionary<long, long> GetBuffPresence(ParsedEvtcLog log, long start, long end)
         {
             if (_buffGraphs == null)
             {
@@ -94,13 +95,31 @@ namespace GW2EIEvtcParser.EIData
             return buffPresence;
         }
 
-        public Dictionary<long, BuffsGraphModel> GetBuffGraphs(ParsedEvtcLog log)
+        public IReadOnlyDictionary<long, BuffsGraphModel> GetBuffGraphs(ParsedEvtcLog log)
         {
             if (_buffGraphs == null)
             {
                 SetBuffGraphs(log);
             }
             return _buffGraphs;
+        }
+
+        public IReadOnlyDictionary<long, BuffsGraphModel> GetBuffGraphs(ParsedEvtcLog log, AbstractSingleActor by)
+        {
+            AgentItem agent = by.AgentItem;
+            if (_buffGraphs == null)
+            {
+                SetBuffGraphs(log);
+            } 
+            if (_buffGraphsPerAgent == null)
+            {
+                _buffGraphsPerAgent = new Dictionary<AgentItem, Dictionary<long, BuffsGraphModel>>();
+            }
+            if (!_buffGraphsPerAgent.ContainsKey(agent))
+            {
+                SetBuffGraphs(log, by);
+            }
+            return _buffGraphsPerAgent[agent];
         }
 
         /// <summary>
@@ -116,7 +135,7 @@ namespace GW2EIEvtcParser.EIData
             {
                 throw new InvalidOperationException("Buff id must be simulated");
             }
-            Dictionary<long, BuffsGraphModel> bgms = GetBuffGraphs(log);
+            IReadOnlyDictionary<long, BuffsGraphModel> bgms = GetBuffGraphs(log);
             if (bgms.TryGetValue(buffId, out BuffsGraphModel bgm))
             {
                 return bgm.IsPresent(time);
@@ -125,6 +144,91 @@ namespace GW2EIEvtcParser.EIData
             {
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Checks if a buff is present on the actor and applied by given actor. Given buff id must be in the buff simulator, throws <see cref="InvalidOperationException"/> otherwise
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="by"></param>
+        /// <param name="buffId"></param>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public bool HasBuff(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long time)
+        {
+            if (!log.Buffs.BuffsByIds.ContainsKey(buffId))
+            {
+                throw new InvalidOperationException("Buff id must be simulated");
+            }
+            IReadOnlyDictionary<long, BuffsGraphModel> bgms = GetBuffGraphs(log, by);
+            if (bgms.TryGetValue(buffId, out BuffsGraphModel bgm))
+            {
+                return bgm.IsPresent(time);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        private static Segment GetBuffStatus(long buffId, long time, IReadOnlyDictionary<long, BuffsGraphModel> bgms)
+        {
+            if (bgms.TryGetValue(buffId, out BuffsGraphModel bgm))
+            {
+                return bgm.GetBuffStatus(time);
+            }
+            else
+            {
+                return new Segment(long.MinValue, long.MaxValue, 0);
+            }
+        }
+
+        public Segment GetBuffStatus(ParsedEvtcLog log, long buffId, long time)
+        {
+            if (!log.Buffs.BuffsByIds.ContainsKey(buffId))
+            {
+                throw new InvalidOperationException("Buff id must be simulated");
+            }
+            return GetBuffStatus(buffId, time, GetBuffGraphs(log));
+        }
+
+        public Segment GetBuffStatus(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long time)
+        {
+            if (!log.Buffs.BuffsByIds.ContainsKey(buffId))
+            {
+                throw new InvalidOperationException("Buff id must be simulated");
+            }
+            return GetBuffStatus(buffId, time, GetBuffGraphs(log, by));
+        }
+
+        private static IReadOnlyList<Segment> GetBuffStatus(long buffId, long start, long end, IReadOnlyDictionary<long, BuffsGraphModel> bgms)
+        {
+            if (bgms.TryGetValue(buffId, out BuffsGraphModel bgm))
+            {
+                return bgm.GetBuffStatus(start, end);
+            }
+            else
+            {
+                return new List<Segment>();
+            }
+        }
+
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, long buffId, long start, long end)
+        {
+            if (!log.Buffs.BuffsByIds.ContainsKey(buffId))
+            {
+                throw new InvalidOperationException("Buff id must be simulated");
+            }
+            return GetBuffStatus(buffId, start, end, GetBuffGraphs(log));
+        }
+
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long start, long end)
+        {
+            if (!log.Buffs.BuffsByIds.ContainsKey(buffId))
+            {
+                throw new InvalidOperationException("Buff id must be simulated");
+            }
+            return GetBuffStatus(buffId, start, end, GetBuffGraphs(log, by));
         }
 
         public IReadOnlyDictionary<long, FinalActorBuffs> GetBuffs(BuffEnum type, ParsedEvtcLog log, long start, long end)
@@ -168,7 +272,7 @@ namespace GW2EIEvtcParser.EIData
         {
             //
             _buffMap = new BuffDictionary();
-            if (Actor.AgentItem == ParserHelper._unknownAgent)
+            if (Actor.AgentItem == _unknownAgent)
             {
                 _buffMap.Finalize(log, Actor.AgentItem, out _trackedBuffs);
                 return;
@@ -177,15 +281,26 @@ namespace GW2EIEvtcParser.EIData
 #if DEBUG
             var test = log.CombatData.GetBuffData(Actor.AgentItem).Where(x => !log.Buffs.BuffsByIds.ContainsKey(x.BuffID)).GroupBy(x => x.BuffSkill.Name).ToDictionary(x => x.Key, x => x.ToList());
 #endif
-            foreach (AbstractBuffEvent buffEvent in log.CombatData.GetBuffData(Actor.AgentItem))
+            var buffEventsDict = log.CombatData.GetBuffData(Actor.AgentItem).GroupBy(x => x.BuffID).ToDictionary(x => x.Key, x => x.ToList());
+            foreach (KeyValuePair<long, List<AbstractBuffEvent>> buffEventPair in buffEventsDict)
             {
-                long buffID = buffEvent.BuffID;
+                long buffID = buffEventPair.Key;
                 if (!log.Buffs.BuffsByIds.ContainsKey(buffID))
                 {
                     continue;
                 }
-                Buff buff = log.Buffs.BuffsByIds[buffID];
-                _buffMap.Add(log, buff, buffEvent);
+                foreach (AbstractBuffEvent buffEvent in buffEventPair.Value)
+                {
+                    Buff buff = log.Buffs.BuffsByIds[buffID];
+                    if (buffID != SkillIDs.Regeneration)
+                    {
+                        _buffMap.Add(log, buff, buffEvent);
+                    }
+                    else
+                    {
+                        _buffMap.AddRegen(log, buff, buffEvent);
+                    }
+                }
             }
             _buffMap.Finalize(log, Actor.AgentItem, out _trackedBuffs);
         }
@@ -295,7 +410,61 @@ namespace GW2EIEvtcParser.EIData
             }
         }
 
-        public Dictionary<long, FinalBuffsDictionary> GetBuffsDictionary(ParsedEvtcLog log, long start, long end)
+        private void SetBuffGraphs(ParsedEvtcLog log, AbstractSingleActor by)
+        {
+            var buffGraphs = new Dictionary<long, BuffsGraphModel>();
+            _buffGraphsPerAgent[by.AgentItem] = buffGraphs;
+            BuffDictionary buffMap = _buffMap;
+            var boonIds = new HashSet<long>(log.Buffs.BuffsByClassification[BuffClassification.Boon].Select(x => x.ID));
+            var condiIds = new HashSet<long>(log.Buffs.BuffsByClassification[BuffClassification.Condition].Select(x => x.ID));
+            //
+            var boonPresenceGraph = new BuffsGraphModel(log.Buffs.BuffsByIds[SkillIDs.NumberOfBoons]);
+            var condiPresenceGraph = new BuffsGraphModel(log.Buffs.BuffsByIds[SkillIDs.NumberOfConditions]);
+            //
+            foreach (Buff buff in GetTrackedBuffs(log))
+            {
+                long buffID = buff.ID;
+                if (_buffSimulators.TryGetValue(buff.ID, out AbstractBuffSimulator simulator) && !buffGraphs.ContainsKey(buffID))
+                {
+                    bool updateBoonPresence = boonIds.Contains(buffID);
+                    bool updateCondiPresence = condiIds.Contains(buffID);
+                    var graphSegments = new List<Segment>();
+                    foreach (BuffSimulationItem simul in simulator.GenerationSimulation)
+                    {
+                        // Graph
+                        var segment = simul.ToSegment(by);
+                        if (graphSegments.Count == 0)
+                        {
+                            graphSegments.Add(new Segment(log.FightData.FightStart, segment.Start, 0));
+                        }
+                        else if (graphSegments.Last().End != segment.Start)
+                        {
+                            graphSegments.Add(new Segment(graphSegments.Last().End, segment.Start, 0));
+                        }
+                        graphSegments.Add(segment);
+                    }
+                    // Graph object creation
+                    if (graphSegments.Count > 0)
+                    {
+                        graphSegments.Add(new Segment(graphSegments.Last().End, log.FightData.FightEnd, 0));
+                    }
+                    else
+                    {
+                        graphSegments.Add(new Segment(log.FightData.FightStart, log.FightData.FightEnd, 0));
+                    }
+                    buffGraphs[buffID] = new BuffsGraphModel(buff, graphSegments);
+                    if (updateBoonPresence || updateCondiPresence)
+                    {
+                        (updateBoonPresence ? boonPresenceGraph : condiPresenceGraph).MergePresenceInto(buffGraphs[buffID].BuffChart);
+                    }
+
+                }
+            }
+            buffGraphs[SkillIDs.NumberOfBoons] = boonPresenceGraph;
+            buffGraphs[SkillIDs.NumberOfConditions] = condiPresenceGraph;
+        }
+
+        public IReadOnlyDictionary<long, FinalBuffsDictionary> GetBuffsDictionary(ParsedEvtcLog log, long start, long end)
         {
             if (_buffsDictionary == null)
             {
@@ -309,7 +478,7 @@ namespace GW2EIEvtcParser.EIData
             return value[0];
         }
 
-        public Dictionary<long, FinalBuffsDictionary> GetActiveBuffsDictionary(ParsedEvtcLog log, long start, long end)
+        public IReadOnlyDictionary<long, FinalBuffsDictionary> GetActiveBuffsDictionary(ParsedEvtcLog log, long start, long end)
         {
             if (_buffsDictionary == null)
             {
@@ -352,7 +521,9 @@ namespace GW2EIEvtcParser.EIData
         }
         private void SetConsumablesList(ParsedEvtcLog log)
         {
-            IReadOnlyList<Buff> consumableList = log.Buffs.BuffsByClassification[BuffClassification.Consumable];
+            var consumableList = new List<Buff>(log.Buffs.BuffsByClassification[BuffClassification.Nourishment]);
+            consumableList.AddRange(log.Buffs.BuffsByClassification[BuffClassification.Enhancement]);
+            consumableList.AddRange(log.Buffs.BuffsByClassification[BuffClassification.OtherConsumable]);
             _consumeList = new List<Consumable>();
             foreach (Buff consumable in consumableList)
             {

@@ -4,7 +4,12 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -15,25 +20,27 @@ namespace GW2EIEvtcParser.EncounterLogic
             MechanicList.AddRange(new List<Mechanic>
             {
 
-            new HitOnPlayerMechanic(47327, "Vortex Slash", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "Donut In","Vortex Slash (Inner Donut hit)", "Inner Donut",0),
-            new HitOnPlayerMechanic(48432, "Vortex Slash", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightOrange), "Donut Out","Vortex Slash (Outer Donut hit)", "Outer Donut", 0),
-            new HitOnPlayerMechanic(47430, "Soul Rift", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Red), "Golem","Soul Rift (stood in Golem Aoe)", "Golem Aoe",0),
-            new HitOnPlayerMechanic(48363, "Quad Slash", new MechanicPlotlySetting(Symbols.StarDiamondOpen,Colors.LightOrange), "Slice1","Quad Slash (4 Slices, First hit)", "4 Slices 1",0),
-            new HitOnPlayerMechanic(47915, "Quad Slash", new MechanicPlotlySetting(Symbols.StarSquareOpen,Colors.LightOrange), "Slice2","Quad Slash (4 Slices, Second hit)", "4 Slices 2",0),
-            new HitOnPlayerMechanic(47363, "Spinning Slash", new MechanicPlotlySetting(Symbols.StarTriangleUpOpen,Colors.DarkRed), "Scythe","Spinning Slash (hit by Scythe)", "Scythe",0),
-            new HitOnPlayerMechanic(48500, "Death Bloom", new MechanicPlotlySetting(Symbols.Octagon,Colors.LightOrange), "8Slice","Death Bloom (8 Slices)", "8 Slices",0),
-            new PlayerBuffApplyMechanic(FixatedSH, "Fixated", new MechanicPlotlySetting(Symbols.Star,Colors.Magenta), "Fixate","Fixated (Special Action Key)", "Fixated",0),
-            new PlayerBuffApplyMechanic(Necrosis, "Necrosis", new MechanicPlotlySetting(Symbols.StarOpen,Colors.Magenta), "Necrosis","Necrosis (Tanking Debuff)", "Necrosis Debuff",50),
-            new HitOnPlayerMechanic(48327, "Corrupt the Living", new MechanicPlotlySetting(Symbols.Circle,Colors.Red), "Spin","Corrupt the Living (Torment+Poison Spin)", "Torment+Poison Spin",0),
-            new HitOnPlayerMechanic(47756, "Wurm Spit", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.DarkTeal), "Spit","Wurm Spit", "Wurm Spit",0),
-            new EnemyCastStartMechanic(48662, "Howling Death", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "CC","Howling Death (Breakbar)", "Breakbar",0),
-            new EnemyCastEndMechanic(48662, "Howling Death", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Howling Death (Breakbar) broken", "CCed",0, (ce, log) => ce.ActualDuration <= 6800),
-            new EnemyCastEndMechanic(48662, "Howling Death", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "CC Fail","Howling Death (Breakbar failed) ", "CC Fail",0, (ce,log) => ce.ActualDuration > 6800),
+            new PlayerDstHitMechanic(InnerVortexSlash, "Vortex Slash", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "Donut In","Vortex Slash (Inner Donut hit)", "Inner Donut",0),
+            new PlayerDstHitMechanic(OuterVortexSlash, "Vortex Slash", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightOrange), "Donut Out","Vortex Slash (Outer Donut hit)", "Outer Donut", 0),
+            new PlayerDstHitMechanic(new long[] { InnerVortexSlash, OuterVortexSlash }, "Necro Dancer", new MechanicPlotlySetting(Symbols.CircleOpenDot, Colors.LightOrange), "NecDancer.Achiv", "Achievement Eligibility: Necro Dancer", "Necro Dancer", 0).UsingAchievementEligibility(true),
+            new PlayerDstHitMechanic(SoulRift, "Soul Rift", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Red), "Golem","Soul Rift (stood in Golem Aoe)", "Golem Aoe",0),
+            new PlayerDstHitMechanic(QuadSlashFirstSet, "Quad Slash", new MechanicPlotlySetting(Symbols.StarDiamondOpen,Colors.LightOrange), "Slice1","Quad Slash (4 Slices, First hit)", "4 Slices 1",0),
+            new PlayerDstHitMechanic(QuadSlashSecondSet, "Quad Slash", new MechanicPlotlySetting(Symbols.StarSquareOpen,Colors.LightOrange), "Slice2","Quad Slash (4 Slices, Second hit)", "4 Slices 2",0),
+            new PlayerDstHitMechanic(SpinningSlash, "Spinning Slash", new MechanicPlotlySetting(Symbols.StarTriangleUpOpen,Colors.DarkRed), "Scythe","Spinning Slash (hit by Scythe)", "Scythe",0),
+            new PlayerDstHitMechanic(DeathBloom, "Death Bloom", new MechanicPlotlySetting(Symbols.Octagon,Colors.LightOrange), "8Slice","Death Bloom (8 Slices)", "8 Slices",0),
+            new PlayerDstBuffApplyMechanic(FixatedSH, "Fixated", new MechanicPlotlySetting(Symbols.Star,Colors.Magenta), "Fixate","Fixated (Special Action Key)", "Fixated",0),
+            new PlayerDstBuffApplyMechanic(Necrosis, "Necrosis", new MechanicPlotlySetting(Symbols.StarOpen,Colors.Magenta), "Necrosis","Necrosis (Tanking Debuff)", "Necrosis Debuff",50),
+            new PlayerDstHitMechanic(CorruptTheLiving, "Corrupt the Living", new MechanicPlotlySetting(Symbols.Circle,Colors.Red), "Spin","Corrupt the Living (Torment+Poison Spin)", "Torment+Poison Spin",0),
+            new PlayerDstHitMechanic(WurmSpit, "Wurm Spit", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.DarkTeal), "Spit","Wurm Spit", "Wurm Spit",0),
+            new EnemyCastStartMechanic(HowlingDeath, "Howling Death", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "CC","Howling Death (Breakbar)", "Breakbar",0),
+            new EnemyCastEndMechanic(HowlingDeath, "Howling Death", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Howling Death (Breakbar) broken", "CCed",0).UsingChecker((ce, log) => ce.ActualDuration <= 6800),
+            new EnemyCastEndMechanic(HowlingDeath, "Howling Death", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "CC Fail","Howling Death (Breakbar failed) ", "CC Fail",0).UsingChecker((ce,log) => ce.ActualDuration > 6800),
+            new PlayerSrcBuffApplyMechanic(Immobile, "Immobilized Golem", new MechanicPlotlySetting(Symbols.X,Colors.Red), "Immob.Golem","Immobilized Golem", "Immobilized Golem",50).UsingChecker((ce, log) => ce.To.IsSpecies(ArcDPSEnums.TrashID.TormentedDead)),
 
             });
             Extension = "sh";
             GenericFallBackMethod = FallBackMethod.None;
-            Icon = "https://wiki.guildwars2.com/images/d/d4/Mini_Desmina.png";
+            Icon = EncounterIconSoullessHorror;
             EncounterCategoryInformation.InSubCategoryOrder = 0;
             EncounterID |= 0x000001;
         }
@@ -42,13 +49,13 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(47837, 47837), // Chilling Aura
+                new DamageCastFinder(ChillingAura, ChillingAura),
             };
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/xjPq9vq.png",
+            return new CombatReplayMap(CombatReplaySoullessHorror,
                             (1000, 1000),
                             (-12223, -771, -8932, 2420)/*,
                             (-21504, -12288, 24576, 12288),
@@ -78,12 +85,12 @@ namespace GW2EIEvtcParser.EncounterLogic
             base.CheckSuccess(combatData, agentData, fightData, playerAgents);
             if (!fightData.Success)
             {
-                AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.SoullessHorror);
+                AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.SoullessHorror));
                 if (mainTarget == null)
                 {
                     throw new MissingKeyActorsException("Soulless Horror not found");
                 }
-                AbstractBuffEvent buffOnDeath = combatData.GetBuffData(SkillIDs.Determined895).Where(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent).LastOrDefault();
+                AbstractBuffEvent buffOnDeath = combatData.GetBuffData(Determined895).Where(x => x.To == mainTarget.AgentItem && x is BuffApplyEvent).LastOrDefault();
                 if (buffOnDeath != null)
                 {
                     fightData.SetSuccess(true, buffOnDeath.Time);
@@ -103,7 +110,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             long fightEnd = log.FightData.FightEnd;
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.SoullessHorror);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.SoullessHorror));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Soulless Horror not found");
@@ -113,7 +120,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 return phases;
             }
-            var howling = mainTarget.GetCastEvents(log, log.FightData.FightStart, fightEnd).Where(x => x.SkillId == 48662).ToList();
+            var howling = mainTarget.GetCastEvents(log, log.FightData.FightStart, fightEnd).Where(x => x.SkillId == HowlingDeath).ToList();
             long start = 0;
             int i = 1;
             foreach (AbstractCastEvent c in howling)
@@ -123,7 +130,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 start = c.EndTime;
                 phases.Add(phase);
             }
-            if (fightEnd - start > 3000)
+            if (fightEnd - start > ParserHelper.PhaseTimeLimit)
             {
                 var lastPhase = new PhaseData(start, fightEnd, "Final");
                 lastPhase.AddTarget(mainTarget);
@@ -178,7 +185,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     }
 
                     //
-                    var howling = cls.Where(x => x.SkillId == 48662).ToList();
+                    var howling = cls.Where(x => x.SkillId == HowlingDeath).ToList();
                     foreach (AbstractCastEvent c in howling)
                     {
                         start = (int)c.Time;
@@ -186,7 +193,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         replay.Decorations.Add(new CircleDecoration(true, start + c.ExpectedDuration, 180, (start, end), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                         replay.Decorations.Add(new CircleDecoration(true, 0, 180, (start, end), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
-                    var vortex = cls.Where(x => x.SkillId == 47327).ToList();
+                    var vortex = cls.Where(x => x.SkillId == InnerVortexSlash).ToList();
                     foreach (AbstractCastEvent c in vortex)
                     {
                         start = (int)c.Time;
@@ -200,7 +207,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                             replay.Decorations.Add(new DoughnutDecoration(true, 0, 380, 760, (end, end + 1000), "rgba(255, 150, 0, 0.5)", new InterpolatedPositionConnector(prev, next, start)));
                         }
                     }
-                    var deathBloom = cls.Where(x => x.SkillId == 48500).ToList();
+                    var deathBloom = cls.Where(x => x.SkillId == DeathBloom).ToList();
                     foreach (AbstractCastEvent c in deathBloom)
                     {
                         start = (int)c.Time;
@@ -210,14 +217,17 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             continue;
                         }
+                        float initialAngle = Point3D.GetRotationFromFacing(facing);
+                        var connector = new AgentConnector(target);
                         for (int i = 0; i < 8; i++)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, 3500, Point3D.GetRotationFromFacing(facing) + (i * 360 / 8), 360 / 12, (start, end), "rgba(255,200,0,0.5)", new AgentConnector(target)));
+                            var rotationConnector = new AngleConnector(initialAngle + (i * 360 / 8));
+                            replay.Decorations.Add(new PieDecoration(true, 0, 3500, 360 / 12, (start, end), "rgba(255,200,0,0.5)", connector).UsingRotationConnector(rotationConnector));
                         }
 
                     }
-                    var quad1 = cls.Where(x => x.SkillId == 48363).ToList();
-                    var quad2 = cls.Where(x => x.SkillId == 47915).ToList();
+                    var quad1 = cls.Where(x => x.SkillId == QuadSlashFirstSet).ToList();
+                    var quad2 = cls.Where(x => x.SkillId == QuadSlashSecondSet).ToList();
                     foreach (AbstractCastEvent c in quad1)
                     {
                         start = (int)c.Time;
@@ -227,9 +237,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             continue;
                         }
+                        float initialAngle = Point3D.GetRotationFromFacing(facing);
+                        var connector = new AgentConnector(target);
                         for (int i = 0; i < 4; i++)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, 3500, Point3D.GetRotationFromFacing(facing) + (i * 360 / 4), 360 / 12, (start, end), "rgba(255,200,0,0.5)", new AgentConnector(target)));
+                            var rotationConnector = new AngleConnector(initialAngle + (i * 360 / 4));
+                            replay.Decorations.Add(new PieDecoration(true, 0, 3500, 360 / 12, (start, end), "rgba(255,200,0,0.5)", connector).UsingRotationConnector(rotationConnector));
                         }
 
                     }
@@ -242,9 +255,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             continue;
                         }
+                        float initialAngle = Point3D.GetRotationFromFacing(facing);
+                        var connector = new AgentConnector(target);
                         for (int i = 0; i < 4; i++)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, 3500, Point3D.GetRotationFromFacing(facing) + 45 + (i * 360 / 4), 360 / 12, (start, end), "rgba(255,200,0,0.5)", new AgentConnector(target)));
+                            var rotationConnector = new AngleConnector(initialAngle + 45 + (i * 360 / 4));
+                            replay.Decorations.Add(new PieDecoration(true, 0, 3500, 360 / 12, (start, end), "rgba(255,200,0,0.5)", connector).UsingRotationConnector(rotationConnector));
                         }
 
                     }
@@ -284,9 +300,15 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         }
 
+        internal override void ComputePlayerCombatReplayActors(AbstractPlayer player, ParsedEvtcLog log, CombatReplay replay)
+        {
+            IEnumerable<Segment> fixations = player.GetBuffStatus(log, FixatedSH, log.FightData.LogStart, log.FightData.LogEnd).Where(x => x.Value > 0);
+            replay.AddOverheadIcons(fixations, player, ParserIcons.FixationPurpleOverhead);
+        }
+
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            var necrosis = combatData.GetBuffData(SkillIDs.Necrosis).Where(x => x is BuffApplyEvent).ToList();
+            var necrosis = combatData.GetBuffData(Necrosis).Where(x => x is BuffApplyEvent).ToList();
             if (necrosis.Count == 0)
             {
                 return 0;

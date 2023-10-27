@@ -4,7 +4,12 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -19,10 +24,10 @@ namespace GW2EIEvtcParser.EncounterLogic
             _greenStart = 0;
             MechanicList.AddRange(new List<Mechanic>
             {
-            new HitOnPlayerMechanic(48172, "Hateful Ephemera", new MechanicPlotlySetting(Symbols.Square,Colors.LightOrange), "Golem","Hateful Ephemera (Golem AoE dmg)", "Golem Dmg",0),
-            new HitOnPlayerMechanic(48121, "Arcing Affliction", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Red), "Bomb dmg","Arcing Affliction (Bomb) hit", "Bomb dmg",0),
-            new PlayerBuffApplyMechanic(ArcingAffliction, "Arcing Affliction", new MechanicPlotlySetting(Symbols.Circle,Colors.Red), "Bomb","Arcing Affliction (Bomb) application", "Bomb",0),
-            new PlayerBuffRemoveMechanic(ArcingAffliction, "Arcing Affliction", new MechanicPlotlySetting(Symbols.Diamond,Colors.Red), "Bomb Trig","Arcing Affliction (Bomb) manualy triggered", "Bomb Triggered",0, (br, log) =>
+            new PlayerDstHitMechanic(HatefulEphemera, "Hateful Ephemera", new MechanicPlotlySetting(Symbols.Square,Colors.LightOrange), "Golem","Hateful Ephemera (Golem AoE dmg)", "Golem Dmg",0),
+            new PlayerDstHitMechanic(ArcingAfflictionHit, "Arcing Affliction", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Red), "Bomb dmg","Arcing Affliction (Bomb) hit", "Bomb dmg",0),
+            new PlayerDstBuffApplyMechanic(ArcingAffliction, "Arcing Affliction", new MechanicPlotlySetting(Symbols.Circle,Colors.Red), "Bomb","Arcing Affliction (Bomb) application", "Bomb",0),
+            new PlayerDstBuffRemoveMechanic(ArcingAffliction, "Arcing Affliction", new MechanicPlotlySetting(Symbols.Diamond,Colors.Red), "Bomb Trig","Arcing Affliction (Bomb) manualy triggered", "Bomb Triggered",0).UsingChecker((br, log) =>
             {
                 // Removal duration check
                 if (br.RemovedDuration < 50)
@@ -45,30 +50,31 @@ namespace GW2EIEvtcParser.EncounterLogic
                 }
                 return true;
              }),
-            //new Mechanic(47476, "Residual Affliction", ParseEnum.BossIDS.Dhuum, new MechanicPlotlySetting(Symbols.StarDiamond,Colors.Yellow), "Bomb",0), //not needed, imho, applied at the same time as Arcing Affliction
-            new PlayerOnPlayerBuffApplyMechanic(47335, "Soul Shackle", new MechanicPlotlySetting(Symbols.Diamond,Colors.Teal), "Shackles","Soul Shackle (Tether) application", "Shackles",10000),//  //also used for removal.
-            new HitOnPlayerMechanic(47164, "Soul Shackle", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Teal), "Shackles dmg","Soul Shackle (Tether) dmg ticks", "Shackles Dmg",0,   (de,log) => de.HealthDamage > 0),
-            new HitOnPlayerMechanic(47561, "Slash", new MechanicPlotlySetting(Symbols.TriangleUp,Colors.DarkGreen), "Cone","Boon ripping Cone Attack", "Cone",0),
-            new HitOnPlayerMechanic(48752, "Cull", new MechanicPlotlySetting(Symbols.AsteriskOpen,Colors.Teal), "Crack","Cull (Fearing Fissures)", "Cracks",0),
-            new HitOnPlayerMechanic(48760, "Putrid Bomb", new MechanicPlotlySetting(Symbols.Circle,Colors.DarkGreen), "Mark","Necro Marks during Scythe attack", "Necro Marks",0),
-            new HitOnPlayerMechanic(48398, "Cataclysmic Cycle", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightOrange), "Suck dmg","Damage when sucked to close to middle", "Suck dmg",0),
-            new HitOnPlayerMechanic(48176, "Death Mark", new MechanicPlotlySetting(Symbols.Hexagon,Colors.LightOrange), "Dip","Lesser Death Mark hit (Dip into ground)", "Dip AoE",0),
-            new HitOnPlayerMechanic(48210, "Greater Death Mark", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "KB dmg","Knockback damage during Greater Deathmark (mid port)", "Knockback dmg",0),
-          //  new Mechanic(48281, "Mortal Coil", ParseEnum.BossIDS.Dhuum, new MechanicPlotlySetting(Symbols.Circle,Colors.DarkGreen), "Green Orbs",
-            new PlayerBuffApplyMechanic(46950, "Fractured Spirit", new MechanicPlotlySetting(Symbols.Square,Colors.Green), "Orb CD","Applied when taking green", "Green port",0),
-            //new SkillOnPlayerMechanic(47076 , "Echo's Damage", new MechanicPlotlySetting(Symbols.Square,Color.Red), "Echo","Damaged by Ender's Echo (pick up)", "Ender's Echo",5000),
-            new PlayerBuffApplyMechanic(EchosPickup, "Echo's Pick up", new MechanicPlotlySetting(Symbols.Square,Colors.Red), "Echo PU","Picked up by Ender's Echo", "Ender's Pick up", 3000),
-            new PlayerBuffRemoveMechanic(EchosPickup, "Freed from Echo", new MechanicPlotlySetting(Symbols.Square,Colors.Blue), "F Echo","Freed from Ender's Echo", "Freed from Echo", 0, (br,log) => !log.CombatData.GetDeadEvents(br.To).Where(x => Math.Abs(x.Time - br.Time) <= 150).Any())
+            //new Mechanic(ResidualAffliction, "Residual Affliction", ParseEnum.BossIDS.Dhuum, new MechanicPlotlySetting(Symbols.StarDiamond,Colors.Yellow), "Bomb",0), //not needed, imho, applied at the same time as Arcing Affliction
+            new PlayerSrcPlayerDstBuffApplyMechanic(DhuumShacklesBuff, "Soul Shackle", new MechanicPlotlySetting(Symbols.Diamond,Colors.Teal), "Shackles","Soul Shackle (Tether) application", "Shackles",10000),//  //also used for removal.
+            new PlayerDstHitMechanic(DhuumShacklesHit, "Soul Shackle", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Teal), "Shackles dmg","Soul Shackle (Tether) dmg ticks", "Shackles Dmg",0).UsingChecker((de,log) => de.HealthDamage > 0),
+            new PlayerDstHitMechanic(ConeSlash, "Slash", new MechanicPlotlySetting(Symbols.TriangleUp,Colors.DarkGreen), "Cone","Boon ripping Cone Attack", "Cone",0),
+            new PlayerDstHitMechanic(Cull, "Cull", new MechanicPlotlySetting(Symbols.AsteriskOpen,Colors.Teal), "Crack","Cull (Fearing Fissures)", "Cracks",0),
+            new PlayerDstHitMechanic(PutridBomb, "Putrid Bomb", new MechanicPlotlySetting(Symbols.Circle,Colors.DarkGreen), "Mark","Necro Marks during Scythe attack", "Necro Marks",0),
+            new PlayerDstHitMechanic(CataclysmicCycle, "Cataclysmic Cycle", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightOrange), "Suck dmg","Damage when sucked to close to middle", "Suck dmg",0),
+            new PlayerDstHitMechanic(DeathMark, "Death Mark", new MechanicPlotlySetting(Symbols.Hexagon,Colors.LightOrange), "Dip","Lesser Death Mark hit (Dip into ground)", "Dip AoE",0),
+            new PlayerDstHitMechanic(GreaterDeathMark, "Greater Death Mark", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "KB dmg","Knockback damage during Greater Deathmark (mid port)", "Knockback dmg",0),
+          //  new Mechanic(MortalCoilDhuum, "Mortal Coil", ParseEnum.BossIDS.Dhuum, new MechanicPlotlySetting(Symbols.Circle,Colors.DarkGreen), "Green Orbs",
+            new PlayerDstBuffApplyMechanic(FracturedSpirit, "Fractured Spirit", new MechanicPlotlySetting(Symbols.Square,Colors.Green), "Orb CD","Applied when taking green", "Green port",0),
+            //new SkillOnPlayerMechanic(EndersEchoDamage , "Echo's Damage", new MechanicPlotlySetting(Symbols.Square,Color.Red), "Echo","Damaged by Ender's Echo (pick up)", "Ender's Echo",5000),
+            new PlayerDstBuffApplyMechanic(EchosPickup, "Echo's Pick up", new MechanicPlotlySetting(Symbols.Square,Colors.Red), "Echo PU","Picked up by Ender's Echo", "Ender's Pick up", 3000),
+            new PlayerDstBuffApplyMechanic(SourcePureOblivionBuff, "Pure Oblivion", new MechanicPlotlySetting(Symbols.HexagonOpen, Colors.Black), "10%", "Lifted by Pure Oblivion", "Pure Oblivion (10%)", 0),
+            new PlayerDstBuffRemoveMechanic(EchosPickup, "Freed from Echo", new MechanicPlotlySetting(Symbols.Square,Colors.Blue), "F Echo","Freed from Ender's Echo", "Freed from Echo", 0).UsingChecker( (br,log) => !log.CombatData.GetDeadEvents(br.To).Where(x => Math.Abs(x.Time - br.Time) <= 150).Any())
             });
             Extension = "dhuum";
-            Icon = "https://wiki.guildwars2.com/images/e/e4/Mini_Dhuum.png";
+            Icon = EncounterIconDhuum;
             EncounterCategoryInformation.InSubCategoryOrder = 3;
             EncounterID |= 0x000006;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/7tEZYPd.png",
+            return new CombatReplayMap(CombatReplayDhuum,
                             (1000, 899),
                             (13524, -1334, 18039, 2735)/*,
                             (-21504, -12288, 24576, 12288),
@@ -79,19 +85,19 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(48238, 48238), // Deathly Aura
+                new DamageCastFinder(DeathlyAura, DeathlyAura),
             };
         }
 
         private static void ComputeFightPhases(List<PhaseData> phases, IReadOnlyList<AbstractCastEvent> castLogs, long fightDuration, long start)
         {
-            AbstractCastEvent shield = castLogs.FirstOrDefault(x => x.SkillId == 47396);
+            AbstractCastEvent shield = castLogs.FirstOrDefault(x => x.SkillId == MajorSoulSplit);
             // Dhuum brought down to 10%
             if (shield != null)
             {
                 long end = shield.Time;
                 phases.Add(new PhaseData(start, end, "Dhuum Fight"));
-                AbstractCastEvent firstDamageable = castLogs.FirstOrDefault(x => x.SkillId == 47304 && x.Time >= end);
+                AbstractCastEvent firstDamageable = castLogs.FirstOrDefault(x => x.SkillId == DhuumVulnerableLast10Percent && x.Time >= end);
                 // ritual started
                 if (firstDamageable != null)
                 {
@@ -113,8 +119,8 @@ namespace GW2EIEvtcParser.EncounterLogic
         private static List<PhaseData> GetInBetweenSoulSplits(ParsedEvtcLog log, AbstractSingleActor dhuum, long mainStart, long mainEnd, bool hasRitual)
         {
             IReadOnlyList<AbstractCastEvent> cls = dhuum.GetCastEvents(log, log.FightData.FightStart, log.FightData.FightEnd);
-            var cataCycles = cls.Where(x => x.SkillId == 48398).ToList();
-            var gDeathmarks = cls.Where(x => x.SkillId == 48210).ToList();
+            var cataCycles = cls.Where(x => x.SkillId == CataclysmicCycle).ToList();
+            var gDeathmarks = cls.Where(x => x.SkillId == GreaterDeathMark).ToList();
             if (gDeathmarks.Count < cataCycles.Count)
             {
                 // anomaly, don't do sub phases
@@ -145,7 +151,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             long fightDuration = log.FightData.FightEnd;
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor dhuum = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Dhuum);
+            AbstractSingleActor dhuum = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Dhuum));
             if (dhuum == null)
             {
                 throw new MissingKeyActorsException("Dhuum not found");
@@ -158,7 +164,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             // Sometimes the pre event is not in the evtc
             IReadOnlyList<AbstractCastEvent> castLogs = dhuum.GetCastEvents(log, log.FightData.FightStart, log.FightData.FightEnd);
             IReadOnlyList<AbstractCastEvent> dhuumCast = dhuum.GetCastEvents(log, log.FightData.FightStart, 20000);
-            if (dhuumCast.Any(x => !(x is InstantCastEvent)))
+            if (dhuumCast.Any(x => !(x is InstantCastEvent) && x.SkillId != WeaponDraw && x.SkillId != WeaponStow))
             {
                 // full fight does not contain the pre event
                 ComputeFightPhases(phases, castLogs, fightDuration, 0);
@@ -173,8 +179,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     long end = invulDhuum.Time;
                     phases.Add(new PhaseData(0, end, "Pre Event"));
-                    phases.Add(new PhaseData(end + 1, fightDuration, "Main Fight") { CanBeSubPhase = false });
-                    ComputeFightPhases(phases, castLogs, fightDuration, end + 1);
+                    phases.Add(new PhaseData(end, fightDuration, "Main Fight") { CanBeSubPhase = false });
+                    ComputeFightPhases(phases, castLogs, fightDuration, end);
                 }
             }
             bool hasRitual = phases.Last().Name == "Ritual";
@@ -221,13 +227,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             };
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             long startToUse = GetGenericFightOffset(fightData);
             CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
             if (logStartNPCUpdate != null)
             {
-                AgentItem messenger = agentData.GetNPCsByID((int)ArcDPSEnums.TrashID.Messenger).MinBy(x => x.FirstAware);
+                AgentItem messenger = agentData.GetNPCsByID(ArcDPSEnums.TrashID.Messenger).MinBy(x => x.FirstAware);
                 if (messenger != null)
                 {
                     startToUse = messenger.FirstAware;
@@ -256,8 +262,8 @@ namespace GW2EIEvtcParser.EncounterLogic
             switch (target.ID)
             {
                 case (int)ArcDPSEnums.TargetID.Dhuum:
-                    var deathmark = cls.Where(x => x.SkillId == 48176).ToList();
-                    AbstractCastEvent majorSplit = cls.FirstOrDefault(x => x.SkillId == 47396);
+                    var deathmark = cls.Where(x => x.SkillId == DeathMark).ToList();
+                    AbstractCastEvent majorSplit = cls.FirstOrDefault(x => x.SkillId == MajorSoulSplit);
                     foreach (AbstractCastEvent c in deathmark)
                     {
                         start = (int)c.Time;
@@ -283,7 +289,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
                         }
                     }
-                    var cataCycle = cls.Where(x => x.SkillId == 48398).ToList();
+                    var cataCycle = cls.Where(x => x.SkillId == CataclysmicCycle).ToList();
                     foreach (AbstractCastEvent c in cataCycle)
                     {
                         start = (int)c.Time;
@@ -291,7 +297,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         replay.Decorations.Add(new CircleDecoration(true, end, 300, (start, end), "rgba(255, 150, 0, 0.7)", new AgentConnector(target)));
                         replay.Decorations.Add(new CircleDecoration(true, 0, 300, (start, end), "rgba(255, 150, 0, 0.5)", new AgentConnector(target)));
                     }
-                    var slash = cls.Where(x => x.SkillId == 47561).ToList();
+                    var slash = cls.Where(x => x.SkillId == ConeSlash).ToList();
                     foreach (AbstractCastEvent c in slash)
                     {
                         start = (int)c.Time;
@@ -301,7 +307,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             continue;
                         }
-                        replay.Decorations.Add(new PieDecoration(false, 0, 850, facing, 60, (start, end), "rgba(255, 150, 0, 0.5)", new AgentConnector(target)));
+                        replay.Decorations.Add(new PieDecoration(false, 0, 850, 60, (start, end), "rgba(255, 150, 0, 0.5)", new AgentConnector(target)).UsingRotationConnector(new AngleConnector(facing)));
                     }
 
                     if (majorSplit != null)
@@ -324,20 +330,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                 case (int)ArcDPSEnums.TrashID.Deathling:
                     break;
                 case (int)ArcDPSEnums.TrashID.UnderworldReaper:
-                    List<AbstractBuffEvent> stealths = GetFilteredList(log.CombatData, Stealth, target, true, true);
-                    int stealthStart = 0;
-                    int stealthEnd = 0;
-                    foreach (AbstractBuffEvent c in stealths)
+                    var stealths = target.GetBuffStatus(log, Stealth, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+                    foreach (Segment seg in stealths)
                     {
-                        if (c is BuffApplyEvent)
-                        {
-                            stealthStart = (int)c.Time;
-                        }
-                        else
-                        {
-                            stealthEnd = (int)c.Time;
-                            replay.Decorations.Add(new CircleDecoration(true, 0, 180, (stealthStart, stealthEnd), "rgba(80, 80, 80, 0.3)", new AgentConnector(target)));
-                        }
+                        replay.Decorations.Add(new CircleDecoration(true, 0, 180, seg, "rgba(80, 80, 80, 0.3)", new AgentConnector(target)));
                     }
                     if (!_isBugged)
                     {
@@ -400,7 +396,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             // spirit transform
             var spiritTransform = log.CombatData.GetBuffData(FracturedSpirit).Where(x => x.To == p.AgentItem && x is BuffApplyEvent).ToList();
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Dhuum);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Dhuum));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Dhuum not found");
@@ -424,68 +420,27 @@ namespace GW2EIEvtcParser.EncounterLogic
                 replay.Decorations.Add(new CircleDecoration(true, start + duration, 100, (start, end), "rgba(0, 50, 200, 0.5)", new AgentConnector(p)));
             }
             // bomb
-            List<AbstractBuffEvent> bombDhuum = GetFilteredList(log.CombatData, ArcingAffliction, p, true, true);
-            int bombDhuumStart = 0;
-            foreach (AbstractBuffEvent c in bombDhuum)
+            var bombDhuum = p.GetBuffStatus(log, ArcingAffliction, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+            foreach (Segment seg in bombDhuum)
             {
-                if (c is BuffApplyEvent)
-                {
-                    bombDhuumStart = (int)c.Time;
-                }
-                else
-                {
-                    int bombDhuumEnd = (int)c.Time;
-                    replay.Decorations.Add(new CircleDecoration(true, 0, 100, (bombDhuumStart, bombDhuumEnd), "rgba(80, 180, 0, 0.3)", new AgentConnector(p)));
-                    replay.Decorations.Add(new CircleDecoration(true, bombDhuumStart + 13000, 100, (bombDhuumStart, bombDhuumEnd), "rgba(80, 180, 0, 0.5)", new AgentConnector(p)));
-                }
+                replay.Decorations.Add(new CircleDecoration(true, 0, 100, seg, "rgba(80, 180, 0, 0.3)", new AgentConnector(p)));
+                replay.Decorations.Add(new CircleDecoration(true, (int)seg.Start + 13000, 100, seg, "rgba(80, 180, 0, 0.5)", new AgentConnector(p)));
+                replay.AddOverheadIcon(seg, p, ParserIcons.BombTimerFullOverhead);
             }
             // shackles connection
-            var shackles = GetFilteredList(log.CombatData, DhuumShackles1, p, true, true).Concat(GetFilteredList(log.CombatData, DhuumShackles2, p, true, true)).ToList();
-            int shacklesStart = 0;
-            Player shacklesTarget = null;
-            foreach (AbstractBuffEvent c in shackles)
-            {
-                if (c is BuffApplyEvent)
-                {
-                    shacklesStart = (int)c.Time;
-                    shacklesTarget = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy);
-                }
-                else
-                {
-                    int shacklesEnd = (int)c.Time;
-                    if (shacklesTarget != null)
-                    {
-                        replay.Decorations.Add(new LineDecoration(0, (shacklesStart, shacklesEnd), "rgba(0, 255, 255, 0.5)", new AgentConnector(p), new AgentConnector(shacklesTarget)));
-                    }
-                }
-            }
+            List<AbstractBuffEvent> shackles = GetFilteredList(log.CombatData, new long[] { DhuumShacklesBuff, DhuumShacklesBuff2 }, p, true, true);
+            replay.AddTether(shackles, "rgba(0, 255, 255, 0.5)");
+
             // shackles damage (identical to the connection for now, not yet properly distinguishable from the pure connection, further investigation needed due to inconsistent behavior (triggering too early, not triggering the damaging skill though)
             // shackles start with buff 47335 applied from one player to the other, this is switched over to buff 48591 after mostly 2 seconds, sometimes later. This is switched to 48042 usually 4 seconds after initial application and the damaging skill 47164 starts to deal damage from that point on.
             // Before that point, 47164 is only logged when evaded/blocked, but doesn't deal damage. Further investigation needed.
-            List<AbstractBuffEvent> shacklesDmg = GetFilteredList(log.CombatData, DhuumDamagingShackles, p, true, true);
-            int shacklesDmgStart = 0;
-            Player shacklesDmgTarget = null;
-            foreach (AbstractBuffEvent c in shacklesDmg)
-            {
-                if (c is BuffApplyEvent)
-                {
-                    shacklesDmgStart = (int)c.Time;
-                    shacklesDmgTarget = log.PlayerList.FirstOrDefault(x => x.AgentItem == c.CreditedBy);
-                }
-                else
-                {
-                    int shacklesDmgEnd = (int)c.Time;
-                    if (shacklesDmgTarget != null)
-                    {
-                        replay.Decorations.Add(new LineDecoration(0, (shacklesDmgStart, shacklesDmgEnd), "rgba(255, 200, 0, 0.5)", new AgentConnector(p), new AgentConnector(shacklesDmgTarget)));
-                    }
-                }
-            }
+            List<AbstractBuffEvent> shacklesDmg = GetFilteredList(log.CombatData, DhuumDamagingShacklesBuff, p, true, true);
+            replay.AddTether(shacklesDmg, "rgba(255, 200, 0, 0.5)");
         }
 
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            AbstractSingleActor target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Dhuum);
+            AbstractSingleActor target = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Dhuum));
             if (target == null)
             {
                 throw new MissingKeyActorsException("Dhuum not found");

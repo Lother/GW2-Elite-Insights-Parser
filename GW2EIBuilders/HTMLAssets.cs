@@ -95,6 +95,9 @@ namespace GW2EIBuilders
                 Properties.Resources.tmplStatTables,
                 Properties.Resources.tmplMechanicsTable,
                 Properties.Resources.tmplGearBuffTable,
+                Properties.Resources.tmplNourishmentBuffTable,
+                Properties.Resources.tmplEnhancementBuffTable,
+                Properties.Resources.tmplOtherConsumableBuffTable,
                 Properties.Resources.tmplDebuffTable,
                 Properties.Resources.tmplConditionsTable,
                 Properties.Resources.tmplPersonalBuffTable,
@@ -116,6 +119,7 @@ namespace GW2EIBuilders
                 Properties.Resources.tmplPlayersRotationTab,
                 Properties.Resources.tmplRotationLegend,
                 Properties.Resources.tmplTargetTabGraph,
+                Properties.Resources.tmplTargetTabPerPlayerGraph,
                 Properties.Resources.tmplTargetData,
                 Properties.Resources.tmplMainView,
             };

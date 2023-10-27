@@ -23,7 +23,7 @@ namespace GW2EIEvtcParser
         public IReadOnlyDictionary<ParserHelper.Spec, List<AbstractSingleActor>> FriendliesListBySpec { get; }
         public DamageModifiersContainer DamageModifiers { get; }
         public BuffsContainer Buffs { get; }
-        internal EvtcParserSettings ParserSettings { get; }
+        public EvtcParserSettings ParserSettings { get; }
         public bool CanCombatReplay => ParserSettings.ParseCombatReplay && CombatData.HasMovementData;
 
         public MechanicData MechanicData { get; }
@@ -34,7 +34,7 @@ namespace GW2EIEvtcParser
         private Dictionary<AgentItem, AbstractSingleActor> _agentToActorDictionary;
 
         internal ParsedEvtcLog(int evtcVersion, FightData fightData, AgentData agentData, SkillData skillData,
-                List<CombatItem> combatItems, List<Player> playerList, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions, long evtcLogDuration, EvtcParserSettings parserSettings, ParserController operation)
+                List<CombatItem> combatItems, List<Player> playerList, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions, EvtcParserSettings parserSettings, ParserController operation)
         {
             FightData = fightData;
             AgentData = agentData;
@@ -43,7 +43,7 @@ namespace GW2EIEvtcParser
             PlayerAgents = new HashSet<AgentItem>(PlayerList.Select(x => x.AgentItem));
             ParserSettings = parserSettings;
             _operation = operation;
-            if (parserSettings.AnonymousPlayer)
+            if (parserSettings.AnonymousPlayers)
             {
                 operation.UpdateProgressWithCancellationCheck("Anonymous players");
                 for (int i = 0; i < PlayerList.Count; i++)
@@ -65,7 +65,7 @@ namespace GW2EIEvtcParser
             //
             _operation.UpdateProgressWithCancellationCheck("Creating GW2EI Combat Events");
             CombatData = new CombatData(combatItems, FightData, AgentData, SkillData, PlayerList, operation, extensions, evtcVersion);
-            if (parserSettings.AnonymousPlayer)
+            if (parserSettings.AnonymousPlayers)
             {
                 operation.UpdateProgressWithCancellationCheck("Anonymous guilds");
                 IReadOnlyList<AgentItem> allPlayerAgents = agentData.GetAgentByType(AgentItem.AgentType.Player);
@@ -101,12 +101,12 @@ namespace GW2EIEvtcParser
                 throw new SkipException();
             }
             _operation.UpdateProgressWithCancellationCheck("Creating GW2EI Log Meta Data");
-            LogData = new LogData(evtcVersion, CombatData, evtcLogDuration, playerList, extensions, operation);
+            LogData = new LogData(evtcVersion, CombatData, FightData.LogEnd - FightData.LogStart, playerList, extensions, operation);
             //
             _operation.UpdateProgressWithCancellationCheck("Creating Buff Container");
-            Buffs = new BuffsContainer(LogData.GW2Build, CombatData, operation);
+            Buffs = new BuffsContainer(CombatData, operation);
             _operation.UpdateProgressWithCancellationCheck("Creating Damage Modifier Container");
-            DamageModifiers = new DamageModifiersContainer(LogData.GW2Build, fightData.Logic.Mode, parserSettings);
+            DamageModifiers = new DamageModifiersContainer(CombatData, fightData.Logic.Mode, parserSettings);
             _operation.UpdateProgressWithCancellationCheck("Creating Mechanic Data");
             MechanicData = FightData.Logic.GetMechanicData();
             _operation.UpdateProgressWithCancellationCheck("Creating General Statistics Container");
@@ -140,12 +140,7 @@ namespace GW2EIEvtcParser
                 {
                     AddToDictionary(p);
                 }
-                foreach (AbstractSingleActor npc in FightData.Logic.Targets)
-                {
-                    AddToDictionary(npc);
-                }
-
-                foreach (NPC npc in FightData.Logic.TrashMobs)
+                foreach (AbstractSingleActor npc in FightData.Logic.Hostiles)
                 {
                     AddToDictionary(npc);
                 }

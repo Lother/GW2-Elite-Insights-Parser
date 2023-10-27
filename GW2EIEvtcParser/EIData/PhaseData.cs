@@ -21,7 +21,6 @@ namespace GW2EIEvtcParser.EIData
 
         public bool BreakbarPhase { get; internal set; } = false;
 
-        public bool Dummy { get; internal set; } = false;
         public IReadOnlyList<AbstractSingleActor> Targets => _targets;
         private readonly List<AbstractSingleActor> _targets = new List<AbstractSingleActor>();
 
@@ -80,14 +79,22 @@ namespace GW2EIEvtcParser.EIData
         }
 
         /// <summary>
-        /// Override times in a manner that the phase englobes the targets present in the phase (if possible)
+        /// Override times in a manner that the phase englobes the targets activities in the phase
         /// </summary>
         /// <param name="log"></param>
         internal void OverrideTimes(ParsedEvtcLog log)
         {
+            OverrideStartTime(log);
+            OverrideEndTime(log);
+        }
+        /// <summary>
+        /// Override start in a manner that the phase starts when the targets are active
+        /// </summary>
+        /// <param name="log"></param>
+        internal void OverrideStartTime(ParsedEvtcLog log)
+        {
             if (Targets.Count > 0)
             {
-                long end = long.MinValue;
                 long start = long.MaxValue;
                 foreach (AbstractSingleActor target in Targets)
                 {
@@ -102,21 +109,32 @@ namespace GW2EIEvtcParser.EIData
                     {
                         startTime = enterCombat.Time;
                     }
+                    start = Math.Min(start, startTime);
+                }
+                OverrideStart(Math.Max(Math.Max(Start, start), log.FightData.FightStart));
+            }
+        }
+        /// <summary>
+        /// Override end in a manner that the phase ends when the targets are gone (if possible)
+        /// </summary>
+        /// <param name="log"></param>
+        internal void OverrideEndTime(ParsedEvtcLog log)
+        {
+            if (Targets.Count > 0)
+            {
+                long end = long.MinValue;
+                foreach (AbstractSingleActor target in Targets)
+                {
                     long deadTime = target.LastAware;
                     DeadEvent died = log.CombatData.GetDeadEvents(target.AgentItem).FirstOrDefault();
                     if (died != null)
                     {
                         deadTime = died.Time;
                     }
-                    start = Math.Min(start, startTime);
                     end = Math.Max(end, deadTime);
                 }
-                Start = Math.Max(Math.Max(Start, start), log.FightData.FightStart);
-                End = Math.Min(Math.Min(End, end), log.FightData.FightEnd);
+                OverrideEnd(Math.Min(Math.Min(End, end), log.FightData.FightEnd));
             }
-            DurationInM = (End - Start) / 60000;
-            DurationInMS = (End - Start);
-            DurationInS = (End - Start) / 1000;
-        }      
+        }
     }
 }

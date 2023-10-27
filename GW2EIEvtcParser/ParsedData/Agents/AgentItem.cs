@@ -57,6 +57,8 @@ namespace GW2EIEvtcParser.ParsedData
             {
                 if (type == AgentType.Player)
                 {
+                    HitboxWidth = 48;
+                    HitboxHeight = 240;
                     string[] splitStr = Name.Split('\0');
                     if (splitStr.Length < 2 || (splitStr[1].Length == 0 || splitStr[2].Length == 0 || splitStr[0].Contains("-")))
                     {
@@ -146,6 +148,16 @@ namespace GW2EIEvtcParser.ParsedData
             ID = (int)id;
         }
 
+        internal void OverrideID(ArcDPSEnums.MinionID id)
+        {
+            ID = (int)id;
+        }
+
+        internal void OverrideID(ArcDPSEnums.ChestID id)
+        {
+            ID = (int)id;
+        }
+
         internal void OverrideToughness(ushort toughness)
         {
             Toughness = toughness;
@@ -166,7 +178,7 @@ namespace GW2EIEvtcParser.ParsedData
             Master = master;
         }
 
-        public AgentItem GetMainAgentWhenAttackTarget(ParsedEvtcLog log, long time)
+        internal AgentItem GetMainAgentWhenAttackTarget(ParsedEvtcLog log, long time)
         {
             IReadOnlyList<AttackTargetEvent> atEvents = log.CombatData.GetAttackTargetEventsByAttackTarget(this);
             if (atEvents.Any()) // agent is attack target
@@ -179,55 +191,59 @@ namespace GW2EIEvtcParser.ParsedData
             }
         }
 
-        private static void AddValueToStatusList(List<Segment> dead, List<Segment> down, List<Segment> dc, AbstractStatusEvent cur, AbstractStatusEvent next, long endTime, int index)
+        private static void AddValueToStatusList(List<Segment> dead, List<Segment> down, List<Segment> dc, AbstractStatusEvent cur, long nextTime, long minTime, int index)
         {
-            long cTime = cur.Time;
-            long nTime = next != null ? next.Time : endTime;
+            long cTime = cur.Time; 
+            
             if (cur is DownEvent)
             {
-                down.Add(new Segment(cTime, nTime, 1));
+                down.Add(new Segment(cTime, nextTime, 1));
             }
             else if (cur is DeadEvent)
             {
-                dead.Add(new Segment(cTime, nTime, 1));
+                dead.Add(new Segment(cTime, nextTime, 1));
             }
             else if (cur is DespawnEvent)
             {
-                dc.Add(new Segment(cTime, nTime, 1));
+                dc.Add(new Segment(cTime, nextTime, 1));
             }
             else if (index == 0)
             {
-                if (cur is SpawnEvent)
-                {
-                    dc.Add(new Segment(long.MinValue, cTime, 1));
-                }
-                else if (cur is AliveEvent)
-                {
-                    dead.Add(new Segment(long.MinValue, cTime, 1));
-                }
+                dc.Add(new Segment(minTime, cTime, 1));
             }
         }
 
         internal void GetAgentStatus(List<Segment> dead, List<Segment> down, List<Segment> dc, CombatData combatData, FightData fightData)
         {
+            // State changes are not reliable
+            if (Type == AgentType.NonSquadPlayer)
+            {
+                return;
+            }
             var status = new List<AbstractStatusEvent>();
             status.AddRange(combatData.GetDownEvents(this));
             status.AddRange(combatData.GetAliveEvents(this));
             status.AddRange(combatData.GetDeadEvents(this));
             status.AddRange(combatData.GetSpawnEvents(this));
             status.AddRange(combatData.GetDespawnEvents(this));
+            dc.Add(new Segment(long.MinValue, FirstAware, 1));
+            if (!status.Any())
+            {
+                dc.Add(new Segment(LastAware, long.MaxValue, 1));
+                return;
+            }
             status = status.OrderBy(x => x.Time).ToList();
             for (int i = 0; i < status.Count - 1; i++)
             {
                 AbstractStatusEvent cur = status[i];
                 AbstractStatusEvent next = status[i + 1];
-                AddValueToStatusList(dead, down, dc, cur, next, LastAware, i);
+                AddValueToStatusList(dead, down, dc, cur, next.Time, FirstAware, i);
             }
             // check last value
             if (status.Count > 0)
             {
                 AbstractStatusEvent cur = status.Last();
-                AddValueToStatusList(dead, down, dc, cur, null, LastAware, status.Count - 1);
+                AddValueToStatusList(dead, down, dc, cur, LastAware, FirstAware, status.Count - 1);
                 if (cur is DeadEvent)
                 {
                     dead.Add(new Segment(LastAware, long.MaxValue, 1));
@@ -237,12 +253,70 @@ namespace GW2EIEvtcParser.ParsedData
                     dc.Add(new Segment(LastAware, long.MaxValue, 1));
                 }
             }
-            if (!dead.Any() || dead[0].Start != long.MinValue)
+        }
+
+        internal void GetAgentBreakbarStatus(List<Segment> nones, List<Segment> actives, List<Segment> immunes, List<Segment> recovering, CombatData combatData, FightData fightData)
+        {
+            // State changes are not reliable
+            if (Type == AgentType.NonSquadPlayer)
             {
-                if (!dc.Any() || dc[0].Start != long.MinValue)
+                return;
+            }
+            var status = new List<BreakbarStateEvent>();
+            status.AddRange(combatData.GetBreakbarStateEvents(this));
+            if (!status.Any())
+            {
+                nones.Add(new Segment(FirstAware, LastAware, 1));
+                return;
+            }
+            status = status.OrderBy(x => x.Time).ToList();
+            for (int i = 0; i < status.Count - 1; i++)
+            {
+                BreakbarStateEvent cur = status[i];
+                if (i == 0 && cur.Time > FirstAware)
                 {
-                    dc.Insert(0, new Segment(long.MinValue, FirstAware, 1));
+                    nones.Add(new Segment(FirstAware, cur.Time, 1));
                 }
+                BreakbarStateEvent next = status[i + 1];
+                switch (cur.State)
+                {
+                    case ArcDPSEnums.BreakbarState.Active:
+                        actives.Add(new Segment(cur.Time, next.Time, 1));
+                        break;
+                    case ArcDPSEnums.BreakbarState.Immune:
+                        immunes.Add(new Segment(cur.Time, next.Time, 1));
+                        break;
+                    case ArcDPSEnums.BreakbarState.None:
+                        nones.Add(new Segment(cur.Time, next.Time, 1));
+                        break;
+                    case ArcDPSEnums.BreakbarState.Recover:
+                        recovering.Add(new Segment(cur.Time, next.Time, 1));
+                        break;
+                }
+            }
+            // check last value
+            if (status.Count > 0)
+            {
+                BreakbarStateEvent cur = status.Last();
+                if (LastAware - cur.Time >= ParserHelper.ServerDelayConstant)
+                {
+                    switch (cur.State)
+                    {
+                        case ArcDPSEnums.BreakbarState.Active:
+                            actives.Add(new Segment(cur.Time, LastAware, 1));
+                            break;
+                        case ArcDPSEnums.BreakbarState.Immune:
+                            immunes.Add(new Segment(cur.Time, LastAware, 1));
+                            break;
+                        case ArcDPSEnums.BreakbarState.None:
+                            nones.Add(new Segment(cur.Time, LastAware, 1));
+                            break;
+                        case ArcDPSEnums.BreakbarState.Recover:
+                            recovering.Add(new Segment(cur.Time, LastAware, 1));
+                            break;
+                    }
+                }
+                
             }
         }
 
@@ -262,7 +336,7 @@ namespace GW2EIEvtcParser.ParsedData
         }
 
         /// <summary>
-        /// Checks if a buff is present on the actor that corresponds to. Given buff id must be in the buff simulator, throws <see cref="InvalidOperationException"/> otherwise
+        /// Checks if a buff is present on the actor. Given buff id must be in the buff simulator, throws <see cref="InvalidOperationException"/> otherwise
         /// </summary>
         /// <param name="log"></param>
         /// <param name="buffId"></param>
@@ -272,6 +346,44 @@ namespace GW2EIEvtcParser.ParsedData
         {
             AbstractSingleActor actor = log.FindActor(this);
             return actor.HasBuff(log, buffId, time);
+        }
+
+        /// <summary>
+        /// Checks if a buff is present on the actor and applied by given actor. Given buff id must be in the buff simulator, throws <see cref="InvalidOperationException"/> otherwise
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="by"></param>
+        /// <param name="buffId"></param>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public bool HasBuff(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long time)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.HasBuff(log, by, buffId, time);
+        }
+
+        public Segment GetBuffStatus(ParsedEvtcLog log, long buffId, long time)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.GetBuffStatus(log, buffId, time);
+        }
+
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, long buffId, long start, long end)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.GetBuffStatus(log, buffId, start, end);
+        }
+
+        public Segment GetBuffStatus(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long time)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.GetBuffStatus(log, by, buffId, time);
+        }
+
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long start, long end)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.GetBuffStatus(log, by, buffId, start, end);
         }
 
         /// <summary>
@@ -326,6 +438,57 @@ namespace GW2EIEvtcParser.ParsedData
         {
             AbstractSingleActor actor = log.FindActor(this);
             return actor.GetCurrentPosition(log, time);
+        }
+
+        public ArcDPSEnums.BreakbarState GetCurrentBreakbarState(ParsedEvtcLog log, long time)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.GetCurrentBreakbarState(log, time);
+        }
+
+        public bool IsSpecies(int id)
+        {
+            return !IsPlayer && ID == id;
+        }
+
+        public bool IsSpecies(ArcDPSEnums.TrashID id)
+        {
+            return IsSpecies((int)id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.TargetID id)
+        {
+            return IsSpecies((int)id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.MinionID id)
+        {
+            return IsSpecies((int)id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.ChestID id)
+        {
+            return IsSpecies((int)id);
+        }
+
+        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.TrashID> ids)
+        {
+            return ids.Any(x => IsSpecies(x));
+        }
+
+        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.TargetID> ids)
+        {
+            return ids.Any(x => IsSpecies(x));
+        }
+
+        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.MinionID> ids)
+        {
+            return ids.Any(x => IsSpecies(x));
+        }
+
+        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.ChestID> ids)
+        {
+            return ids.Any(x => IsSpecies(x));
         }
     }
 }
