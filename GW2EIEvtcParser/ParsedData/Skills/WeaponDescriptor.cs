@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIGW2API.GW2API;
+using static GW2EIEvtcParser.ArcDPSEnums;
 
 namespace GW2EIEvtcParser.ParsedData
 {
@@ -36,32 +37,37 @@ namespace GW2EIEvtcParser.ParsedData
             }
         }
 
-        internal int FindWeaponSlot(List<int> swaps)
+        public static bool IsWeaponSlot(string slot)
         {
-            int swapped = -1;
-            int firstSwap = swaps.Count > 0 ? swaps[0] : -1;
+            return slot == "Weapon_1" || slot == "Weapon_2" || slot == "Weapon_3" || slot == "Weapon_4" || slot == "Weapon_5";
+        }
+
+        internal int FindFirstWeaponSet(List<int> swaps)
+        {
+            int swapped = WeaponSetIDs.NoSet;
+            int firstSwap = swaps.Count > 0 ? swaps[0] : WeaponSetIDs.NoSet;
             if (IsLand)
             {
                 // if the first swap is not a land set that means the next time we get to a land set was the first set to begin with
-                if (firstSwap != ParserHelper.WeaponSetIDs.FirstLandSet && firstSwap != ParserHelper.WeaponSetIDs.SecondLandSet)
+                if (firstSwap != WeaponSetIDs.FirstLandSet && firstSwap != WeaponSetIDs.SecondLandSet)
                 {
-                    swapped = swaps.Exists(x => x == ParserHelper.WeaponSetIDs.FirstLandSet || x == ParserHelper.WeaponSetIDs.SecondLandSet) ? swaps.First(x => x == ParserHelper.WeaponSetIDs.FirstLandSet || x == ParserHelper.WeaponSetIDs.SecondLandSet) : ParserHelper.WeaponSetIDs.FirstLandSet;
+                    swapped = swaps.Exists(x => x == WeaponSetIDs.FirstLandSet || x == WeaponSetIDs.SecondLandSet) ? swaps.First(x => x == WeaponSetIDs.FirstLandSet || x == WeaponSetIDs.SecondLandSet) : WeaponSetIDs.FirstLandSet;
                 }
                 else
                 {
-                    swapped = firstSwap == ParserHelper.WeaponSetIDs.FirstLandSet ? ParserHelper.WeaponSetIDs.SecondLandSet : ParserHelper.WeaponSetIDs.FirstLandSet;
+                    swapped = firstSwap == WeaponSetIDs.FirstLandSet ? WeaponSetIDs.SecondLandSet : WeaponSetIDs.FirstLandSet;
                 }
             }
             else
             {
                 // if the first swap is not a water set that means the next time we get to a water set was the first set to begin with
-                if (firstSwap != ParserHelper.WeaponSetIDs.FirstWaterSet && firstSwap != ParserHelper.WeaponSetIDs.SecondWaterSet)
+                if (firstSwap != WeaponSetIDs.FirstWaterSet && firstSwap != WeaponSetIDs.SecondWaterSet)
                 {
-                    swapped = swaps.Exists(x => x == ParserHelper.WeaponSetIDs.FirstWaterSet || x == ParserHelper.WeaponSetIDs.SecondWaterSet) ? swaps.First(x => x == ParserHelper.WeaponSetIDs.FirstWaterSet || x == ParserHelper.WeaponSetIDs.SecondWaterSet) : ParserHelper.WeaponSetIDs.FirstWaterSet;
+                    swapped = swaps.Exists(x => x == WeaponSetIDs.FirstWaterSet || x == WeaponSetIDs.SecondWaterSet) ? swaps.First(x => x == WeaponSetIDs.FirstWaterSet || x == WeaponSetIDs.SecondWaterSet) : WeaponSetIDs.FirstWaterSet;
                 }
                 else
                 {
-                    swapped = firstSwap == ParserHelper.WeaponSetIDs.FirstWaterSet ? ParserHelper.WeaponSetIDs.SecondWaterSet : ParserHelper.WeaponSetIDs.FirstWaterSet;
+                    swapped = firstSwap == WeaponSetIDs.FirstWaterSet ? WeaponSetIDs.SecondWaterSet : WeaponSetIDs.FirstWaterSet;
                 }
             }
             return swapped;

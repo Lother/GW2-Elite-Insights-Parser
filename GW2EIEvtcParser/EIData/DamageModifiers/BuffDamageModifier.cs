@@ -7,8 +7,10 @@ namespace GW2EIEvtcParser.EIData
 {
     public class BuffDamageModifier : DamageModifier
     {
+        internal delegate double DamageGainAdjuster(AbstractHealthDamageEvent dl, ParsedEvtcLog log);
 
         internal BuffsTracker Tracker { get; }
+        internal DamageGainAdjuster GainAdjuster { get; private set; }
 
         internal BuffDamageModifier(long id, string name, string tooltip, DamageSource damageSource, double gainPerStack, DamageType srctype, DamageType compareType, ParserHelper.Source src, GainComputer gainComputer, string icon, DamageModifierMode mode) : base(name, tooltip, damageSource, gainPerStack, srctype, compareType, src, icon, gainComputer, mode)
         {
@@ -20,16 +22,28 @@ namespace GW2EIEvtcParser.EIData
             Tracker = new BuffsTrackerMulti(new List<long>(ids));
         }
 
-        protected double ComputeGain(int stack, AbstractHealthDamageEvent dl, ParsedEvtcLog log)
+        internal DamageModifier UsingGainAdjuster(DamageGainAdjuster gainAdjuster)
         {
+            GainAdjuster = gainAdjuster;
+            return this;
+        }
+
+        private double ComputeAdjustedGain(AbstractHealthDamageEvent dl, ParsedEvtcLog log)
+        {
+            return GainAdjuster != null ? GainAdjuster(dl, log) * GainPerStack : GainPerStack;
+        }
+
+        protected double ComputeGain(IReadOnlyDictionary<long, BuffsGraphModel> bgms, AbstractHealthDamageEvent dl, ParsedEvtcLog log)
+        {
+            int stack = Tracker.GetStack(bgms, dl.Time);
             // When gain per stack is 0, we only count hits done under the buff or in its absence
-            double gain = GainComputer.ComputeGain(GainPerStack == 0.0 ? 1.0 : GainPerStack, stack);
+            double gain = GainComputer.ComputeGain(GainPerStack == 0.0 ? 1.0 : ComputeAdjustedGain(dl, log), stack);
             return gain > 0.0 ? (GainPerStack == 0.0 ? 0.0 : gain * dl.HealthDamage) : -1.0;
         }
 
         internal override List<DamageModifierEvent> ComputeDamageModifier(AbstractSingleActor actor, ParsedEvtcLog log)
         {
-            Dictionary<long, BuffsGraphModel> bgms = actor.GetBuffGraphs(log);
+            IReadOnlyDictionary<long, BuffsGraphModel> bgms = actor.GetBuffGraphs(log);
             if (!Tracker.Has(bgms) && GainComputer != ByAbsence)
             {
                 return new List<DamageModifierEvent>();
@@ -38,11 +52,10 @@ namespace GW2EIEvtcParser.EIData
             IReadOnlyList<AbstractHealthDamageEvent> typeHits = GetHitDamageEvents(actor, log, null, log.FightData.FightStart, log.FightData.FightEnd);
             foreach (AbstractHealthDamageEvent evt in typeHits)
             {
-                if (DLChecker != null && !DLChecker(evt, log))
+                if (CheckCondition(evt, log))
                 {
-                    continue;
+                    res.Add(new DamageModifierEvent(evt, this, ComputeGain(bgms, evt, log)));
                 }
-                res.Add(new DamageModifierEvent(evt, this, ComputeGain(Tracker.GetStack(bgms, evt.Time), evt, log)));
             }
             res.RemoveAll(x => x.DamageGain == -1.0);
             return res;

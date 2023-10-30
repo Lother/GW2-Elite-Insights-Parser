@@ -6,8 +6,13 @@ using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
+using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -18,60 +23,60 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-            new EnemyCastStartMechanic(51943, "Qadim CC", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.DarkTeal), "Q.CC","Qadim CC", "Qadim CC",0),
-            new EnemyCastEndMechanic(51943, "Qadim CC", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.DarkGreen), "Q.CCed","Qadim Breakbar broken", "Qadim CCed",0, (ce, log) => ce.ActualDuration < 6500),
-            new EnemyCastStartMechanic(52265, "Riposte", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.DarkRed), "Q.CC Fail","Qadim Breakbar failed", "Qadim CC Fail",0),
-            new HitOnPlayerMechanic(52265, "Riposte", new MechanicPlotlySetting(Symbols.Circle,Colors.Magenta), "NoCC Attack", "Riposte (Attack if CC on Qadim failed)", "Riposte (No CC)", 0),
-            new HitOnPlayerMechanic(new long[] { 52614, 52864, 53153, 52383, }, "Fiery Dance", new MechanicPlotlySetting(Symbols.AsteriskOpen,Colors.Orange), "F.Dance", "Fiery Dance (Fire running along metal edges)", "Fire on Lines", 0),
-            new HitOnPlayerMechanic(52242, "Shattering Impact", new MechanicPlotlySetting(Symbols.Circle,Colors.Yellow), "Stun","Shattering Impact (Stunning flame bolt)", "Flame Bolt Stun",0),
-            new HitOnPlayerMechanic(52814, "Flame Wave", new MechanicPlotlySetting(Symbols.StarTriangleUpOpen,Colors.Pink), "KB","Flame Wave (Knockback Frontal Beam)", "KB Push",0),
-            new HitOnPlayerMechanic(52820, "Fire Wave", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Orange), "Q.Wave","Fire Wave (Shockwave after Qadim's Mace attack)", "Mace Shockwave",0),
-            new HitOnPlayerMechanic(52224, "Fire Wave", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkRed), "D.Wave","Fire Wave (Shockwave after Destroyer's Jump or Stomp)", "Destroyer Shockwave",0),
-            new HitOnPlayerMechanic(52520, "Elemental Breath", new MechanicPlotlySetting(Symbols.TriangleLeft,Colors.Red), "Hydra Breath","Elemental Breath (Hydra Breath)", "Hydra Breath",0),
-            new HitOnPlayerMechanic(53013, "Fireball", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Yellow,10), "H.FBall","Fireball (Hydra)", "Hydra Fireball",0),
-            new HitOnPlayerMechanic(52941, "Fiery Meteor", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Pink), "H.Meteor","Fiery Meteor (Hydra)", "Hydra Meteor",0),
-            new EnemyCastStartMechanic(52941, "Fiery Meteor", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "H.CC","Fiery Meteor (Hydra Breakbar)", "Hydra CC",0),
+            new EnemyCastStartMechanic(QadimCC, "Qadim CC", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.DarkTeal), "Q.CC","Qadim CC", "Qadim CC",0),
+            new EnemyCastEndMechanic(QadimCC, "Qadim CC", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.DarkGreen), "Q.CCed","Qadim Breakbar broken", "Qadim CCed",0).UsingChecker((ce, log) => ce.ActualDuration < 6500),
+            new EnemyCastStartMechanic(QadimRiposte, "Riposte", new MechanicPlotlySetting(Symbols.StarDiamond,Colors.DarkRed), "Q.CC Fail","Qadim Breakbar failed", "Qadim CC Fail",0),
+            new PlayerDstHitMechanic(QadimRiposte, "Riposte", new MechanicPlotlySetting(Symbols.Circle,Colors.Magenta), "NoCC Attack", "Riposte (Attack if CC on Qadim failed)", "Riposte (No CC)", 0),
+            new PlayerDstHitMechanic(new long[] { FieryDance1, FieryDance2, FieryDance3, FieryDance4, }, "Fiery Dance", new MechanicPlotlySetting(Symbols.AsteriskOpen,Colors.Orange), "F.Dance", "Fiery Dance (Fire running along metal edges)", "Fire on Lines", 0),
+            new PlayerDstHitMechanic(ShatteringImpact, "Shattering Impact", new MechanicPlotlySetting(Symbols.Circle,Colors.Yellow), "Stun","Shattering Impact (Stunning flame bolt)", "Flame Bolt Stun",0),
+            new PlayerDstHitMechanic(FlameWave, "Flame Wave", new MechanicPlotlySetting(Symbols.StarTriangleUpOpen,Colors.Pink), "KB","Flame Wave (Knockback Frontal Beam)", "KB Push",0),
+            new PlayerDstHitMechanic(FireWaveQadim, "Fire Wave", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Orange), "Q.Wave","Fire Wave (Shockwave after Qadim's Mace attack)", "Mace Shockwave",0),
+            new PlayerDstHitMechanic(FireWaveDestroyer, "Fire Wave", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkRed), "D.Wave","Fire Wave (Shockwave after Destroyer's Jump or Stomp)", "Destroyer Shockwave",0),
+            new PlayerDstHitMechanic(ElementalBreath, "Elemental Breath", new MechanicPlotlySetting(Symbols.TriangleLeft,Colors.Red), "Hydra Breath","Elemental Breath (Hydra Breath)", "Hydra Breath",0),
+            new PlayerDstHitMechanic(Fireball, "Fireball", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Yellow,10), "H.FBall","Fireball (Hydra)", "Hydra Fireball",0),
+            new PlayerDstHitMechanic(FieryMeteor, "Fiery Meteor", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Pink), "H.Meteor","Fiery Meteor (Hydra)", "Hydra Meteor",0),
+            new EnemyCastStartMechanic(FieryMeteor, "Fiery Meteor", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "H.CC","Fiery Meteor (Hydra Breakbar)", "Hydra CC",0),
             //new Mechanic(718, "Fiery Meteor (Spawn)", Mechanic.MechType.EnemyBoon, ParseEnum.BossIDS.Qadim, new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkRed), "H.CC.Fail","Fiery Meteor Spawned (Hydra Breakbar)", "Hydra CC Fail",0,(condition =>  condition.CombatItem.IFF == ParseEnum.IFF.Foe)),
-            new EnemyCastEndMechanic(52941, "Fiery Meteor", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "H.CCed","Fiery Meteor (Hydra Breakbar broken)", "Hydra CCed",0,(ce, log) => ce.ActualDuration < 12364),
-            new EnemyCastEndMechanic(52941, "Fiery Meteor", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkRed), "H.CC Fail","Fiery Meteor (Hydra Breakbar not broken)", "Hydra CC Failed",0, (ce,log) => ce.ActualDuration >= 12364),
-            new HitOnPlayerMechanic(53051, "Teleport", new MechanicPlotlySetting(Symbols.Circle,Colors.Purple), "H.KB","Teleport Knockback (Hydra)", "Hydra TP KB",0),
-            new HitOnPlayerMechanic(52310, "Big Hit", new MechanicPlotlySetting(Symbols.Circle,Colors.Red), "Mace","Big Hit (Mace Impact)", "Mace Impact",0),
-            new HitOnPlayerMechanic(52587, "Inferno", new MechanicPlotlySetting(Symbols.TriangleDownOpen,Colors.Red), "Inf.","Inferno (Lava Pool drop  on long platform spokes)", "Inferno Pool",0),
-            new HitOnPlayerMechanic(51958, "Slash (Wyvern)", new MechanicPlotlySetting(Symbols.TriangleDownOpen,Colors.Yellow), "Slash","Wyvern Slash (Double attack: knock into pin down)", "KB/Pin down",0),
-            new HitOnPlayerMechanic(52705, "Tail Swipe", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Yellow), "W.Pizza","Wyvern Tail Swipe (Pizza attack)", "Tail Swipe",0),
-            new HitOnPlayerMechanic(52726, "Fire Breath", new MechanicPlotlySetting(Symbols.TriangleRightOpen,Colors.Orange), "W.Breath","Fire Breath (Wyvern)", "Fire Breath",0),
-            new HitOnPlayerMechanic(52734, "Wing Buffet", new MechanicPlotlySetting(Symbols.StarDiamondOpen,Colors.DarkTeal), "W.Wing","Wing Buffet (Wyvern Launching Wing Storm)", "Wing Buffet",0),
-            new EnemyCastStartMechanic(53132, "Patriarch CC", new MechanicPlotlySetting(Symbols.StarSquare,Colors.DarkTeal), "W.BB","Platform Destruction (Patriarch CC)", "Patriarch CC",0),
-            new EnemyCastEndMechanic(53132, "Patriarch CC", new MechanicPlotlySetting(Symbols.StarSquare,Colors.DarkGreen), "W.CCed","Platform Destruction (Patriarch Breakbar broken)", "Patriarch CCed",0, (ce, log) => ce.ActualDuration < 6500),
-            new EnemyCastStartMechanic(51984, "Patriarch CC (Jump into air)", new MechanicPlotlySetting(Symbols.StarSquare,Colors.DarkRed), "Wyv CC Fail","Platform Destruction (Patriarch Breakbar failed)", "Patriarch CC Fail",0),
-            new HitOnPlayerMechanic(52330, "Seismic Stomp", new MechanicPlotlySetting(Symbols.StarOpen,Colors.Yellow), "D.Stomp","Seismic Stomp (Destroyer Stomp)", "Seismic Stomp (Destroyer)",0),
-            new HitOnPlayerMechanic(51923, "Shattered Earth", new MechanicPlotlySetting(Symbols.HexagramOpen,Colors.Red), "D.Slam","Shattered Earth (Destroyer Jump Slam)", "Jump Slam (Destroyer)",0),
-            new HitOnPlayerMechanic(51759, "Wave of Force", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Orange), "D.Pizza","Wave of Force (Destroyer Pizza)", "Destroyer Auto",0),
-            new EnemyCastStartMechanic(52054, "Summon", new MechanicPlotlySetting(Symbols.StarTriangleDown,Colors.DarkTeal), "D.CC","Summon (Destroyer Breakbar)", "Destroyer CC",0),
-            new EnemyCastEndMechanic(52054, "Summon", new MechanicPlotlySetting(Symbols.StarTriangleDown,Colors.DarkGreen), "D.CCed","Summon (Destroyer Breakbar broken)", "Destroyer CCed",0, (ce, log) => ce.ActualDuration < 8332),
-            new EnemyCastEndMechanic(52054, "Summon", new MechanicPlotlySetting(Symbols.StarTriangleDown,Colors.DarkRed), "D.CC Fail","Summon (Destroyer Breakbar failed)", "Destroyer CC Fail",0, (ce,log) => ce.ActualDuration >= 8332),
-            new SpawnMechanic(20944, "Summon (Spawn)", new MechanicPlotlySetting(Symbols.DiamondWide,Colors.DarkRed), "D.Spwn","Summon (Destroyer Trolls summoned)", "Destroyer Summoned",0),
-            new HitOnPlayerMechanic(51879, "Body of Flame", new MechanicPlotlySetting(Symbols.StarOpen,Colors.Pink,10), "P.AoE","Body of Flame (Pyre Ground AoE (CM))", "Pyre Hitbox AoE",0),
-            new HitOnPlayerMechanic(52461, "Sea of Flame", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Red), "Q.Hitbox","Sea of Flame (Stood in Qadim Hitbox)", "Qadim Hitbox AoE",0),
-            new HitOnPlayerMechanic(52221, "Claw", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.DarkTeal,10), "Claw","Claw (Reaper of Flesh attack)", "Reaper Claw",0),
-            new HitOnPlayerMechanic(52281, "Swap", new MechanicPlotlySetting(Symbols.CircleCrossOpen,Colors.Magenta), "Port","Swap (Ported from below Legendary Creature to Qadim)", "Port to Qadim",0),
-            new PlayerBuffApplyMechanic(PowerOfTheLamp, "Power of the Lamp", new MechanicPlotlySetting(Symbols.TriangleUp,Colors.LightPurple,10), "Lamp","Power of the Lamp (Returned from the Lamp)", "Lamp Return",0),
-            new KilledMechanic((int)ArcDPSEnums.TrashID.PyreGuardian, "Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.Red), "Pyre.K","Pyre Killed", "Pyre Killed",0),
-            new KilledMechanic((int)ArcDPSEnums.TrashID.PyreGuardianStab, "Stab Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.LightOrange), "Pyre.S.K","Stab Pyre Killed", "Stab Pyre Killed",0),
-            new KilledMechanic((int)ArcDPSEnums.TrashID.PyreGuardianProtect, "Protect Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.Orange), "Pyre.P.K","Protect Pyre Killed", "Protect Pyre Killed",0),
-            new KilledMechanic((int)ArcDPSEnums.TrashID.PyreGuardianRetal, "Retal Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.LightRed), "Pyre.R.K","Retal Pyre Killed", "Retal Pyre Killed",0),
-            new KilledMechanic((int)ArcDPSEnums.TrashID.PyreGuardianResolution, "Resolution Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.DarkRed), "Pyre.R.K","Resolution Pyre Killed", "Resolution Pyre Killed",0),
+            new EnemyCastEndMechanic(FieryMeteor, "Fiery Meteor", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "H.CCed","Fiery Meteor (Hydra Breakbar broken)", "Hydra CCed",0).UsingChecker((ce, log) => ce.ActualDuration < 12364),
+            new EnemyCastEndMechanic(FieryMeteor, "Fiery Meteor", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkRed), "H.CC Fail","Fiery Meteor (Hydra Breakbar not broken)", "Hydra CC Failed",0).UsingChecker((ce,log) => ce.ActualDuration >= 12364),
+            new PlayerDstHitMechanic(TeleportHydra, "Teleport", new MechanicPlotlySetting(Symbols.Circle,Colors.Purple), "H.KB","Teleport Knockback (Hydra)", "Hydra TP KB",0),
+            new PlayerDstHitMechanic(BigHit, "Big Hit", new MechanicPlotlySetting(Symbols.Circle,Colors.Red), "Mace","Big Hit (Mace Impact)", "Mace Impact",0),
+            new PlayerDstHitMechanic(Inferno, "Inferno", new MechanicPlotlySetting(Symbols.TriangleDownOpen,Colors.Red), "Inf.","Inferno (Lava Pool drop  on long platform spokes)", "Inferno Pool",0),
+            new PlayerDstHitMechanic(SlashWyvern, "Slash (Wyvern)", new MechanicPlotlySetting(Symbols.TriangleDownOpen,Colors.Yellow), "Slash","Wyvern Slash (Double attack: knock into pin down)", "KB/Pin down",0),
+            new PlayerDstHitMechanic(TailSwipe, "Tail Swipe", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Yellow), "W.Pizza","Wyvern Tail Swipe (Pizza attack)", "Tail Swipe",0),
+            new PlayerDstHitMechanic(FireBreath, "Fire Breath", new MechanicPlotlySetting(Symbols.TriangleRightOpen,Colors.Orange), "W.Breath","Fire Breath (Wyvern)", "Fire Breath",0),
+            new PlayerDstHitMechanic(WingBuffet, "Wing Buffet", new MechanicPlotlySetting(Symbols.StarDiamondOpen,Colors.DarkTeal), "W.Wing","Wing Buffet (Wyvern Launching Wing Storm)", "Wing Buffet",0),
+            new EnemyCastStartMechanic(PatriarchCC, "Patriarch CC", new MechanicPlotlySetting(Symbols.StarSquare,Colors.DarkTeal), "W.BB","Platform Destruction (Patriarch CC)", "Patriarch CC",0),
+            new EnemyCastEndMechanic(PatriarchCC, "Patriarch CC", new MechanicPlotlySetting(Symbols.StarSquare,Colors.DarkGreen), "W.CCed","Platform Destruction (Patriarch Breakbar broken)", "Patriarch CCed",0).UsingChecker((ce, log) => ce.ActualDuration < 6500),
+            new EnemyCastStartMechanic(PatriarchCCJumpInAir, "Patriarch CC (Jump into air)", new MechanicPlotlySetting(Symbols.StarSquare,Colors.DarkRed), "Wyv CC Fail","Platform Destruction (Patriarch Breakbar failed)", "Patriarch CC Fail",0),
+            new PlayerDstHitMechanic(SeismicStomp, "Seismic Stomp", new MechanicPlotlySetting(Symbols.StarOpen,Colors.Yellow), "D.Stomp","Seismic Stomp (Destroyer Stomp)", "Seismic Stomp (Destroyer)",0),
+            new PlayerDstHitMechanic(ShatteredEarth, "Shattered Earth", new MechanicPlotlySetting(Symbols.HexagramOpen,Colors.Red), "D.Slam","Shattered Earth (Destroyer Jump Slam)", "Jump Slam (Destroyer)",0),
+            new PlayerDstHitMechanic(WaveOfForce, "Wave of Force", new MechanicPlotlySetting(Symbols.DiamondOpen,Colors.Orange), "D.Pizza","Wave of Force (Destroyer Pizza)", "Destroyer Auto",0),
+            new EnemyCastStartMechanic(SummonDestroyer, "Summon", new MechanicPlotlySetting(Symbols.StarTriangleDown,Colors.DarkTeal), "D.CC","Summon (Destroyer Breakbar)", "Destroyer CC",0),
+            new EnemyCastEndMechanic(SummonDestroyer, "Summon", new MechanicPlotlySetting(Symbols.StarTriangleDown,Colors.DarkGreen), "D.CCed","Summon (Destroyer Breakbar broken)", "Destroyer CCed",0).UsingChecker((ce, log) => ce.ActualDuration < 8332),
+            new EnemyCastEndMechanic(SummonDestroyer, "Summon", new MechanicPlotlySetting(Symbols.StarTriangleDown,Colors.DarkRed), "D.CC Fail","Summon (Destroyer Breakbar failed)", "Destroyer CC Fail",0).UsingChecker((ce,log) => ce.ActualDuration >= 8332),
+            new SpawnMechanic(SummonSpawn, "Summon (Spawn)", new MechanicPlotlySetting(Symbols.DiamondWide,Colors.DarkRed), "D.Spwn","Summon (Destroyer Trolls summoned)", "Destroyer Summoned",0),
+            new PlayerDstHitMechanic(BodyOfFlame, "Body of Flame", new MechanicPlotlySetting(Symbols.StarOpen,Colors.Pink,10), "P.AoE","Body of Flame (Pyre Ground AoE (CM))", "Pyre Hitbox AoE",0),
+            new PlayerDstHitMechanic(SeaOfFlame, "Sea of Flame", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Red), "Q.Hitbox","Sea of Flame (Stood in Qadim Hitbox)", "Qadim Hitbox AoE",0),
+            new PlayerDstHitMechanic(Claw, "Claw", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.DarkTeal,10), "Claw","Claw (Reaper of Flesh attack)", "Reaper Claw",0),
+            new PlayerDstHitMechanic(SwapQadim, "Swap", new MechanicPlotlySetting(Symbols.CircleCrossOpen,Colors.Magenta), "Port","Swap (Ported from below Legendary Creature to Qadim)", "Port to Qadim",0),
+            new PlayerDstBuffApplyMechanic(PowerOfTheLamp, "Power of the Lamp", new MechanicPlotlySetting(Symbols.TriangleUp,Colors.LightPurple,10), "Lamp","Power of the Lamp (Returned from the Lamp)", "Lamp Return",0),
+            new EnemyStatusMechanic<DeadEvent>("Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.Red), "Pyre.K","Pyre Killed", "Pyre Killed",0, (log, a) => a.IsSpecies(TrashID.PyreGuardian) ? log.CombatData.GetDeadEvents(a) : new List<DeadEvent>()),
+            new EnemyStatusMechanic<DeadEvent>("Stab Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.LightOrange), "Pyre.S.K","Stab Pyre Killed", "Stab Pyre Killed",0, (log, a) => a.IsSpecies(TrashID.PyreGuardianStab) ? log.CombatData.GetDeadEvents(a) : new List<DeadEvent>()),
+            new EnemyStatusMechanic<DeadEvent>("Protect Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.Orange), "Pyre.P.K","Protect Pyre Killed", "Protect Pyre Killed",0, (log, a) => a.IsSpecies(TrashID.PyreGuardianProtect) ? log.CombatData.GetDeadEvents(a) : new List<DeadEvent>()),
+            new EnemyStatusMechanic<DeadEvent>("Retal Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.LightRed), "Pyre.R.K","Retal Pyre Killed", "Retal Pyre Killed",0, (log, a) => a.IsSpecies(TrashID.PyreGuardianRetal) ? log.CombatData.GetDeadEvents(a) : new List<DeadEvent>()),
+            new EnemyStatusMechanic<DeadEvent>("Resolution Pyre Guardian", new MechanicPlotlySetting(Symbols.Bowtie,Colors.DarkRed), "Pyre.R.K","Resolution Pyre Killed", "Resolution Pyre Killed",0, (log, a) => a.IsSpecies(TrashID.PyreGuardianResolution) ? log.CombatData.GetDeadEvents(a) : new List<DeadEvent>()),
             });
             Extension = "qadim";
-            Icon = "https://wiki.guildwars2.com/images/f/f2/Mini_Qadim.png";
-            GenericFallBackMethod = FallBackMethod.CombatExit;
+            Icon = EncounterIconQadim;
+            GenericFallBackMethod = FallBackMethod.Death | FallBackMethod.CombatExit;
             EncounterCategoryInformation.InSubCategoryOrder = 2;
             EncounterID |= 0x000003;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/f4jfgiX.png",
+            return new CombatReplayMap(CombatReplayQadim,
                             (1000, 994),
                             (-11676, 8825, -3870, 16582)/*,
                             (-21504, -21504, 24576, 24576),
@@ -83,12 +88,12 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<int>
             {
-                (int)ArcDPSEnums.TargetID.Qadim,
-                (int)ArcDPSEnums.TrashID.AncientInvokedHydra,
-                (int)ArcDPSEnums.TrashID.WyvernMatriarch,
-                (int)ArcDPSEnums.TrashID.WyvernPatriarch,
-                (int)ArcDPSEnums.TrashID.ApocalypseBringer,
-                (int)ArcDPSEnums.TrashID.QadimLamp,
+                (int)TargetID.Qadim,
+                (int)TrashID.AncientInvokedHydra,
+                (int)TrashID.WyvernMatriarch,
+                (int)TrashID.WyvernPatriarch,
+                (int)TrashID.ApocalypseBringer,
+                (int)TrashID.QadimLamp,
             };
         }
 
@@ -96,45 +101,48 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new HashSet<int>
             {
-                (int)ArcDPSEnums.TargetID.Qadim,
-                (int)ArcDPSEnums.TrashID.AncientInvokedHydra,
-                (int)ArcDPSEnums.TrashID.ApocalypseBringer,
-                (int)ArcDPSEnums.TrashID.WyvernMatriarch,
-                (int)ArcDPSEnums.TrashID.WyvernPatriarch
+                (int)TargetID.Qadim,
+                (int)TrashID.AncientInvokedHydra,
+                (int)TrashID.ApocalypseBringer,
+                (int)TrashID.WyvernMatriarch,
+                (int)TrashID.WyvernPatriarch
             };
         }
 
         internal override void EIEvtcParse(ulong gw2Build, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
-            IReadOnlyList<AgentItem> pyres = agentData.GetNPCsByID((int)ArcDPSEnums.TrashID.PyreGuardian);
+            IReadOnlyList<AgentItem> pyres = agentData.GetNPCsByID(TrashID.PyreGuardian);
             // Lamps
-            var lampAgents = combatData.Where(x => x.DstAgent == 14940 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 202).ToList();
+            var lampAgents = combatData.Where(x => x.DstAgent == 14940 && x.IsStateChange == StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 202).ToList();
             foreach (AgentItem lamp in lampAgents)
             {
                 lamp.OverrideType(AgentItem.AgentType.NPC);
-                lamp.OverrideID(ArcDPSEnums.TrashID.QadimLamp);
+                lamp.OverrideID(TrashID.QadimLamp);
             }
             bool refresh = lampAgents.Count > 0;
             // Pyres
+            var protectPyrePositions = new List<Point3D> { new Point3D(-8947, 14728), new Point3D(-10834, 12477) };
+            var stabilityPyrePositions = new List<Point3D> { new Point3D(-4356, 12076), new Point3D(-5889, 14723), new Point3D(-7851, 13550) };
+            var resolutionRetaliationPyrePositions = new List<Point3D> { new Point3D(-8951, 9429), new Point3D(-5716, 9325), new Point3D(-7846, 10612) };
             foreach (AgentItem pyre in pyres)
             {
-                CombatItem position = combatData.FirstOrDefault(x => x.SrcMatchesAgent(pyre) && x.IsStateChange == ArcDPSEnums.StateChange.Position);
-                if (position != null)
+                CombatItem positionEvt = combatData.FirstOrDefault(x => x.SrcMatchesAgent(pyre) && x.IsStateChange == StateChange.Position);
+                if (positionEvt != null)
                 {
-                    (float x, float y, _) = AbstractMovementEvent.UnpackMovementData(position.DstAgent, 0);
-                    if ((Math.Abs(x + 8947) < 10 && Math.Abs(y - 14728) < 10) || (Math.Abs(x + 10834) < 10 && Math.Abs(y - 12477) < 10))
+                    Point3D position = AbstractMovementEvent.GetPoint3D(positionEvt.DstAgent, 0);
+                    if (protectPyrePositions.Any(x => x.Distance2DToPoint(position) < InchDistanceThreshold))
                     {
-                        pyre.OverrideID(ArcDPSEnums.TrashID.PyreGuardianProtect);
+                        pyre.OverrideID(TrashID.PyreGuardianProtect);
                         refresh = true;
                     }
-                    else if ((Math.Abs(x + 4356) < 10 && Math.Abs(y - 12076) < 10) || (Math.Abs(x + 5889) < 10 && Math.Abs(y - 14723) < 10) || (Math.Abs(x + 7851) < 10 && Math.Abs(y - 13550) < 10))
+                    else if (stabilityPyrePositions.Any(x => x.Distance2DToPoint(position) < InchDistanceThreshold))
                     {
-                        pyre.OverrideID(ArcDPSEnums.TrashID.PyreGuardianStab);
+                        pyre.OverrideID(TrashID.PyreGuardianStab);
                         refresh = true;
                     }
-                    else if ((Math.Abs(x + 8951) < 10 && Math.Abs(y - 9429) < 10) || (Math.Abs(x + 5716) < 10 && Math.Abs(y - 9325) < 10) || (Math.Abs(x + 7846) < 10 && Math.Abs(y - 10612) < 10))
+                    else if (resolutionRetaliationPyrePositions.Any(x => x.Distance2DToPoint(position) < InchDistanceThreshold))
                     {
-                        pyre.OverrideID(gw2Build >= GW2Builds.May2021Balance ? ArcDPSEnums.TrashID.PyreGuardianResolution : ArcDPSEnums.TrashID.PyreGuardianRetal);
+                        pyre.OverrideID(gw2Build >= GW2Builds.May2021Balance ? TrashID.PyreGuardianResolution : TrashID.PyreGuardianRetal);
                         refresh = true;
                     }
                 }
@@ -146,19 +154,19 @@ namespace GW2EIEvtcParser.EncounterLogic
             ComputeFightTargets(agentData, combatData, extensions);
             foreach (NPC target in TrashMobs)
             {
-                if (target.ID == (int)ArcDPSEnums.TrashID.PyreGuardianProtect)
+                if (target.IsSpecies(TrashID.PyreGuardianProtect))
                 {
                     target.OverrideName("Protect " + target.Character);
                 }
-                if (target.ID == (int)ArcDPSEnums.TrashID.PyreGuardianRetal)
+                if (target.IsSpecies(TrashID.PyreGuardianRetal))
                 {
                     target.OverrideName("Retal " + target.Character);
                 }
-                if (target.ID == (int)ArcDPSEnums.TrashID.PyreGuardianResolution)
+                if (target.IsSpecies(TrashID.PyreGuardianResolution))
                 {
                     target.OverrideName("Resolution " + target.Character);
                 }
-                if (target.ID == (int)ArcDPSEnums.TrashID.PyreGuardianStab)
+                if (target.IsSpecies(TrashID.PyreGuardianStab))
                 {
                     target.OverrideName("Stab " + target.Character);
                 }
@@ -169,20 +177,20 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(52522, 52522), // Burning Crucible
+                new DamageCastFinder(BurningCrucible, BurningCrucible), // Burning Crucible
             };
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             // Find target
-            AgentItem target = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Qadim).FirstOrDefault();
+            AgentItem target = agentData.GetNPCsByID(TargetID.Qadim).FirstOrDefault();
             if (target == null)
             {
                 throw new MissingKeyActorsException("Qadim not found");
             }
-            CombatItem startCast = combatData.FirstOrDefault(x => x.SkillID == 52496 && x.StartCasting());
-            CombatItem sanityCheckCast = combatData.FirstOrDefault(x => (x.SkillID == 52528 || x.SkillID == 52333 || x.SkillID == 58814) && x.StartCasting());
+            CombatItem startCast = combatData.FirstOrDefault(x => x.SkillID == QadimInitialCast && x.StartCasting());
+            CombatItem sanityCheckCast = combatData.FirstOrDefault(x => (x.SkillID == FlameSlash3 || x.SkillID == FlameSlash || x.SkillID == FlameWave) && x.StartCasting());
             if (startCast == null || sanityCheckCast == null)
             {
                 return fightData.LogStart;
@@ -201,7 +209,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             // If changing phase detection, combat replay platform timings may have to be updated.
 
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor qadim = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Qadim);
+            AbstractSingleActor qadim = Targets.FirstOrDefault(x => x.IsSpecies(TargetID.Qadim));
             if (qadim == null)
             {
                 throw new MissingKeyActorsException("Qadim not found");
@@ -211,7 +219,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 return phases;
             }
-            phases.AddRange(GetPhasesByInvul(log, 52329, qadim, true, false));
+            phases.AddRange(GetPhasesByInvul(log, QadimInvulnerable, qadim, true, false));
             for (int i = 1; i < phases.Count; i++)
             {
                 PhaseData phase = phases[i];
@@ -219,13 +227,13 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     phase.Name = "Qadim P" + (i) / 2;
                     var pyresFirstAware = new List<long>();
-                    var pyres = new List<int>
+                    var pyres = new List<ArcDPSEnums.TrashID>
                         {
-                            (int) ArcDPSEnums.TrashID.PyreGuardian,
-                            (int) ArcDPSEnums.TrashID.PyreGuardianProtect,
-                            (int) ArcDPSEnums.TrashID.PyreGuardianStab,
-                            (int) ArcDPSEnums.TrashID.PyreGuardianRetal,
-                            (int) ArcDPSEnums.TrashID.PyreGuardianResolution,
+                            TrashID.PyreGuardian,
+                            TrashID.PyreGuardianProtect,
+                            TrashID.PyreGuardianStab,
+                            TrashID.PyreGuardianRetal,
+                            TrashID.PyreGuardianResolution,
                         };
                     foreach (int pyreId in pyres)
                     {
@@ -241,25 +249,25 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     var ids = new List<int>
                         {
-                           (int) ArcDPSEnums.TrashID.WyvernMatriarch,
-                           (int) ArcDPSEnums.TrashID.WyvernPatriarch,
-                           (int) ArcDPSEnums.TrashID.AncientInvokedHydra,
-                           (int) ArcDPSEnums.TrashID.ApocalypseBringer,
-                           (int) ArcDPSEnums.TrashID.QadimLamp
+                           (int) TrashID.WyvernMatriarch,
+                           (int) TrashID.WyvernPatriarch,
+                           (int) TrashID.AncientInvokedHydra,
+                           (int) TrashID.ApocalypseBringer,
+                           (int) TrashID.QadimLamp
                         };
                     AddTargetsToPhaseAndFit(phase, ids, log);
                     if (phase.Targets.Count > 0)
                     {
                         var phaseTarIDs = new HashSet<int>(phase.Targets.Select(x => x.ID));
-                        if (phaseTarIDs.Contains((int)ArcDPSEnums.TrashID.AncientInvokedHydra))
+                        if (phaseTarIDs.Contains((int)TrashID.AncientInvokedHydra))
                         {
                             phase.Name = "Hydra";
                         }
-                        else if (phaseTarIDs.Contains((int)ArcDPSEnums.TrashID.ApocalypseBringer))
+                        else if (phaseTarIDs.Contains((int)TrashID.ApocalypseBringer))
                         {
                             phase.Name = "Apocalypse";
                         }
-                        else if (phaseTarIDs.Contains((int)ArcDPSEnums.TrashID.WyvernPatriarch) || phaseTarIDs.Contains((int)ArcDPSEnums.TrashID.WyvernMatriarch))
+                        else if (phaseTarIDs.Contains((int)TrashID.WyvernPatriarch) || phaseTarIDs.Contains((int)TrashID.WyvernMatriarch))
                         {
                             phase.Name = "Wyvern";
                         }
@@ -278,23 +286,71 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<ArcDPSEnums.TrashID>()
             {
-                ArcDPSEnums.TrashID.LavaElemental1,
-                ArcDPSEnums.TrashID.LavaElemental2,
-                ArcDPSEnums.TrashID.IcebornHydra,
-                ArcDPSEnums.TrashID.GreaterMagmaElemental1,
-                ArcDPSEnums.TrashID.GreaterMagmaElemental2,
-                ArcDPSEnums.TrashID.FireElemental,
-                ArcDPSEnums.TrashID.FireImp,
-                ArcDPSEnums.TrashID.PyreGuardian,
-                ArcDPSEnums.TrashID.PyreGuardianProtect,
-                ArcDPSEnums.TrashID.PyreGuardianRetal,
-                ArcDPSEnums.TrashID.PyreGuardianResolution,
-                ArcDPSEnums.TrashID.PyreGuardianStab,
-                ArcDPSEnums.TrashID.ReaperofFlesh,
-                ArcDPSEnums.TrashID.DestroyerTroll,
-                ArcDPSEnums.TrashID.IceElemental,
-                ArcDPSEnums.TrashID.Zommoros
+                TrashID.LavaElemental1,
+                TrashID.LavaElemental2,
+                TrashID.IcebornHydra,
+                TrashID.GreaterMagmaElemental1,
+                TrashID.GreaterMagmaElemental2,
+                TrashID.FireElemental,
+                TrashID.FireImp,
+                TrashID.PyreGuardian,
+                TrashID.PyreGuardianProtect,
+                TrashID.PyreGuardianRetal,
+                TrashID.PyreGuardianResolution,
+                TrashID.PyreGuardianStab,
+                TrashID.ReaperOfFlesh,
+                TrashID.DestroyerTroll,
+                TrashID.IceElemental,
+                TrashID.AngryZommoros,
+                TrashID.AssaultCube,
+                TrashID.AwakenedSoldier,
+                TrashID.Basilisk,
+                TrashID.BlackMoa,
+                TrashID.BrandedCharr,
+                TrashID.BrandedDevourer,
+                TrashID.ChakDrone,
+                TrashID.CrazedKarkaHatchling,
+                TrashID.FireImpLamp,
+                TrashID.GhostlyPirateFighter,
+                TrashID.GiantBrawler,
+                TrashID.GiantHunter,
+                TrashID.GoldOoze,
+                TrashID.GrawlBascher,
+                TrashID.GrawlTrapper,
+                TrashID.GuildInitiateModusSceleris,
+                TrashID.IcebroodAtrocity,
+                TrashID.IcebroodKodan,
+                TrashID.IcebroodQuaggan,
+                TrashID.Jotun,
+                TrashID.JungleWurm,
+                TrashID.Karka,
+                TrashID.MinotaurBull,
+                TrashID.ModnirrBerserker,
+                TrashID.MoltenDisaggregator,
+                TrashID.MoltenProtector,
+                TrashID.MoltenReverberant,
+                TrashID.MordremVinetooth,
+                TrashID.Murellow,
+                TrashID.NightmareCourtier,
+                TrashID.OgreHunter,
+                TrashID.PirareSkrittSentry,
+                TrashID.PolarBear,
+                TrashID.Rabbit,
+                TrashID.ReefSkelk,
+                TrashID.RisenKraitDamoss,
+                TrashID.RottingAncientOakheart,
+                TrashID.RottingDestroyer,
+                TrashID.ShadowSkelk,
+                TrashID.SpiritOfExcess,
+                TrashID.TamedWarg,
+                TrashID.TarElemental,
+                TrashID.WindRider,
             };
+        }
+
+        internal override void ComputeEnvironmentCombatReplayDecorations(ParsedEvtcLog log)
+        {
+            AddPlatformsToCombatReplay(Targets.FirstOrDefault(x => x.IsSpecies(TargetID.Qadim)), log, EnvironmentDecorations);
         }
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
@@ -303,24 +359,23 @@ namespace GW2EIEvtcParser.EncounterLogic
             int ccRadius = 200;
             switch (target.ID)
             {
-                case (int)ArcDPSEnums.TargetID.Qadim:
+                case (int)TargetID.Qadim:
                     //CC
-                    AddPlatformsToCombatReplay(target, log, replay);
-                    var breakbar = cls.Where(x => x.SkillId == 51943).ToList();
+                    var breakbar = cls.Where(x => x.SkillId == QadimCC).ToList();
                     foreach (AbstractCastEvent c in breakbar)
                     {
                         int radius = ccRadius;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
                     //Riposte
-                    var riposte = cls.Where(x => x.SkillId == 52265).ToList();
+                    var riposte = cls.Where(x => x.SkillId == QadimRiposte).ToList();
                     foreach (AbstractCastEvent c in riposte)
                     {
                         int radius = 2200;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, radius, ((int)c.Time, (int)c.EndTime), "rgba(255, 0, 0, 0.5)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(radius, ((int)c.Time, (int)c.EndTime), "rgba(255, 0, 0, 0.5)", new AgentConnector(target)));
                     }
                     //Big Hit
-                    var maceShockwave = cls.Where(x => x.SkillId == 52310 && x.Status != AbstractCastEvent.AnimationStatus.Interrupted).ToList();
+                    var maceShockwave = cls.Where(x => x.SkillId == BigHit && x.Status != AbstractCastEvent.AnimationStatus.Interrupted).ToList();
                     foreach (AbstractCastEvent c in maceShockwave)
                     {
                         int start = (int)c.Time;
@@ -329,26 +384,26 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int radius = 2000;
                         int impactRadius = 40;
                         int spellCenterDistance = 300;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
-                        Point3D targetPosition = replay.PolledPositions.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
+                        Point3D targetPosition = target.GetCurrentPosition(log, start + 1000);
                         if (facing != null && targetPosition != null)
                         {
                             var position = new Point3D(targetPosition.X + (facing.X * spellCenterDistance), targetPosition.Y + (facing.Y * spellCenterDistance), targetPosition.Z);
-                            replay.Decorations.Add(new CircleDecoration(true, 0, impactRadius, (start, start + delay), "rgba(255, 100, 0, 0.2)", new PositionConnector(position)));
-                            replay.Decorations.Add(new CircleDecoration(true, 0, impactRadius, (start + delay - 10, start + delay + 100), "rgba(255, 100, 0, 0.7)", new PositionConnector(position)));
-                            replay.Decorations.Add(new CircleDecoration(false, start + delay + duration, radius, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.7)", new PositionConnector(position)));
+                            replay.Decorations.Add(new CircleDecoration(impactRadius, (start, start + delay), "rgba(255, 100, 0, 0.2)", new PositionConnector(position)));
+                            replay.Decorations.Add(new CircleDecoration(impactRadius, (start + delay - 10, start + delay + 100), "rgba(255, 100, 0, 0.7)", new PositionConnector(position)));
+                            replay.Decorations.Add(new CircleDecoration(radius, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.7)", new PositionConnector(position)).UsingFilled(false).UsingGrowingEnd(start + delay + duration));
                         }
                     }
                     break;
-                case (int)ArcDPSEnums.TrashID.AncientInvokedHydra:
+                case (int)TrashID.AncientInvokedHydra:
                     //CC
-                    var fieryMeteor = cls.Where(x => x.SkillId == 52941).ToList();
+                    var fieryMeteor = cls.Where(x => x.SkillId == FieryMeteor).ToList();
                     foreach (AbstractCastEvent c in fieryMeteor)
                     {
                         int radius = ccRadius;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
-                    var eleBreath = cls.Where(x => x.SkillId == 52520).ToList();
+                    var eleBreath = cls.Where(x => x.SkillId == ElementalBreath).ToList();
                     foreach (AbstractCastEvent c in eleBreath)
                     {
                         int start = (int)c.Time;
@@ -356,33 +411,34 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int delay = 2600;
                         int duration = 1000;
                         int openingAngle = 70;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
                         if (facing != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, openingAngle, (start + delay, start + delay + duration), "rgba(255, 180, 0, 0.3)", new AgentConnector(target)));
+                            replay.Decorations.Add(new PieDecoration(radius, openingAngle, (start + delay, start + delay + duration), "rgba(255, 180, 0, 0.3)", new AgentConnector(target)).UsingRotationConnector(new AngleConnector(facing)));
                         }
                     }
                     break;
-                case (int)ArcDPSEnums.TrashID.WyvernMatriarch:
+                case (int)TrashID.WyvernMatriarch:
                     //Wing Buffet
-                    var wingBuffet = cls.Where(x => x.SkillId == 52734).ToList();
+                    var wingBuffet = cls.Where(x => x.SkillId == WingBuffet).ToList();
                     foreach (AbstractCastEvent c in wingBuffet)
                     {
                         int start = (int)c.Time;
                         int preCast = Math.Min(3500, c.ActualDuration);
                         int duration = Math.Min(6500, c.ActualDuration);
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
                         int range = 2800;
                         int span = 2400;
                         if (facing != null)
                         {
-                            float rotation = Point3D.GetRotationFromFacing(facing);
-                            replay.Decorations.Add(new RotatedRectangleDecoration(true, 0, range, span, rotation, range / 2, (start, start + preCast), "rgba(0,100,255,0.2)", new AgentConnector(target)));
-                            replay.Decorations.Add(new RotatedRectangleDecoration(true, 0, range, span, rotation, range / 2, (start + preCast, start + duration), "rgba(0,100,255,0.5)", new AgentConnector(target)));
+                            var positionConnector = (AgentConnector)new AgentConnector(target).WithOffset(new Point3D(range / 2, 0), true);
+                            var rotationConnextor = new AngleConnector(facing);
+                            replay.Decorations.Add(new RectangleDecoration(range, span, (start, start + preCast), "rgba(0,100,255,0.2)", positionConnector).UsingRotationConnector(rotationConnextor));
+                            replay.Decorations.Add(new RectangleDecoration(range, span, (start + preCast, start + duration), "rgba(0,100,255,0.5)", positionConnector).UsingRotationConnector(rotationConnextor));
                         }
                     }
                     //Breath
-                    var matBreath = cls.Where(x => x.SkillId == 52726).ToList();
+                    var matBreath = cls.Where(x => x.SkillId == FireBreath).ToList();
                     foreach (AbstractCastEvent c in matBreath)
                     {
                         int start = (int)c.Time;
@@ -391,16 +447,17 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int duration = 3000;
                         int openingAngle = 70;
                         int fieldDuration = 10000;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
-                        Point3D pos = replay.PolledPositions.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
+                        Point3D pos = target.GetCurrentPosition(log, start + 1000);
                         if (facing != null && pos != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, openingAngle, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.3)", new AgentConnector(target)));
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, openingAngle, (start + delay + duration, start + delay + fieldDuration), "rgba(255, 50, 0, 0.3)", new PositionConnector(pos)));
+                            var rotationConnector = new AngleConnector(facing);
+                            replay.Decorations.Add(new PieDecoration(radius, openingAngle, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.3)", new AgentConnector(target)).UsingRotationConnector(rotationConnector));
+                            replay.Decorations.Add(new PieDecoration(radius, openingAngle, (start + delay + duration, start + delay + fieldDuration), "rgba(255, 50, 0, 0.3)", new PositionConnector(pos)).UsingRotationConnector(rotationConnector));
                         }
                     }
                     //Tail Swipe
-                    var matSwipe = cls.Where(x => x.SkillId == 52705).ToList();
+                    var matSwipe = cls.Where(x => x.SkillId == TailSwipe).ToList();
                     foreach (AbstractCastEvent c in matSwipe)
                     {
                         int start = (int)c.Time;
@@ -410,29 +467,30 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int openingAngle = 59;
                         int angleIncrement = 60;
                         int coneAmount = 4;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
                         if (facing != null)
                         {
+                            float initialAngle = Point3D.GetRotationFromFacing(facing);
+                            var connector = new AgentConnector(target);
                             for (int i = 0; i < coneAmount; i++)
                             {
-                                float rotation = Point3D.GetRotationFromFacing(facing);
-                                replay.Decorations.Add(new PieDecoration(false, 0, maxRadius - (i * radiusDecrement), rotation - (i * angleIncrement), openingAngle, (start, start + delay), "rgba(255, 255, 0, 0.6)", new AgentConnector(target)));
-                                replay.Decorations.Add(new PieDecoration(true, 0, maxRadius - (i * radiusDecrement), rotation - (i * angleIncrement), openingAngle, (start, start + delay), "rgba(255, 180, 0, 0.3)", new AgentConnector(target)));
+                                var rotationConnector = new AngleConnector(initialAngle - (i * angleIncrement));
+                                replay.AddDecorationWithBorder((PieDecoration)new PieDecoration( maxRadius - (i * radiusDecrement), openingAngle, (start, start + delay), "rgba(255, 180, 0, 0.3)", connector).UsingRotationConnector(rotationConnector));
 
                             }
                         }
                     }
                     break;
-                case (int)ArcDPSEnums.TrashID.WyvernPatriarch:
+                case (int)TrashID.WyvernPatriarch:
                     //CC
-                    var patCC = cls.Where(x => x.SkillId == 53132).ToList();
+                    var patCC = cls.Where(x => x.SkillId == PatriarchCC).ToList();
                     foreach (AbstractCastEvent c in patCC)
                     {
                         int radius = ccRadius;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.4)", new AgentConnector(target)));
                     }
                     //Breath
-                    var patBreath = cls.Where(x => x.SkillId == 52726).ToList();
+                    var patBreath = cls.Where(x => x.SkillId == FireBreath).ToList();
                     foreach (AbstractCastEvent c in patBreath)
                     {
                         int start = (int)c.Time;
@@ -441,16 +499,17 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int duration = 3000;
                         int openingAngle = 60;
                         int fieldDuration = 10000;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
-                        Point3D pos = replay.PolledPositions.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
+                        Point3D pos = target.GetCurrentPosition(log, start + 1000);
                         if (facing != null && pos != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, openingAngle, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.3)", new AgentConnector(target)));
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, openingAngle, (start + delay + duration, start + delay + fieldDuration), "rgba(255, 50, 0, 0.3)", new PositionConnector(pos)));
+                            var rotationConnector = new AngleConnector(facing);
+                            replay.Decorations.Add(new PieDecoration(radius, openingAngle, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.3)", new AgentConnector(target)).UsingRotationConnector(rotationConnector));
+                            replay.Decorations.Add(new PieDecoration(radius, openingAngle, (start + delay + duration, start + delay + fieldDuration), "rgba(255, 50, 0, 0.3)", new PositionConnector(pos)).UsingRotationConnector(rotationConnector));
                         }
                     }
                     //Tail Swipe
-                    var patSwipe = cls.Where(x => x.SkillId == 52705).ToList();
+                    var patSwipe = cls.Where(x => x.SkillId == TailSwipe).ToList();
                     foreach (AbstractCastEvent c in patSwipe)
                     {
                         int start = (int)c.Time;
@@ -460,29 +519,30 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int openingAngle = 59;
                         int angleIncrement = 60;
                         int coneAmount = 4;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
                         if (facing != null)
                         {
+                            float initialAngle = Point3D.GetRotationFromFacing(facing);
+                            var connector = new AgentConnector(target);
                             for (int i = 0; i < coneAmount; i++)
                             {
-                                float rotation = Point3D.GetRotationFromFacing(facing);
-                                replay.Decorations.Add(new PieDecoration(false, 0, maxRadius - (i * radiusDecrement), rotation - (i * angleIncrement), openingAngle, (start, start + delay), "rgba(255, 255, 0, 0.6)", new AgentConnector(target)));
-                                replay.Decorations.Add(new PieDecoration(true, 0, maxRadius - (i * radiusDecrement), rotation - (i * angleIncrement), openingAngle, (start, start + delay), "rgba(255, 180, 0, 0.3)", new AgentConnector(target)));
+                                var rotationConnector = new AngleConnector(initialAngle - (i * angleIncrement));
+                                replay.AddDecorationWithBorder((PieDecoration)new PieDecoration( maxRadius - (i * radiusDecrement), openingAngle, (start, start + delay), "rgba(255, 180, 0, 0.4)", connector).UsingRotationConnector(rotationConnector));
                             }
                         }
                     }
                     break;
-                case (int)ArcDPSEnums.TrashID.ApocalypseBringer:
-                    var jumpShockwave = cls.Where(x => x.SkillId == 51923).ToList();
+                case (int)TrashID.ApocalypseBringer:
+                    var jumpShockwave = cls.Where(x => x.SkillId == ShatteredEarth).ToList();
                     foreach (AbstractCastEvent c in jumpShockwave)
                     {
                         int start = (int)c.Time;
                         int delay = 1800;
                         int duration = 3000;
                         int maxRadius = 2000;
-                        replay.Decorations.Add(new CircleDecoration(false, start + delay + duration, maxRadius, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.5)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration( maxRadius, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.5)", new AgentConnector(target)).UsingFilled(false).UsingGrowingEnd(start + delay + duration));
                     }
-                    var stompShockwave = cls.Where(x => x.SkillId == 52330).ToList();
+                    var stompShockwave = cls.Where(x => x.SkillId == SeismicStomp).ToList();
                     foreach (AbstractCastEvent c in stompShockwave)
                     {
                         int start = (int)c.Time;
@@ -491,25 +551,25 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int maxRadius = 2000;
                         int impactRadius = 500;
                         int spellCenterDistance = 270; //hitbox radius
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
-                        Point3D targetPosition = replay.PolledPositions.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
+                        Point3D targetPosition = target.GetCurrentPosition(log, start + 1000);
                         if (facing != null && targetPosition != null)
                         {
                             var position = new Point3D(targetPosition.X + facing.X * spellCenterDistance, targetPosition.Y + facing.Y * spellCenterDistance, targetPosition.Z);
-                            replay.Decorations.Add(new CircleDecoration(true, 0, impactRadius, (start, start + delay), "rgba(255, 100, 0, 0.1)", new PositionConnector(position)));
-                            replay.Decorations.Add(new CircleDecoration(true, 0, impactRadius, (start + delay - 10, start + delay + 100), "rgba(255, 100, 0, 0.5)", new PositionConnector(position)));
-                            replay.Decorations.Add(new CircleDecoration(false, start + delay + duration, maxRadius, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.5)", new PositionConnector(position)));
+                            replay.Decorations.Add(new CircleDecoration(impactRadius, (start, start + delay), "rgba(255, 100, 0, 0.1)", new PositionConnector(position)));
+                            replay.Decorations.Add(new CircleDecoration(impactRadius, (start + delay - 10, start + delay + 100), "rgba(255, 100, 0, 0.5)", new PositionConnector(position)));
+                            replay.Decorations.Add(new CircleDecoration(maxRadius, (start + delay, start + delay + duration), "rgba(255, 200, 0, 0.5)", new PositionConnector(position)).UsingFilled(false).UsingGrowingEnd(start + delay + duration));
                         }
                     }
                     //CC
-                    var summon = cls.Where(x => x.SkillId == 52054).ToList();
+                    var summon = cls.Where(x => x.SkillId == SummonDestroyer).ToList();
                     foreach (AbstractCastEvent c in summon)
                     {
                         int radius = ccRadius;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(ccRadius, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
                     //Pizza
-                    var forceWave = cls.Where(x => x.SkillId == 51759).ToList();
+                    var forceWave = cls.Where(x => x.SkillId == WaveOfForce).ToList();
                     foreach (AbstractCastEvent c in forceWave)
                     {
                         int start = (int)c.Time;
@@ -519,14 +579,15 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int openingAngle = 44;
                         int angleIncrement = 45;
                         int coneAmount = 3;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start + 1000);
+                        Point3D facing = target.GetCurrentRotation(log, start + 1000);
                         if (facing != null)
                         {
+                            float initialAngle = Point3D.GetRotationFromFacing(facing);
+                            var connector = new AgentConnector(target);
                             for (int i = 0; i < coneAmount; i++)
                             {
-                                float rotation = Point3D.GetRotationFromFacing(facing);
-                                replay.Decorations.Add(new PieDecoration(false, 0, maxRadius - (i * radiusDecrement), rotation - (i * angleIncrement), openingAngle, (start, start + delay), "rgba(255, 255, 0, 0.6)", new AgentConnector(target)));
-                                replay.Decorations.Add(new PieDecoration(true, 0, maxRadius - (i * radiusDecrement), rotation - (i * angleIncrement), openingAngle, (start, start + delay), "rgba(255, 180, 0, 0.3)", new AgentConnector(target)));
+                                var rotationConnector = new AngleConnector(initialAngle - (i * angleIncrement));
+                                replay.AddDecorationWithBorder((PieDecoration)new PieDecoration( maxRadius - (i * radiusDecrement), openingAngle, (start, start + delay), "rgba(255, 180, 0, 0.4)", connector).UsingRotationConnector(rotationConnector));
                             }
                         }
                     }
@@ -538,7 +599,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            AbstractSingleActor target = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Qadim);
+            AbstractSingleActor target = Targets.FirstOrDefault(x => x.IsSpecies(TargetID.Qadim));
             if (target == null)
             {
                 throw new MissingKeyActorsException("Qadim not found");
@@ -546,10 +607,10 @@ namespace GW2EIEvtcParser.EncounterLogic
             return (target.GetHealth(combatData) > 21e6) ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal;
         }
 
-        private static void AddPlatformsToCombatReplay(NPC target, ParsedEvtcLog log, CombatReplay replay)
+        private static void AddPlatformsToCombatReplay(AbstractSingleActor qadim, ParsedEvtcLog log, List<GenericDecoration> decorations)
         {
             // We later use the target to find out the timing of the last move
-            Debug.Assert(target.ID == (int)ArcDPSEnums.TargetID.Qadim);
+            Debug.Assert(qadim.IsSpecies(TargetID.Qadim));
 
             // These values were all calculated by hand.
             // It would be way nicer to calculate them here, but we don't have a nice vector library
@@ -642,7 +703,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 PhaseData lastPhase = phases[6];
 
-                List<ParametricPoint3D> qadimMovement = replay.Positions;
+                IReadOnlyList<ParametricPoint3D> qadimMovement = qadim.GetCombatReplayNonPolledPositions(log);
 
                 ParametricPoint3D lastMove = qadimMovement.FirstOrDefault(
                     pt =>
@@ -923,7 +984,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             for (int i = 0; i < platformCount; i++)
             {
                 platforms[i] = new MovingPlatformDecoration(platformImageUrl, 2247, 2247, (int.MinValue, int.MaxValue));
-                replay.Decorations.Add(platforms[i]);
+                decorations.Add(platforms[i]);
             }
 
             // Add movement "keyframes" on a movement end and on the start of the next one.
@@ -947,6 +1008,29 @@ namespace GW2EIEvtcParser.EncounterLogic
                         // between the end of this movement and the start of the next one
                         platform.AddPosition(x, y, z, angle, opacity, movements[i + 1].start);
                     }
+                }
+            }
+        }
+
+        protected override void SetInstanceBuffs(ParsedEvtcLog log)
+        {
+            base.SetInstanceBuffs(log);
+
+            if (log.FightData.Success)
+            {
+                if (log.CombatData.GetBuffData(AchievementEligibilityTakingTurns).Any()) { CheckAchievementBuff(log, AchievementEligibilityTakingTurns); }
+                if (log.CombatData.GetBuffData(AchievementEligibilityManipulateTheManipulator).Any()) { CheckAchievementBuff(log, AchievementEligibilityManipulateTheManipulator); }
+            }
+        }
+
+        private void CheckAchievementBuff(ParsedEvtcLog log, long achievement)
+        {
+            foreach (Player p in log.PlayerList)
+            {
+                if (p.HasBuff(log, achievement, log.FightData.FightEnd - ServerDelayConstant))
+                {
+                    InstanceBuffs.Add((log.Buffs.BuffsByIds[achievement], 1));
+                    break;
                 }
             }
         }

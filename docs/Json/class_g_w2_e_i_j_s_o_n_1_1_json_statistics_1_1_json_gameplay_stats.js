@@ -1,13 +1,23 @@
 var class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats =
 [
+    [ "AgainstDownedCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a02b25bddd500db3d6918da18e22df679", null ],
+    [ "AgainstDownedDamage", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a7261d1c8772f753122d129cafc639fc9", null ],
     [ "AgainstMovingRate", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#acc81131a972ec000df4ab55df6e31d36", null ],
     [ "Blocked", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#ad4387cf7a62f1133e221e0a5d843d2a1", null ],
+    [ "ConnectedConditionAbove90HPCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a2de544156f019b3e571bd36e8d40876e", null ],
+    [ "ConnectedConditionCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a9951f119cc9ce1038caa2374c941a3eb", null ],
     [ "ConnectedDamageCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a6fc43dff6329068d8c97803663052d33", null ],
     [ "ConnectedDirectDamageCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#ac486f23bfc1dddeb2a7649c775c57391", null ],
+    [ "ConnectedDirectDmg", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#ae5d444b589f9505b0314f5c945efd30a", null ],
+    [ "ConnectedDmg", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a58af3c134130048f80389dcdf2cb422e", null ],
+    [ "ConnectedPowerAbove90HPCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a704be3fb4ed5736bf4b95a3e3eb282d3", null ],
+    [ "ConnectedPowerCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a8bd7c50b061b0ff9715d61c6e6c0d156", null ],
     [ "CritableDirectDamageCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a1d1d265d1c72e0cb00dc8bb48a90bc11", null ],
     [ "CriticalDmg", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a40648ecf4798a86eeaffa7a3b05db44c", null ],
     [ "CriticalRate", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#ab5a484ae754097f2d0cb0b017c32bc5c", null ],
     [ "DirectDamageCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a245ec103eb4a3cea3106937122a17b3b", null ],
+    [ "DirectDmg", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#af147dd4e34eb4f89885721b9f08d9a85", null ],
+    [ "DownContribution", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#add07e8f3b9d555a883ff5f6ba3f77958", null ],
     [ "Downed", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a7d59581c781df1480ad4a9bd11d314f6", null ],
     [ "Evaded", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#af1dea7f6523746ef87dcd2f8d3022a77", null ],
     [ "FlankingRate", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a624c5f9a3ad7c3455f63400e34f4f6c1", null ],
@@ -16,5 +26,6 @@ var class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats =
     [ "Invulned", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#ab728b756c2a2109bbcb6bac4d9250f69", null ],
     [ "Killed", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#aacbf86fc517834aee89d5b8bb9683bc1", null ],
     [ "Missed", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a7b9ff058afc0ee10bbad58360c9a335b", null ],
-    [ "TotalDamageCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#aac60b4bfaa74e28df22dfeb49cf9bf7e", null ]
+    [ "TotalDamageCount", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#aac60b4bfaa74e28df22dfeb49cf9bf7e", null ],
+    [ "TotalDmg", "class_g_w2_e_i_j_s_o_n_1_1_json_statistics_1_1_json_gameplay_stats.html#a5bcd838bd26e8adeb93b7204bb900d0d", null ]
 ];

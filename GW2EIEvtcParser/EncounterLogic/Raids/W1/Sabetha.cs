@@ -4,7 +4,12 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -14,9 +19,9 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-            new PlayerBuffApplyMechanic(ShellShocked, "Shell-Shocked", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkGreen), "Launched","Shell-Shocked (launched up to cannons)", "Shell-Shocked",0),
-            new PlayerBuffApplyMechanic(SapperBomb, "Sapper Bomb", new MechanicPlotlySetting(Symbols.Circle,Colors.DarkGreen), "Sap Bomb","Got a Sapper Bomb", "Sapper Bomb",0),
-            new PlayerBuffApplyMechanic(TimeBomb, "Time Bomb", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "Timed Bomb","Got a Timed Bomb (Expanding circle)", "Timed Bomb",0),
+            new PlayerDstBuffApplyMechanic(ShellShocked, "Shell-Shocked", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkGreen), "Launched","Shell-Shocked (launched up to cannons)", "Shell-Shocked",0),
+            new PlayerDstBuffApplyMechanic(SapperBombBuff, "Sapper Bomb", new MechanicPlotlySetting(Symbols.Circle,Colors.DarkGreen), "Sap Bomb","Got a Sapper Bomb", "Sapper Bomb",0),
+            new PlayerDstBuffApplyMechanic(TimeBomb, "Time Bomb", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "Timed Bomb","Got a Timed Bomb (Expanding circle)", "Timed Bomb",0),
             /*new PlayerBoonApplyMechanic(31324, "Time Bomb Hit", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightOrange), "Timed Bomb Hit","Got hit by Timed Bomb (Expanding circle)", "Timed Bomb Hit",0,
                 (ba, log) =>
                 {
@@ -39,25 +44,25 @@ namespace GW2EIEvtcParser.EncounterLogic
                     return true;
                }
             }),*/
-            new SkillOnPlayerMechanic(Firestorm, "Firestorm", new MechanicPlotlySetting(Symbols.Square,Colors.Red), "Flamewall","Firestorm (killed by Flamewall)", "Flamewall",0, (de, log) => de.HasKilled),
-            new HitOnPlayerMechanic(FlakShot, "Flak Shot", new MechanicPlotlySetting(Symbols.HexagramOpen,Colors.LightOrange), "Flak","Flak Shot (Fire Patches)", "Flak Shot",0),
-            new HitOnPlayerMechanic(CannonBarrage, "Cannon Barrage", new MechanicPlotlySetting(Symbols.Circle,Colors.Yellow), "Cannon","Cannon Barrage (stood in AoE)", "Cannon Shot",0),
-            new HitOnPlayerMechanic(FlameBlast, "Flame Blast", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.Yellow), "Karde Flame","Flame Blast (Karde's Flamethrower)", "Flamethrower (Karde)",0),
-            new HitOnPlayerMechanic(BanditKick, "Kick", new MechanicPlotlySetting(Symbols.TriangleRight,Colors.Magenta), "Kick","Kicked by Bandit", "Bandit Kick",0, (de, log) => !de.To.HasBuff(log, Stability, de.Time - ParserHelper.ServerDelayConstant)),
+            new PlayerDstSkillMechanic(Firestorm, "Firestorm", new MechanicPlotlySetting(Symbols.Square,Colors.Red), "Flamewall","Firestorm (killed by Flamewall)", "Flamewall",0).UsingChecker((de, log) => de.HasKilled),
+            new PlayerDstHitMechanic(FlakShot, "Flak Shot", new MechanicPlotlySetting(Symbols.HexagramOpen,Colors.LightOrange), "Flak","Flak Shot (Fire Patches)", "Flak Shot",0),
+            new PlayerDstHitMechanic(CannonBarrage, "Cannon Barrage", new MechanicPlotlySetting(Symbols.Circle,Colors.Yellow), "Cannon","Cannon Barrage (stood in AoE)", "Cannon Shot",0),
+            new PlayerDstHitMechanic(FlameBlast, "Flame Blast", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.Yellow), "Karde Flame","Flame Blast (Karde's Flamethrower)", "Flamethrower (Karde)",0),
+            new PlayerDstHitMechanic(BanditKick, "Kick", new MechanicPlotlySetting(Symbols.TriangleRight,Colors.Magenta), "Kick","Kicked by Bandit", "Bandit Kick",0).UsingChecker((de, log) => !de.To.HasBuff(log, Stability, de.Time - ParserHelper.ServerDelayConstant)),
             new EnemyCastStartMechanic(PlatformQuake, "Platform Quake", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "CC","Platform Quake (Breakbar)","Breakbar",0),
-            new EnemyCastEndMechanic(PlatformQuake, "Platform Quake", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Platform Quake (Breakbar broken) ", "CCed",0, (ce, log) => ce.ActualDuration <= 4400),
-            new EnemyCastEndMechanic(PlatformQuake, "Platform Quake", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "CC Fail","Platform Quake (Breakbar failed) ", "CC Fail",0, (ce,log) =>  ce.ActualDuration > 4400),
+            new EnemyCastEndMechanic(PlatformQuake, "Platform Quake", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Platform Quake (Breakbar broken) ", "CCed",0).UsingChecker((ce, log) => ce.ActualDuration <= 4400),
+            new EnemyCastEndMechanic(PlatformQuake, "Platform Quake", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "CC Fail","Platform Quake (Breakbar failed) ", "CC Fail",0).UsingChecker( (ce,log) =>  ce.ActualDuration > 4400),
             // Hit by Time Bomb could be implemented by checking if a person is affected by ID 31324 (1st Time Bomb) or 34152 (2nd Time Bomb, only below 50% boss HP) without being attributed a bomb (ID: 31485) 3000ms before (+-50ms). I think the actual heavy hit isn't logged because it may be percentage based. Nothing can be found in the logs.
             });
             Extension = "sab";
-            Icon = "https://wiki.guildwars2.com/images/5/54/Mini_Sabetha.png";
+            Icon = EncounterIconSabetha;
             EncounterCategoryInformation.InSubCategoryOrder = 2;
             EncounterID |= 0x000003;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/HXjxqlu.png",
+            return new CombatReplayMap(CombatReplaySabetha,
                             (1000, 990),
                             (-8587, -162, -1601, 6753)/*,
                             (-15360, -36864, 15360, 39936),
@@ -67,7 +72,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Sabetha);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Sabetha));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Sabetha not found");
@@ -78,7 +83,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 return phases;
             }
             // Invul check
-            phases.AddRange(GetPhasesByInvul(log, 757, mainTarget, true, true));
+            phases.AddRange(GetPhasesByInvul(log, Invulnerability757, mainTarget, true, true));
             var ids = new List<int>
                     {
                        (int) ArcDPSEnums.TrashID.Kernan,
@@ -94,21 +99,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     if (phase.Targets.Count > 0)
                     {
                         AbstractSingleActor phaseTar = phase.Targets[0];
-                        switch (phaseTar.ID)
-                        {
-                            case (int)ArcDPSEnums.TrashID.Kernan:
-                                phase.Name = "Kernan";
-                                break;
-                            case (int)ArcDPSEnums.TrashID.Knuckles:
-                                phase.Name = "Knuckles";
-                                break;
-                            case (int)ArcDPSEnums.TrashID.Karde:
-                                phase.Name = "Karde";
-                                break;
-                            default:
-                                phase.Name = "Unknown";
-                                break;
-                        }
+                        phase.Name = PhaseNames.TryGetValue(phaseTar.ID, out string phaseName) ? phaseName : "Unknown";
                     }
                 }
                 else
@@ -119,13 +110,13 @@ namespace GW2EIEvtcParser.EncounterLogic
                     switch(phaseID)
                     {
                         case 2:
-                            phase.AddTargets(Targets.Where(x => x.ID == (int)ArcDPSEnums.TrashID.Kernan));
+                            phase.AddTargets(Targets.Where(x => x.IsSpecies(ArcDPSEnums.TrashID.Kernan)));
                             break;
                         case 3:
-                            phase.AddTargets(Targets.Where(x => x.ID == (int)ArcDPSEnums.TrashID.Knuckles));
+                            phase.AddTargets(Targets.Where(x => x.IsSpecies(ArcDPSEnums.TrashID.Knuckles)));
                             break;
                         case 4:
-                            phase.AddTargets(Targets.Where(x => x.ID == (int)ArcDPSEnums.TrashID.Karde));
+                            phase.AddTargets(Targets.Where(x => x.IsSpecies(ArcDPSEnums.TrashID.Karde)));
                             break;
                         default:
                             break;
@@ -159,12 +150,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int preCastTime = 2800;
                         int duration = 10000;
                         int width = 1300; int height = 60;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start);
+                        Point3D facing = target.GetCurrentRotation(log, start);
                         if (facing != null)
                         {
-                            float initialDirection = ParserHelper.RadianToDegreeF(Math.Atan2(facing.Y, facing.X));
-                            replay.Decorations.Add(new RotatedRectangleDecoration(true, 0, width, height, initialDirection, width / 2, (start, start + preCastTime), "rgba(255, 100, 0, 0.2)", new AgentConnector(target)));
-                            replay.Decorations.Add(new RotatedRectangleDecoration(true, 0, width, height, initialDirection, width / 2, 360, (start + preCastTime, start + preCastTime + duration), "rgba(255, 50, 0, 0.5)", new AgentConnector(target)));
+                            var positionConnector = (AgentConnector)new AgentConnector(target).WithOffset(new Point3D(width / 2, 0), true);
+                            replay.Decorations.Add(new RectangleDecoration(width, height, (start, start + preCastTime), "rgba(255, 100, 0, 0.2)", positionConnector).UsingRotationConnector(new AngleConnector(facing)));
+                            replay.Decorations.Add(new RectangleDecoration(width, height, (start + preCastTime, start + preCastTime + duration), "rgba(255, 50, 0, 0.5)", positionConnector).UsingRotationConnector(new AngleConnector(facing, 360)));
                         }
                     }
                     break;
@@ -180,12 +171,14 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int secondConeEnd = secondConeStart + 400;
                         int thirdConeEnd = thirdConeStart + 400;
                         int radius = 1500;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start);
+                        Point3D facing = target.GetCurrentRotation(log, start);
                         if (facing != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 28, (firstConeStart, firstConeEnd), "rgba(255,200,0,0.3)", new AgentConnector(target)));
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 54, (secondConeStart, secondConeEnd), "rgba(255,200,0,0.3)", new AgentConnector(target)));
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 81, (thirdConeStart, thirdConeEnd), "rgba(255,200,0,0.3)", new AgentConnector(target)));
+                            var connector = new AgentConnector(target);
+                            var rotationConnector = new AngleConnector(facing);
+                            replay.Decorations.Add(new PieDecoration( radius, 28, (firstConeStart, firstConeEnd), "rgba(255,200,0,0.3)", connector).UsingRotationConnector(rotationConnector));
+                            replay.Decorations.Add(new PieDecoration(radius, 54, (secondConeStart, secondConeEnd), "rgba(255,200,0,0.3)", connector).UsingRotationConnector(rotationConnector));
+                            replay.Decorations.Add(new PieDecoration(radius, 81, (thirdConeStart, thirdConeEnd), "rgba(255,200,0,0.3)", connector).UsingRotationConnector(rotationConnector));
                         }
                     }
                     break;
@@ -193,7 +186,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     var breakbar = cls.Where(x => x.SkillId == PlatformQuake).ToList();
                     foreach (AbstractCastEvent c in breakbar)
                     {
-                        replay.Decorations.Add(new CircleDecoration(true, 0, 180, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(180, ((int)c.Time, (int)c.EndTime), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.Karde:
@@ -203,10 +196,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int start = (int)c.Time;
                         int end = start + 4000;
                         int radius = 600;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start);
+                        Point3D facing = target.GetCurrentRotation(log, start);
                         if (facing != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 60, (start, end), "rgba(255,200,0,0.5)", new AgentConnector(target)));
+                            replay.Decorations.Add(new PieDecoration(radius, 60, (start, end), "rgba(255,200,0,0.5)", new AgentConnector(target)).UsingRotationConnector(new AngleConnector(facing)));
                         }
                     }
                     break;
@@ -233,24 +226,14 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 int start = (int)c.Time;
                 int end = start + 3000;
-                replay.Decorations.Add(new CircleDecoration(false, 0, 280, (start, end), "rgba(255, 150, 0, 0.5)", new AgentConnector(p)));
-                replay.Decorations.Add(new CircleDecoration(true, end, 280, (start, end), "rgba(255, 150, 0, 0.5)", new AgentConnector(p)));
+                replay.AddDecorationWithFilledWithGrowing(new CircleDecoration(0, 280, (start, end), "rgba(255, 150, 0, 0.5)", new AgentConnector(p)).UsingFilled(false), true, end);
             }
             // Sapper bombs
-            List<AbstractBuffEvent> sapperBombs = GetFilteredList(log.CombatData, SapperBomb, p, true, true);
-            int sapperStart = 0;
-            foreach (AbstractBuffEvent c in sapperBombs)
+            var sapperBombs = p.GetBuffStatus(log, SapperBombBuff, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+            foreach (Segment seg in sapperBombs)
             {
-                if (c is BuffApplyEvent)
-                {
-                    sapperStart = (int)c.Time;
-                }
-                else
-                {
-                    int sapperEnd = (int)c.Time;
-                    replay.Decorations.Add(new CircleDecoration(false, 0, 180, (sapperStart, sapperEnd), "rgba(200, 255, 100, 0.5)", new AgentConnector(p)));
-                    replay.Decorations.Add(new CircleDecoration(true, sapperStart + 5000, 180, (sapperStart, sapperEnd), "rgba(200, 255, 100, 0.5)", new AgentConnector(p)));
-                }
+                replay.AddDecorationWithFilledWithGrowing(new CircleDecoration(180, seg, "rgba(200, 255, 100, 0.5)", new AgentConnector(p)).UsingFilled(false), true, seg.Start + 5000);
+                replay.AddOverheadIcon(seg, p, ParserIcons.BombOverhead);
             }
         }
 
@@ -264,5 +247,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                 (int)ArcDPSEnums.TrashID.Knuckles,
             };
         }
+
+        private readonly IReadOnlyDictionary<int, string> PhaseNames = new Dictionary<int, string>()
+        {
+            { (int)ArcDPSEnums.TrashID.Kernan, "Kernan" },
+            { (int)ArcDPSEnums.TrashID.Karde, "Karde" },
+            { (int)ArcDPSEnums.TrashID.Knuckles, "Knuckles" }
+        };
     }
 }

@@ -5,30 +5,20 @@ using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.Extensions
 {
-    internal class EXTHealingCastFinder : InstantCastFinder
+    internal class EXTHealingCastFinder : CheckedCastFinder<EXTAbstractHealingEvent>
     {
-        public delegate bool HealingCastChecker(EXTAbstractHealingEvent evt, CombatData combatData, AgentData agentData, SkillData skillData);
-        private HealingCastChecker _triggerCondition { get; set; }
 
         private readonly long _damageSkillID;
         public EXTHealingCastFinder(long skillID, long damageSkillID) : base(skillID)
         {
             UsingNotAccurate(true);
+            UsingEnable((combatData) => combatData.HasEXTHealing);
             _damageSkillID = damageSkillID;
-        }
-        internal EXTHealingCastFinder UsingChecker(HealingCastChecker checker)
-        {
-            _triggerCondition = checker;
-            return this;
         }
 
         public override List<InstantCastEvent> ComputeInstantCast(CombatData combatData, SkillData skillData, AgentData agentData)
         {
             var res = new List<InstantCastEvent>();
-            if (!combatData.HasEXTHealing)
-            {
-                return res;
-            }
             var heals = combatData.EXTHealingCombatData.GetHealData(_damageSkillID).GroupBy(x => x.From).ToDictionary(x => x.Key, x => x.ToList());
             foreach (KeyValuePair<AgentItem, List<EXTAbstractHealingEvent>> pair in heals)
             {
@@ -37,25 +27,17 @@ namespace GW2EIEvtcParser.Extensions
                 {
                     continue;
                 }
-                foreach (EXTAbstractHealingEvent de in pair.Value)
+                foreach (EXTAbstractHealingEvent he in pair.Value)
                 {
-                    if (de.Time - lastTime < ICD)
+                    if (he.Time - lastTime < ICD)
                     {
-                        lastTime = de.Time;
+                        lastTime = he.Time;
                         continue;
                     }
-                    if (_triggerCondition != null)
+                    if (CheckCondition(he, combatData, agentData, skillData))
                     {
-                        if (_triggerCondition(de, combatData, agentData, skillData))
-                        {
-                            lastTime = de.Time;
-                            res.Add(new InstantCastEvent(de.Time, skillData.Get(SkillID), de.From));
-                        }
-                    }
-                    else
-                    {
-                        lastTime = de.Time;
-                        res.Add(new InstantCastEvent(de.Time, skillData.Get(SkillID), de.From));
+                        lastTime = he.Time;
+                        res.Add(new InstantCastEvent(GetTime(he, he.From,combatData), skillData.Get(SkillID), he.From));
                     }
                 }
             }

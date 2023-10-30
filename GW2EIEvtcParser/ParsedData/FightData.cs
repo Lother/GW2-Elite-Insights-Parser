@@ -11,7 +11,6 @@ namespace GW2EIEvtcParser.ParsedData
     {
         // Fields
         private List<PhaseData> _phases = new List<PhaseData>();
-        private List<PhaseData> _nonDummyPhases = new List<PhaseData>();
         public int TriggerID { get; }
         public FightLogic Logic { get; }
         public long FightEnd { get; private set; } = long.MaxValue;
@@ -44,12 +43,11 @@ namespace GW2EIEvtcParser.ParsedData
         private EncounterMode _encounterStatus = EncounterMode.NotSet;
         public bool IsCM => _encounterStatus == EncounterMode.CMNoName || _encounterStatus == EncounterMode.CM;
         // Constructors
-        internal FightData(int id, AgentData agentData, EvtcParserSettings parserSettings, long start, long end)
+        internal FightData(int id, AgentData agentData, List<CombatItem> combatData, EvtcParserSettings parserSettings, long start, long end, int evtcVersion)
         {
             LogStart = start;
             LogEnd = end;
             FightEnd = end - start;
-            TriggerID = id;
             switch (ArcDPSEnums.GetTargetID(id))
             {
                 case ArcDPSEnums.TargetID.Mordremoth:
@@ -76,17 +74,24 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.Matthias:
                     Logic = new Matthias(id);
                     break;
-                /*case ParseEnum.TargetIDS.Escort:
-                    Logic = new Escort(id, agentData);
-                    break;*/
+                case ArcDPSEnums.TargetID.McLeodTheSilent:
+                    // No proper escort support by arc dps before that build, redirect to unknown
+                    if (evtcVersion >= ArcDPSEnums.ArcDPSBuilds.NewLogStart)
+                    {
+                        Logic = new Escort(id);
+                    }  
+                    else
+                    {
+                        Logic = new UnknownFightLogic(id);
+                    }
+                    break;
                 case ArcDPSEnums.TargetID.KeepConstruct:
                     Logic = new KeepConstruct(id);
                     break;
                 case ArcDPSEnums.TargetID.Xera:
                     // some TC logs are registered as Xera
-                    if (agentData.GetNPCsByID((int)ArcDPSEnums.TrashID.HauntingStatue).Count > 0)
+                    if (agentData.GetNPCsByID(ArcDPSEnums.TrashID.HauntingStatue).Count > 0)
                     {
-                        TriggerID = (int)ArcDPSEnums.TrashID.HauntingStatue;
                         Logic = new TwistedCastle((int)ArcDPSEnums.TargetID.DummyTarget);
                         break;
                     }
@@ -113,7 +118,7 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.BrokenKing:
                     Logic = new StatueOfIce(id);
                     break;
-                case ArcDPSEnums.TargetID.SoulEater:
+                case ArcDPSEnums.TargetID.EaterOfSouls:
                     Logic = new StatueOfDeath(id);
                     break;
                 case ArcDPSEnums.TargetID.EyeOfFate:
@@ -122,11 +127,10 @@ namespace GW2EIEvtcParser.ParsedData
                     break;
                 case ArcDPSEnums.TargetID.Dhuum:
                     // some eyes logs are registered as Dhuum
-                    if (agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.EyeOfFate).Count > 0 ||
-                        agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.EyeOfJudgement).Count > 0)
+                    if (agentData.GetNPCsByID(ArcDPSEnums.TargetID.EyeOfFate).Count > 0 ||
+                        agentData.GetNPCsByID(ArcDPSEnums.TargetID.EyeOfJudgement).Count > 0)
                     {
-                        TriggerID = (int)ArcDPSEnums.TargetID.EyeOfFate;
-                        Logic = new StatueOfDarkness(TriggerID);
+                        Logic = new StatueOfDarkness((int)ArcDPSEnums.TargetID.EyeOfFate);
                         break;
                     }
                     Logic = new Dhuum(id);
@@ -136,7 +140,6 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.CALeftArm_CHINA:
                 case ArcDPSEnums.TargetID.CARightArm_CHINA:
                     Logic = new ConjuredAmalgamate(id);
-                    TriggerID = (int)ArcDPSEnums.TargetID.ConjuredAmalgamate;
                     break;
                 case ArcDPSEnums.TargetID.Kenut:
                 case ArcDPSEnums.TargetID.Nikare:
@@ -190,7 +193,14 @@ namespace GW2EIEvtcParser.ParsedData
                 // This will most likely require a chinese client version
                 case ArcDPSEnums.TargetID.GadgetTheDragonVoid1:
                 case ArcDPSEnums.TargetID.GadgetTheDragonVoid2:
-                    Logic = new HarvestTemple(id);
+                    if (agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidAmalgamate).Any())
+                    {
+                        Logic = new HarvestTemple((int)ArcDPSEnums.TargetID.GadgetTheDragonVoid1);
+                    }
+                    else
+                    {
+                        Logic = new UnknownFightLogic(id);
+                    }
                     break;
                 case ArcDPSEnums.TargetID.PrototypeVermilion:
                 case ArcDPSEnums.TargetID.PrototypeArsenite:
@@ -199,6 +209,12 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.PrototypeArseniteCM:
                 case ArcDPSEnums.TargetID.PrototypeIndigoCM:
                     Logic = new OldLionsCourt(id);
+                    break;
+                case ArcDPSEnums.TargetID.Dagda:
+                    Logic = new CosmicObservatory(id);
+                    break;
+                case ArcDPSEnums.TargetID.Cerus:
+                    Logic = new TempleOfFebe(id);
                     break;
                 //
                 case ArcDPSEnums.TargetID.MAMA:
@@ -222,8 +238,16 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.AiKeeperOfThePeak:
                     Logic = new AiKeeperOfThePeak(id);
                     break;
+                case ArcDPSEnums.TargetID.KanaxaiScytheOfHouseAurkusCM:
+                    Logic = new Kanaxai(id);
+                    break;
                 //
                 case ArcDPSEnums.TargetID.WorldVersusWorld:
+                    if (agentData.GetNPCsByID(ArcDPSEnums.TargetID.Desmina).Any())
+                    {
+                        Logic = new River((int)ArcDPSEnums.TargetID.DummyTarget);
+                        break;
+                    }
                     Logic = new WvWFight(id, parserSettings.DetailedWvWParse);
                     break;
                 //
@@ -256,6 +280,19 @@ namespace GW2EIEvtcParser.ParsedData
                         case ArcDPSEnums.TrashID.VoidAmalgamate:
                             Logic = new HarvestTemple(id);
                             break;
+                        case ArcDPSEnums.TrashID.AncientInvokedHydra:
+                            Logic = new Qadim((int)ArcDPSEnums.TargetID.Qadim);
+                            break;
+                        case ArcDPSEnums.TrashID.VoidMelter:
+                            if (agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidAmalgamate).Any())
+                            {
+                                Logic = new HarvestTemple((int)ArcDPSEnums.TargetID.GadgetTheDragonVoid1);
+                            } 
+                            else
+                            {
+                                Logic = new UnknownFightLogic(id);
+                            }
+                            break;
                         default:
                             // Unknown
                             Logic = new UnknownFightLogic(id);
@@ -263,12 +300,20 @@ namespace GW2EIEvtcParser.ParsedData
                     }
                     break;
             }
+            Logic = Logic.AdjustLogic(agentData, combatData);
+            TriggerID = Logic.GetTriggerID();
         }
 
         internal void SetFightName(CombatData combatData, AgentData agentData)
         {
             FightName = Logic.GetLogicName(combatData, agentData) + (_encounterStatus == EncounterMode.CM ? " CM" : "") + (_encounterStatus == EncounterMode.Story ? " Story" : "");
         }
+
+        public IReadOnlyList<GenericDecoration> GetEnvironmentCombatReplayDecorations(ParsedEvtcLog log)
+        {
+            return Logic.GetEnvironmentCombatReplayDecorations(log);
+        }
+
         public IReadOnlyList<PhaseData> GetPhases(ParsedEvtcLog log)
         {
 
@@ -293,15 +338,6 @@ namespace GW2EIEvtcParser.ParsedData
                 });
             }
             return _phases;
-        }
-
-        public IReadOnlyList<PhaseData> GetNonDummyPhases(ParsedEvtcLog log)
-        {
-            if (!_nonDummyPhases.Any())
-            {
-                _nonDummyPhases = GetPhases(log).Where(x => !x.Dummy).ToList();
-            }
-            return _nonDummyPhases;
         }
 
         public IReadOnlyList<AbstractSingleActor> GetMainTargets(ParsedEvtcLog log)

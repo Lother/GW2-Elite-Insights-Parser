@@ -55,8 +55,19 @@ namespace GW2EIEvtcParser.EIData
         {
             if (Health == -2)
             {
+                Health = -1;
                 IReadOnlyList<MaxHealthUpdateEvent> maxHpUpdates = combatData.GetMaxHealthUpdateEvents(AgentItem);
-                Health = maxHpUpdates.Count > 0 ? maxHpUpdates.Max(x => x.MaxHealth) : -1;
+                if (maxHpUpdates.Any())
+                {
+                    AbstractHealthDamageEvent lastDamage = combatData.GetDamageTakenData(AgentItem).LastOrDefault(x => x.HealthDamage > 0);
+                    long timeCheck = (FirstAware + LastAware) / 2;
+                    if (lastDamage != null)
+                    {
+                        timeCheck = Math.Max(timeCheck, Math.Max(FirstAware, lastDamage.Time - 5000));
+                    }
+                    MaxHealthUpdateEvent hpEvent = maxHpUpdates.LastOrDefault(x => x.Time < timeCheck + ServerDelayConstant);
+                    Health = hpEvent != null ? hpEvent.MaxHealth : maxHpUpdates.Max(x => x.MaxHealth);
+                }
             }
             return Health;
         }
@@ -68,6 +79,11 @@ namespace GW2EIEvtcParser.EIData
         public (IReadOnlyList<Segment> deads, IReadOnlyList<Segment> downs, IReadOnlyList<Segment> dcs) GetStatus(ParsedEvtcLog log)
         {
             return _statusHelper.GetStatus(log);
+        }
+
+        public (IReadOnlyList<Segment> breakbarNones, IReadOnlyList<Segment> breakbarActives, IReadOnlyList<Segment> breakbarImmunes, IReadOnlyList<Segment> breakbarRecoverings) GetBreakbarStatus(ParsedEvtcLog log)
+        {
+            return _statusHelper.GetBreakbarStatus(log);
         }
 
         public long GetTimeSpentInCombat(ParsedEvtcLog log, long start, long end)
@@ -93,6 +109,27 @@ namespace GW2EIEvtcParser.EIData
         {
             (_, _, IReadOnlyList<Segment> dcs) = _statusHelper.GetStatus(log);
             return dcs.Any(x => x.ContainsPoint(time));
+        }
+
+        public ArcDPSEnums.BreakbarState GetCurrentBreakbarState(ParsedEvtcLog log, long time)
+        {
+            (IReadOnlyList<Segment> nones, IReadOnlyList<Segment> actives, IReadOnlyList<Segment> immunes, IReadOnlyList<Segment> recoverings) = _statusHelper.GetBreakbarStatus(log);
+            if (nones.Any(x => x.ContainsPoint(time))) {
+                return ArcDPSEnums.BreakbarState.None;
+            }
+            if (actives.Any(x => x.ContainsPoint(time)))
+            {
+                return ArcDPSEnums.BreakbarState.Active;
+            }
+            if (immunes.Any(x => x.ContainsPoint(time)))
+            {
+                return ArcDPSEnums.BreakbarState.Immune;
+            }
+            if (recoverings.Any(x => x.ContainsPoint(time)))
+            {
+                return ArcDPSEnums.BreakbarState.Recover;
+            }
+            return ArcDPSEnums.BreakbarState.None;
         }
 
         //
@@ -234,7 +271,7 @@ namespace GW2EIEvtcParser.EIData
             return _buffHelper.GetBuffDistribution(log, start, end);
         }
    
-        public Dictionary<long, long> GetBuffPresence(ParsedEvtcLog log, long start, long end)
+        public IReadOnlyDictionary<long, long> GetBuffPresence(ParsedEvtcLog log, long start, long end)
         {
             return _buffHelper.GetBuffPresence(log, start, end);
         }
@@ -262,9 +299,14 @@ namespace GW2EIEvtcParser.EIData
         }
 
 
-        public Dictionary<long, BuffsGraphModel> GetBuffGraphs(ParsedEvtcLog log)
+        public IReadOnlyDictionary<long, BuffsGraphModel> GetBuffGraphs(ParsedEvtcLog log)
         {
             return _buffHelper.GetBuffGraphs(log);
+        }
+
+        public IReadOnlyDictionary<long, BuffsGraphModel> GetBuffGraphs(ParsedEvtcLog log, AbstractSingleActor by)
+        {
+            return _buffHelper.GetBuffGraphs(log, by);
         }
 
         /// <summary>
@@ -277,6 +319,58 @@ namespace GW2EIEvtcParser.EIData
         public bool HasBuff(ParsedEvtcLog log, long buffId, long time)
         {
             return _buffHelper.HasBuff(log, buffId, time);
+        }
+
+        /// <summary>
+        /// Checks if a buff is present on the actor and was applied by given actor. Given buff id must be in the buff simulator, throws <see cref="InvalidOperationException"/> otherwise
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="by"></param>
+        /// <param name="buffId"></param>
+        /// <param name="time"></param>
+        /// <returns></returns>
+        public bool HasBuff(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long time)
+        {
+            return _buffHelper.HasBuff(log, by, buffId, time);
+        }
+
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, long buffId, long start, long end)
+        {
+            return _buffHelper.GetBuffStatus(log, buffId, start, end);
+        }
+
+        public Segment GetBuffStatus(ParsedEvtcLog log, long buffId, long time)
+        {
+            return _buffHelper.GetBuffStatus(log, buffId, time);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="List{T}"/> of <see cref="Segment"/> of the <paramref name="buffIds"/> in input.
+        /// </summary>
+        /// <param name="log">The log.</param>
+        /// <param name="buffIds">Buff IDs of which to find the <see cref="Segment"/> of.</param>
+        /// <param name="start">Start time to search.</param>
+        /// <param name="end">End time to search.</param>
+        /// <returns><see cref="IReadOnlyList{T}"/> with the <see cref="Segment"/>s found.</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, long[] buffIds, long start, long end)
+        {
+            var result = new List<Segment>();
+            foreach(long id in buffIds)
+            {
+                result.AddRange(_buffHelper.GetBuffStatus(log, id, start, end));
+            }
+            return result;
+        }
+
+        public IReadOnlyList<Segment> GetBuffStatus(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long start, long end)
+        {
+            return _buffHelper.GetBuffStatus(log, by, buffId, start, end);
+        }
+
+        public Segment GetBuffStatus(ParsedEvtcLog log, AbstractSingleActor by, long buffId, long time)
+        {
+            return _buffHelper.GetBuffStatus(log, by, buffId, time);
         }
 
         public IReadOnlyDictionary<long, FinalActorBuffs> GetBuffs(BuffEnum type, ParsedEvtcLog log, long start, long end)
@@ -314,6 +408,15 @@ namespace GW2EIEvtcParser.EIData
             }
         }
 
+        public IReadOnlyList<ParametricPoint3D> GetCombatReplayNonPolledPositions(ParsedEvtcLog log)
+        {
+            if (CombatReplay == null)
+            {
+                InitCombatReplay(log);
+            }
+            return CombatReplay.Positions;
+        }
+
         public IReadOnlyList<ParametricPoint3D> GetCombatReplayPolledPositions(ParsedEvtcLog log)
         {
             if (CombatReplay == null)
@@ -321,6 +424,24 @@ namespace GW2EIEvtcParser.EIData
                 InitCombatReplay(log);
             }
             return CombatReplay.PolledPositions;
+        }
+
+        public IReadOnlyList<ParametricPoint3D> GetCombatReplayNonPolledRotations(ParsedEvtcLog log)
+        {
+            if (CombatReplay == null)
+            {
+                InitCombatReplay(log);
+            }
+            return CombatReplay.Rotations;
+        }
+
+        public IReadOnlyList<ParametricPoint3D> GetCombatReplayPolledRotations(ParsedEvtcLog log)
+        {
+            if (CombatReplay == null)
+            {
+                InitCombatReplay(log);
+            }
+            return CombatReplay.PolledRotations;
         }
 
         protected static void TrimCombatReplay(ParsedEvtcLog log, CombatReplay replay, AgentItem agentItem)
@@ -368,11 +489,6 @@ namespace GW2EIEvtcParser.EIData
 
         public IReadOnlyList<GenericDecoration> GetCombatReplayDecorations(ParsedEvtcLog log)
         {
-            if (!log.CanCombatReplay)
-            {
-                // no combat replay support on fight
-                return new List<GenericDecoration>();
-            }
             if (CombatReplay == null)
             {
                 InitCombatReplay(log);
@@ -408,7 +524,7 @@ namespace GW2EIEvtcParser.EIData
             CastEvents.AddRange(log.CombatData.GetInstantCastData(AgentItem));
             foreach (WeaponSwapEvent wepSwap in log.CombatData.GetWeaponSwapData(AgentItem))
             {
-                if (CastEvents.Count > 0 && (wepSwap.Time - CastEvents.Last().Time) < ParserHelper.ServerDelayConstant && CastEvents.Last().SkillId == SkillIDs.WeaponSwap)
+                if (CastEvents.Count > 0 && (wepSwap.Time - CastEvents.Last().Time) < ServerDelayConstant && CastEvents.Last().SkillId == SkillIDs.WeaponSwap)
                 {
                     CastEvents[CastEvents.Count - 1] = wepSwap;
                 }
@@ -417,7 +533,7 @@ namespace GW2EIEvtcParser.EIData
                     CastEvents.Add(wepSwap);
                 }
             }
-            CastEvents = CastEvents.OrderBy(x => x.Time).ThenBy(x => !x.Skill.IsSwap).ThenBy(x => !x.Skill.IsInstantTransformation).ToList();
+            CastEvents = CastEvents.OrderBy(x => x.Time).ThenBy(x => !x.Skill.IsSwap).ToList();
         }
 
         // DPS Stats
@@ -662,14 +778,76 @@ namespace GW2EIEvtcParser.EIData
             return dls;
         }
 
-        public Point3D GetCurrentPosition(ParsedEvtcLog log, long time)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="time"></param>
+        /// <param name="forwardWindow">Position will be looked up to time + forwardWindow if given</param>
+        /// <returns></returns>
+        public Point3D GetCurrentPosition(ParsedEvtcLog log, long time, long forwardWindow = 0)
         {
             IReadOnlyList<ParametricPoint3D> positions = GetCombatReplayPolledPositions(log);
             if (!positions.Any())
             {
                 return null;
             }
-            return positions.FirstOrDefault(x => x.Time >= time);
+            if (forwardWindow != 0)
+            {
+                return positions.FirstOrDefault(x => x.Time >= time && x.Time <= time + forwardWindow) ?? positions.LastOrDefault(x => x.Time <= time);
+            }
+            return positions.LastOrDefault(x => x.Time <= time);
+        }
+
+        public Point3D GetCurrentInterpolatedPosition(ParsedEvtcLog log, long time)
+        {
+            IReadOnlyList<ParametricPoint3D> positions = GetCombatReplayPolledPositions(log);
+            if (!positions.Any())
+            {
+                return null;
+            }
+            ParametricPoint3D next = positions.FirstOrDefault(x => x.Time >= time);
+            ParametricPoint3D prev = positions.LastOrDefault(x => x.Time <= time);
+            Point3D res;
+            if (prev != null && next != null)
+            {
+                long denom = next.Time - prev.Time;
+                if (denom == 0)
+                {
+                    res = prev;
+                }
+                else
+                {
+                    float ratio = (float)(time - prev.Time) / denom;
+                    res = new Point3D(prev, next, ratio);
+                }
+            }
+            else
+            {
+                res = prev ?? next;
+            }
+            return res;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="log"></param>
+        /// <param name="time"></param>
+        /// <param name="forwardWindow">Rotation will be looked up to time + forwardWindow if given</param>
+        /// <returns></returns>
+        public Point3D GetCurrentRotation(ParsedEvtcLog log, long time, long forwardWindow = 0)
+        {
+            IReadOnlyList<ParametricPoint3D> rotations = GetCombatReplayPolledRotations(log);
+            if (!rotations.Any())
+            {
+                return null;
+            }
+            if (forwardWindow != 0)
+            {
+                return rotations.FirstOrDefault(x => x.Time >= time && x.Time <= time + forwardWindow) ?? rotations.LastOrDefault(x => x.Time <= time); 
+            }
+            return rotations.LastOrDefault(x => x.Time <= time);
         }
 
     }

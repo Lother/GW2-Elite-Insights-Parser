@@ -63,15 +63,7 @@ namespace GW2EIBuilders.JsonModels.JsonActorUtilities
                     actorCombatReplayData.Down = jsonDowns;
                 }
                 //
-                IReadOnlyList<GenericDecoration> decorations = actor.GetCombatReplayDecorations(log);
-                foreach (GenericDecoration decoration in decorations)
-                {
-                    GenericDecorationCombatReplayDescription decDescription = decoration.GetCombatReplayDescription(map, log);
-                    if (decDescription is FacingDecorationCombatReplayDescription facingDescription)
-                    {
-                        actorCombatReplayData.Orientations = facingDescription.FacingData;
-                    }
-                }
+                actorCombatReplayData.Orientations = description.Angles;
             }
             
             //

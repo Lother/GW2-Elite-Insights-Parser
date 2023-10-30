@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Extensions;
+using static GW2EIEvtcParser.ArcDPSEnums;
+using static GW2EIEvtcParser.ParserHelper;
 
 namespace GW2EIEvtcParser.ParsedData
 {
@@ -36,7 +38,9 @@ namespace GW2EIEvtcParser.ParsedData
         public bool HasEXTHealing => EXTHealingCombatData != null;
         public bool HasEXTBarrier => EXTBarrierCombatData != null;
 
-        internal bool HasStackIDs { get; } = false;
+        internal bool UseBuffInstanceSimulator { get; } = false;
+
+        internal bool HasStackIDs { get; }
 
         public bool HasBreakbarDamageData { get; } = false;
         public bool HasEffectData { get; } = false;
@@ -162,6 +166,35 @@ namespace GW2EIEvtcParser.ParsedData
                 _damageData[a] = _damageData[a].OrderBy(x => x.Time).ToList();
             }
         }
+
+        private IReadOnlyList<InstantCastEvent> ComputeInstantCastEventsFromFinders(AgentData agentData, SkillData skillData, IReadOnlyList<InstantCastFinder> instantCastFinders)
+        {
+            var res = new List<InstantCastEvent>();
+            foreach (InstantCastFinder icf in instantCastFinders)
+            {
+                if (icf.Available(this))
+                {
+                    if (icf.NotAccurate)
+                    {
+                        skillData.NotAccurate.Add(icf.SkillID);
+                    }
+                    switch(icf.CastOrigin)
+                    {
+                        case InstantCastFinder.InstantCastOrigin.Trait:
+                            skillData.TraitProc.Add(icf.SkillID);
+                            break;
+                        case InstantCastFinder.InstantCastOrigin.Gear:
+                            skillData.GearProc.Add(icf.SkillID);
+                            break;
+                        case InstantCastFinder.InstantCastOrigin.Skill:
+                        default:
+                            break;
+                    }
+                    res.AddRange(icf.ComputeInstantCast(this, skillData, agentData));
+                }
+            }
+            return res;
+        }
         private void EICastParse(IReadOnlyList<Player> players, SkillData skillData, FightData fightData, AgentData agentData)
         {
             List<AbstractCastEvent> toAdd = fightData.Logic.SpecialCastEventProcess(this, skillData);
@@ -170,6 +203,18 @@ namespace GW2EIEvtcParser.ParsedData
                 {
                     case ParserHelper.Spec.Willbender:
                         toAdd.AddRange(WillbenderHelper.ComputeFlowingResolveCastEvents(p, this, skillData, agentData));
+                        break;
+                    default:
+                        break;
+                }
+                switch(p.BaseSpec)
+                {
+                    case ParserHelper.Spec.Ranger:
+                        toAdd.AddRange(RangerHelper.ComputeAncestralGraceCastEvents(p, this, skillData, agentData));
+                        break;
+                    case Spec.Elementalist:
+                        toAdd.AddRange(ElementalistHelper.ComputeUpdraftCastEvents(p, this, skillData, agentData));
+                        toAdd.AddRange(ElementalistHelper.ComputeRideTheLightningCastEvents(p, this, skillData, agentData));
                         break;
                     default:
                         break;
@@ -226,9 +271,10 @@ namespace GW2EIEvtcParser.ParsedData
                     wepSwapAgentsToSort.Add(wse.Caster);
                 }
             }
-            IReadOnlyList<InstantCastEvent> instantCasts = ProfHelper.ComputeInstantCastEvents(players, this, agentData, skillData, fightData);
+            var instantCastsFinder = new HashSet<InstantCastFinder>(ProfHelper.GetProfessionInstantCastFinders(players));
+            fightData.Logic.GetInstantCastFinders().ForEach(x => instantCastsFinder.Add(x));
             //
-            foreach (InstantCastEvent ice in instantCasts)
+            foreach (InstantCastEvent ice in ComputeInstantCastEventsFromFinders(agentData, skillData, instantCastsFinder.ToList()))
             {
                 if (_instantCastData.TryGetValue(ice.Caster, out List<InstantCastEvent> instantCastList))
                 {
@@ -281,7 +327,7 @@ namespace GW2EIEvtcParser.ParsedData
         {
             foreach (KeyValuePair<AgentItem, List<AbstractHealthDamageEvent>> pair in _damageTakenData)
             {
-                if (pair.Key.ID == (int)ArcDPSEnums.TargetID.WorldVersusWorld)
+                if (pair.Key.IsSpecies(ArcDPSEnums.TargetID.WorldVersusWorld))
                 {
                     continue;
                 }
@@ -328,6 +374,15 @@ namespace GW2EIEvtcParser.ParsedData
 
         private void EIExtraEventProcess(IReadOnlyList<Player> players, SkillData skillData, AgentData agentData, FightData fightData, ParserController operation, int arcdpsVersion)
         {
+            // Add missing breakbar active state
+            foreach (KeyValuePair<AgentItem, List<BreakbarStateEvent>> pair in _statusEvents.BreakbarStateEvents)
+            {
+                BreakbarStateEvent first = pair.Value.FirstOrDefault();
+                if (first != null && first.State != ArcDPSEnums.BreakbarState.Active && first.Time > pair.Key.FirstAware + 500)
+                {
+                    pair.Value.Insert(0, new BreakbarStateEvent(pair.Key, pair.Key.FirstAware, ArcDPSEnums.BreakbarState.Active));
+                }
+            }
             // master attachements
             operation.UpdateProgressWithCancellationCheck("Processing Warrior Gadgets");
             WarriorHelper.ProcessGadgets(players, this);
@@ -362,24 +417,27 @@ namespace GW2EIEvtcParser.ParsedData
             operation.UpdateProgressWithCancellationCheck("Creating EI Combat Data");
             foreach (CombatItem combatItem in combatEvents)
             {
-                _skillIds.Add(combatItem.SkillID);
+                bool insertToSkillIDs = false;
                 if (combatItem.IsStateChange != ArcDPSEnums.StateChange.None)
                 {
                     if (combatItem.IsExtension)
                     {
                         if (extensions.TryGetValue(combatItem.Pad, out AbstractExtensionHandler handler))
                         {
+                            insertToSkillIDs = handler.IsSkillID(combatItem);
                             handler.InsertEIExtensionEvent(combatItem, agentData, skillData);
                         }
                     } 
                     else
                     {
+                        insertToSkillIDs = combatItem.IsStateChange == ArcDPSEnums.StateChange.BuffInitial;
                         CombatEventFactory.AddStateChangeEvent(combatItem, agentData, skillData, _metaDataEvents, _statusEvents, _rewardEvents, wepSwaps, buffEvents, evtcVersion);
                     }
                     
                 }
                 else if (combatItem.IsActivation != ArcDPSEnums.Activation.None)
                 {
+                    insertToSkillIDs = true;
                     if (castCombatEvents.TryGetValue(combatItem.SrcAgent, out List<CombatItem> list))
                     {
                         list.Add(combatItem);
@@ -391,10 +449,12 @@ namespace GW2EIEvtcParser.ParsedData
                 }
                 else if (combatItem.IsBuffRemove != ArcDPSEnums.BuffRemove.None)
                 {
+                    insertToSkillIDs = true;
                     CombatEventFactory.AddBuffRemoveEvent(combatItem, buffEvents, agentData, skillData);
                 }
                 else
                 {
+                    insertToSkillIDs = true;
                     if (combatItem.IsBuff != 0 && combatItem.BuffDmg == 0 && combatItem.Value > 0)
                     {
                         CombatEventFactory.AddBuffApplyEvent(combatItem, buffEvents, agentData, skillData);
@@ -408,8 +468,13 @@ namespace GW2EIEvtcParser.ParsedData
                         CombatEventFactory.AddIndirectDamageEvent(combatItem, damageData, brkDamageData, agentData, skillData);
                     }
                 }
+                if (insertToSkillIDs)
+                {
+                    _skillIds.Add(combatItem.SkillID);
+                }
             }
-            HasStackIDs = false;// arcdpsVersion > 20210529 && buffEvents.Any(x => x is BuffStackActiveEvent || x is BuffStackResetEvent) && (fightData.Logic.Mode == EncounterLogic.FightLogic.ParseMode.Instanced10 || fightData.Logic.Mode == EncounterLogic.FightLogic.ParseMode.Instanced5 || fightData.Logic.Mode == EncounterLogic.FightLogic.ParseMode.Benchmark);
+            HasStackIDs = evtcVersion > ArcDPSEnums.ArcDPSBuilds.ProperConfusionDamageSimulation && buffEvents.Any(x => x is BuffStackActiveEvent || x is BuffStackResetEvent);
+            UseBuffInstanceSimulator = HasStackIDs && false;// (fightData.Logic.Mode == EncounterLogic.FightLogic.ParseMode.Instanced10 || fightData.Logic.Mode == EncounterLogic.FightLogic.ParseMode.Instanced5 || fightData.Logic.Mode == EncounterLogic.FightLogic.ParseMode.Benchmark);
             HasMovementData = _statusEvents.MovementEvents.Count > 1;
             HasBreakbarDamageData = brkDamageData.Any();
             HasEffectData = _statusEvents.EffectEvents.Any();
@@ -438,13 +503,6 @@ namespace GW2EIEvtcParser.ParsedData
             _breakbarDamageTakenData = brkDamageData.GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
             _buffRemoveAllData = _buffData.ToDictionary(x => x.Key, x => x.Value.OfType<BuffRemoveAllEvent>().ToList());
             //
-            /*healing_data = allCombatItems.Where(x => x.getDstInstid() != 0 && x.isStateChange() == ParseEnum.StateChange.Normal && x.getIFF() == ParseEnum.IFF.Friend && x.isBuffremove() == ParseEnum.BuffRemove.None &&
-                                         ((x.isBuff() == 1 && x.getBuffDmg() > 0 && x.getValue() == 0) ||
-                                         (x.isBuff() == 0 && x.getValue() > 0))).ToList();
-
-            healing_received_data = allCombatItems.Where(x => x.isStateChange() == ParseEnum.StateChange.Normal && x.getIFF() == ParseEnum.IFF.Friend && x.isBuffremove() == ParseEnum.BuffRemove.None &&
-                                            ((x.isBuff() == 1 && x.getBuffDmg() > 0 && x.getValue() == 0) ||
-                                                (x.isBuff() == 0 && x.getValue() >= 0))).ToList();*/
             foreach (AbstractExtensionHandler handler in extensions.Values)
             {
                 handler.AttachToCombatData(this, operation, GetBuildEvent().Build);
@@ -572,6 +630,11 @@ namespace GW2EIEvtcParser.ParsedData
             return _metaDataEvents.PointOfViewEvent;
         }
 
+        public FractalScaleEvent GetFractalScaleEvent()
+        {
+            return _metaDataEvents.FractalScaleEvent;
+        }
+
         public IReadOnlyList<SpawnEvent> GetSpawnEvents(AgentItem src)
         {
             if (_statusEvents.SpawnEvents.TryGetValue(src, out List<SpawnEvent> list))
@@ -646,9 +709,9 @@ namespace GW2EIEvtcParser.ParsedData
             return _metaDataEvents.LogStartEvent;
         }
 
-        public LogStartNPCUpdateEvent GetLogStartNPCUpdateEvent()
+        public IReadOnlyList<LogStartNPCUpdateEvent> GetLogStartNPCUpdateEvents()
         {
-            return _metaDataEvents.LogStartNPCUpdateEvent;
+            return _metaDataEvents.LogStartNPCUpdateEvents;
         }
 
         public LogEndEvent GetLogEndEvent()
@@ -676,6 +739,11 @@ namespace GW2EIEvtcParser.ParsedData
             return _metaDataEvents.ShardEvents;
         }
 
+        public IReadOnlyList<TickRateEvent> GetTickRateEvents()
+        {
+            return _metaDataEvents.TickRateEvents;
+        }
+
         public BuffInfoEvent GetBuffInfoEvent(long buffID)
         {
             if (_metaDataEvents.BuffInfoEvents.TryGetValue(buffID, out BuffInfoEvent evt))
@@ -685,7 +753,7 @@ namespace GW2EIEvtcParser.ParsedData
             return null;
         }
 
-        public IReadOnlyList<BuffInfoEvent> GetBuffInfoEvent(ArcDPSEnums.BuffCategory category)
+        public IReadOnlyList<BuffInfoEvent> GetBuffInfoEvent(byte category)
         {
             if (_metaDataEvents.BuffInfoEventsByCategory.TryGetValue(category, out List<BuffInfoEvent> evts))
             {
@@ -701,6 +769,20 @@ namespace GW2EIEvtcParser.ParsedData
                 return evt;
             }
             return null;
+        }
+
+        public IReadOnlyList<Last90BeforeDownEvent> GetLast90BeforeDownEvents()
+        {
+            return _statusEvents.Last90BeforeDownEvents;
+        }
+
+        public IReadOnlyList<Last90BeforeDownEvent> GetLast90BeforeDownEvents(AgentItem src)
+        {
+            if (_statusEvents.Last90BeforeDownEventsBySrc.TryGetValue(src, out List<Last90BeforeDownEvent> res))
+            {
+                return res;
+            }
+            return new List<Last90BeforeDownEvent>();
         }
 
         public IReadOnlyList<AbstractBuffEvent> GetBuffData(long buffID)
@@ -889,17 +971,6 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<AbstractBreakbarDamageEvent>();
         }
 
-        /*public IReadOnlyList<CombatItem> getHealingData()
-        {
-            return _healingData;
-        }
-
-        public IReadOnlyList<CombatItem> getHealingReceivedData()
-        {
-            return _healingReceivedData;
-        }*/
-
-
         public IReadOnlyList<AbstractMovementEvent> GetMovementData(AgentItem src)
         {
             if (_statusEvents.MovementEvents.TryGetValue(src, out List<AbstractMovementEvent> res))
@@ -909,7 +980,7 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<AbstractMovementEvent>();
         }
 
-        public IReadOnlyList<EffectEvent> GetEffectEvents(AgentItem src)
+        public IReadOnlyList<EffectEvent> GetEffectEventsBySrc(AgentItem src)
         {
             if (_statusEvents.EffectEventsBySrc.TryGetValue(src, out List<EffectEvent> list))
             {
@@ -945,6 +1016,134 @@ namespace GW2EIEvtcParser.ParsedData
             return new List<EffectEvent>();
         }
 
+        public bool TryGetEffectEndByTrackingId(long trackingID, long time, out long end)
+        {
+            end = 0;
+            EffectEvent endEvent = GetEffectEventsByTrackingID(trackingID).FirstOrDefault(effect => effect.IsEnd && effect.Time >= time);
+            if (endEvent != null)
+            {
+                end = endEvent.Time;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryGetEffectEventsByGUID(string effectGUID, out IReadOnlyList<EffectEvent> effectEvents)
+        {
+            EffectGUIDEvent effectGUIDEvent = GetEffectGUIDEvent(effectGUID);
+            effectEvents = null;
+            if (effectGUIDEvent != null)
+            {
+                effectEvents = GetEffectEventsByEffectID(effectGUIDEvent.ContentID);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Returns effect events for the given agent and effect GUID.</summary>
+        public bool TryGetEffectEventsBySrcWithGUID(AgentItem agent, string effectGUID, out IReadOnlyList<EffectEvent> effectEvents)
+        {
+            effectEvents = null;
+            if (TryGetEffectEventsByGUID(effectGUID, out IReadOnlyList<EffectEvent> effects)) {
+                effectEvents = effects.Where(effect => effect.Src == agent).ToList();
+                return true;
+            }
+            return false;
+        }
+        /// <summary>Returns effect events for the given agent and effect GUID.</summary>
+        public bool TryGetEffectEventsByDstWithGUID(AgentItem agent, string effectGUID, out IReadOnlyList<EffectEvent> effectEvents)
+        {
+            effectEvents = null;
+            if (TryGetEffectEventsByGUID(effectGUID, out IReadOnlyList<EffectEvent> effects))
+            {
+                effectEvents = effects.Where(effect => effect.Dst == agent).ToList();
+                return true;
+            }
+            return false;
+        }
+        /// <summary>Returns effect events for the given agent and effect GUIDs.</summary>
+        public bool TryGetEffectEventsBySrcWithGUIDs(AgentItem agent, string[] effectGUIDs, out IReadOnlyList<EffectEvent> effectEvents)
+        {
+            effectEvents = null;
+            var result = new List<EffectEvent>();
+            var found = false;
+            foreach (string effectGUID in effectGUIDs)
+            {
+                if (TryGetEffectEventsByGUID(effectGUID, out IReadOnlyList<EffectEvent> effects))
+                {
+                    result.AddRange(effects.Where(effect => effect.Src == agent));
+                    found = true;
+                }
+            }
+            if (found)
+            {
+                effectEvents = result;
+            }
+            return found;
+        }
+
+        /// <summary>Returns effect events for the given agent <b>including</b> minions and the given effect GUID.</summary>
+        public bool TryGetEffectEventsByMasterWithGUID(AgentItem agent, string effectGUID, out IReadOnlyList<EffectEvent> effectEvents)
+        {
+            effectEvents = null;
+            if (TryGetEffectEventsByGUID(effectGUID, out IReadOnlyList<EffectEvent> effects))
+            {
+                effectEvents = effects.Where(effect => effect.Src.GetFinalMaster() == agent).ToList();
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryGetEffectEventsByMasterWithGUIDs(AgentItem agent, string[] effectGUIDs, out IReadOnlyList<EffectEvent> effectEvents)
+        {
+            effectEvents = null;
+            var result = new List<EffectEvent>();
+            var found = false;
+            foreach (string effectGUID in effectGUIDs)
+            {
+                if (TryGetEffectEventsByMasterWithGUID(agent, effectGUID, out IReadOnlyList<EffectEvent> effects))
+                {
+                    result.AddRange(effects.Where(effect => effect.Src == agent));
+                    found = true;
+                }
+            }
+            if (found)
+            {
+                effectEvents = result;
+            }
+            return found;
+        }
+
+        /// <summary>
+        /// Returns effect events for the given agent and effect GUID.
+        /// The same effects happening within epsilon milliseconds are grouped together.
+        /// </summary>
+        public bool TryGetGroupedEffectEventsBySrcWithGUID(AgentItem agent, string effectGUID, out IReadOnlyList<IReadOnlyList<EffectEvent>> groupedEffectEvents, long epsilon = ServerDelayConstant)
+        {
+            var effectGroups = new List<List<EffectEvent>>();
+            groupedEffectEvents = effectGroups;
+            if (TryGetEffectEventsByGUID(effectGUID, out IReadOnlyList<EffectEvent> effects)) {
+                var processedTimes = new HashSet<long>();
+                foreach (EffectEvent first in effects)
+                {
+                    if (first.Src == agent) {
+                        if (processedTimes.Contains(first.Time))
+                        {
+                            continue;
+                        }
+                        var group = effects.Where(effect => effect.Time >= first.Time && effect.Time < first.Time + epsilon).ToList();
+                        foreach (EffectEvent effect in group)
+                        {
+                            processedTimes.Add(effect.Time);
+                        }
+
+                        effectGroups.Add(group);
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
 
         public IReadOnlyList<EffectEvent> GetEffectEvents()
         {
@@ -986,6 +1185,107 @@ namespace GW2EIEvtcParser.ParsedData
                 return evt;
             }
             return null;
+        }
+
+        public static IEnumerable<T> FindRelatedEvents<T>(IEnumerable<T> events, long time, long epsilon = ServerDelayConstant) where T : AbstractTimeCombatEvent
+        {
+            return events.Where(evt => Math.Abs(evt.Time - time) < epsilon);
+        }
+
+        public bool HasRelatedHit(long skillID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetDamageData(skillID), time, epsilon)
+                .Any(hit => hit.CreditedFrom == agent);
+        }
+
+        public bool HasPreviousCast(long skillID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetAnimatedCastData(skillID), time, epsilon)
+                .Any(cast => cast.Caster == agent && cast.Time <= time);
+        }
+
+        public bool IsCasting(long skillID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return GetAnimatedCastData(skillID)
+                .Any(cast => cast.Caster == agent && cast.Time - epsilon <= time && cast.EndTime + epsilon >= time);
+        }
+
+        public bool HasGainedBuff(long buffID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffApplyEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent);
+        }
+
+        public bool HasGainedBuff(long buffID, AgentItem agent, long time, AgentItem source, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffApplyEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent && apply.CreditedBy == source);
+        }
+
+        public bool HasGainedBuff(long buffID, AgentItem agent, long time, long appliedDuration, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffApplyEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent && Math.Abs(apply.AppliedDuration - appliedDuration) < epsilon);
+        }
+
+        public bool HasGainedBuff(long buffID, AgentItem agent, long time, long appliedDuration, AgentItem source, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffApplyEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent && apply.CreditedBy == source && Math.Abs(apply.AppliedDuration - appliedDuration) < epsilon);
+        }
+
+        public bool HasLostBuff(long buffID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffRemoveAllEvent>(), time, epsilon)
+                .Any(remove => remove.To == agent);
+        }
+
+        public bool HasLostBuffStack(long buffID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<AbstractBuffRemoveEvent>(), time, epsilon)
+                .Any(remove => remove.To == agent);
+        }
+
+        public bool HasRelatedEffect(string effectGUID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            if (TryGetEffectEventsBySrcWithGUID(agent, effectGUID, out IReadOnlyList<EffectEvent> effectEvents))
+            {
+                return FindRelatedEvents(effectEvents, time, epsilon).Any();
+            }
+            return false;
+        }
+
+        public bool HasRelatedEffectDst(string effectGUID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            if (TryGetEffectEventsByDstWithGUID(agent, effectGUID, out IReadOnlyList<EffectEvent> effectEvents))
+            {
+                return FindRelatedEvents(effectEvents, time, epsilon).Any();
+            }
+            return false;
+        }
+
+        public bool HasExtendedBuff(long buffID, AgentItem agent, long time, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffExtensionEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent);
+        }
+
+        public bool HasExtendedBuff(long buffID, AgentItem agent, long time, AgentItem source, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffExtensionEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent && apply.CreditedBy == source);
+        }
+
+        public bool HasExtendedBuff(long buffID, AgentItem agent, long time, long extendedDuration, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffExtensionEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent && Math.Abs(apply.ExtendedDuration - extendedDuration) < epsilon);
+        }
+
+        public bool HasExtendedBuff(long buffID, AgentItem agent, long time, long extendedDuration, AgentItem source, long epsilon = ServerDelayConstant)
+        {
+            return FindRelatedEvents(GetBuffData(buffID).OfType<BuffExtensionEvent>(), time, epsilon)
+                .Any(apply => apply.To == agent && apply.CreditedBy == source && Math.Abs(apply.ExtendedDuration - extendedDuration) < epsilon);
         }
 
     }

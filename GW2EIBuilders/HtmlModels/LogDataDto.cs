@@ -28,6 +28,9 @@ namespace GW2EIBuilders.HtmlModels
         public List<long> DefBuffs { get; } = new List<long>();
         public List<long> Debuffs { get; } = new List<long>();
         public List<long> GearBuffs { get; } = new List<long>();
+        public List<long> Nourishments { get; } = new List<long>();
+        public List<long> Enhancements { get; } = new List<long>();
+        public List<long> OtherConsumables { get; } = new List<long>();
         public List<object[]> InstanceBuffs { get; } = new List<object[]>();
         public List<long> DmgModifiersItem { get; } = new List<long>();
         public List<long> DmgModifiersCommon { get; } = new List<long>();
@@ -66,6 +69,8 @@ namespace GW2EIBuilders.HtmlModels
         public long EncounterID { get; set; }
         public string Parser { get; set; }
         public string RecordedBy { get; set; }
+        public string RecordedAccountBy { get; set; }
+        public int FractalScale { get; set; }
         public List<string> UploadLinks { get; set; }
         public List<string> UsedExtensions { get; set; }
         public List<List<string>> PlayersRunningExtensions { get; set; }
@@ -82,6 +87,8 @@ namespace GW2EIBuilders.HtmlModels
             EncounterID = log.FightData.Logic.EncounterID;
             Parser = "Elite Insights " + parserVersion.ToString();
             RecordedBy = log.LogData.PoVName;
+            RecordedAccountBy = log.LogData.PoVAccount;
+            FractalScale = log.CombatData.GetFractalScaleEvent() != null ? log.CombatData.GetFractalScaleEvent().Scale : 0;
             UploadLinks = uploadLinks.ToList();
             if (log.LogData.UsedExtensions.Any())
             {
@@ -278,6 +285,21 @@ namespace GW2EIBuilders.HtmlModels
             {
                 logData.GearBuffs.Add(gearBuff.ID);
                 usedBuffs[gearBuff.ID] = gearBuff;
+            }
+            foreach (Buff nourishment in statistics.PresentNourishements)
+            {
+                logData.Nourishments.Add(nourishment.ID);
+                usedBuffs[nourishment.ID] = nourishment;
+            }
+            foreach (Buff enhancement in statistics.PresentEnhancements)
+            {
+                logData.Enhancements.Add(enhancement.ID);
+                usedBuffs[enhancement.ID] = enhancement;
+            }
+            foreach (Buff otherConsumables in statistics.PresentOtherConsumables)
+            {
+                logData.OtherConsumables.Add(otherConsumables.ID);
+                usedBuffs[otherConsumables.ID] = otherConsumables;
             }
             foreach ((Buff instanceBuff, int stack) in log.FightData.Logic.GetInstanceBuffs(log))
             {

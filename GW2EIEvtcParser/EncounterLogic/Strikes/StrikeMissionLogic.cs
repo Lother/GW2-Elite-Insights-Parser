@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
+using GW2EIEvtcParser.EIData;
+using static GW2EIEvtcParser.SkillIDs;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -10,14 +10,16 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected StrikeMissionLogic(int triggerID) : base(triggerID)
         {
+            MechanicList.AddRange(new List<Mechanic>
+            {
+                new PlayerDstBuffApplyMechanic(ExposedPlayer, "Exposed", new MechanicPlotlySetting(Symbols.TriangleLeft, Colors.Purple, 10), "Exposed", "Exposed Applied (Increased incoming damage)", "Exposed Applied", 0),
+                new PlayerDstBuffApplyMechanic(Debilitated, "Debilitated", new MechanicPlotlySetting(Symbols.TriangleDown, Colors.Purple, 10), "Debilitated", "Debilitated Applied (Reduced outgoing damage)", "Debilitated Applied", 0),
+                new PlayerDstBuffApplyMechanic(Infirmity, "Infirmity", new MechanicPlotlySetting(Symbols.TriangleUp, Colors.Purple, 10), "Infirmity", "Infirmity Applied (Reduced incoming healing)", "Infirmity", 0),
+            }
+            );
             Mode = ParseMode.Instanced10;
             EncounterCategoryInformation.Category = FightCategory.Strike;
             EncounterID |= EncounterIDs.EncounterMasks.StrikeMask;
-        }
-
-        protected virtual void SetSuccessByDeath(CombatData combatData, FightData fightData, IReadOnlyCollection<AgentItem> playerAgents, bool all)
-        {
-            SetSuccessByDeath(combatData, fightData, playerAgents, all, GetSuccessCheckIds());
         }
 
         protected override HashSet<int> GetUniqueNPCIDs()

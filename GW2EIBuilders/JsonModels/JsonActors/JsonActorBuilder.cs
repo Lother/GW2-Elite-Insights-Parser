@@ -18,7 +18,7 @@ namespace GW2EIBuilders.JsonModels.JsonActors
 
         public static void FillJsonActor(JsonActor jsonActor, AbstractSingleActor actor, ParsedEvtcLog log, RawFormatSettings settings, Dictionary<string, JsonLog.SkillDesc> skillDesc, Dictionary<string, JsonLog.BuffDesc> buffDesc)
         {
-            IReadOnlyList<PhaseData> phases = log.FightData.GetNonDummyPhases(log);
+            IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
             //
             jsonActor.Name = actor.Character;
             jsonActor.TotalHealth = actor.GetHealth(log.CombatData);
@@ -30,6 +30,7 @@ namespace GW2EIBuilders.JsonModels.JsonActors
             jsonActor.HitboxWidth = actor.HitboxWidth;
             jsonActor.InstanceID = actor.AgentItem.InstID;
             jsonActor.IsFake = actor.IsFakeActor;
+            jsonActor.TeamID = log.CombatData.GetTeamChangeEvents(actor.AgentItem).Any()? log.CombatData.GetTeamChangeEvents(actor.AgentItem).LastOrDefault().TeamID : 0;
             //
             jsonActor.DpsAll = phases.Select(phase => JsonStatisticsBuilder.BuildJsonDPS(actor.GetDPSStats(log, phase.Start, phase.End))).ToArray();
             jsonActor.StatsAll = phases.Select(phase => JsonStatisticsBuilder.BuildJsonGameplayStatsAll(actor.GetGameplayStats(log, phase.Start, phase.End), actor.GetOffensiveStats(null, log, phase.Start, phase.End))).ToArray();
@@ -38,7 +39,7 @@ namespace GW2EIBuilders.JsonModels.JsonActors
             IReadOnlyDictionary<long, Minions> minionsList = actor.GetMinions(log);
             if (minionsList.Values.Any())
             {
-                jsonActor.Minions = minionsList.Values.Select(x => JsonMinionsBuilder.BuildJsonMinions(x, log, skillDesc, buffDesc)).ToList();
+                jsonActor.Minions = minionsList.Values.Select(x => JsonMinionsBuilder.BuildJsonMinions(x, log, settings, skillDesc, buffDesc)).ToList();
             }
             //
             var skillByID = actor.GetIntersectingCastEvents(log, log.FightData.FightStart, log.FightData.FightEnd).GroupBy(x => x.SkillId).ToDictionary(x => x.Key, x => x.ToList());
@@ -76,7 +77,7 @@ namespace GW2EIBuilders.JsonModels.JsonActors
             //
             if (settings.RawFormatTimelineArrays)
             {
-                Dictionary<long, BuffsGraphModel> buffGraphs = actor.GetBuffGraphs(log);
+                IReadOnlyDictionary<long, BuffsGraphModel> buffGraphs = actor.GetBuffGraphs(log);
                 jsonActor.BoonsStates = JsonBuffsUptimeBuilder.GetBuffStates(buffGraphs[SkillIDs.NumberOfBoons]);
                 jsonActor.ConditionsStates = JsonBuffsUptimeBuilder.GetBuffStates(buffGraphs[SkillIDs.NumberOfConditions]);
                 if (buffGraphs.TryGetValue(SkillIDs.NumberOfActiveCombatMinions, out BuffsGraphModel states))

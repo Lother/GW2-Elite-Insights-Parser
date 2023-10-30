@@ -2,6 +2,12 @@
 using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
+using static GW2EIEvtcParser.ParserHelper;
+using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -11,16 +17,22 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-                new HitOnPlayerMechanic(57832, "Deadly Ice Shock Wave",new MechanicPlotlySetting(Symbols.Square,Colors.Red),"D.IceWave","Deadly Ice Shock Wave", "Deadly Shock Wave", 0),
-                new HitOnPlayerMechanic(57516, "Ice Arm Swing",new MechanicPlotlySetting(Symbols.TriangleUp,Colors.LightOrange),"A.Swing","Ice Arm Swing", "Ice Arm Swing", 0),
-                new HitOnPlayerMechanic(new long[] {57948, 57472, 57779 }, "Ice Shock Wave",new MechanicPlotlySetting(Symbols.Square,Colors.LightOrange),"ShockWave","Ice Shock Wave", "Ice Shock Wave", 0),
-                new HitOnPlayerMechanic(57690, "Ice Shatter",new MechanicPlotlySetting(Symbols.TriangleUp,Colors.Pink),"Ice Orbs","Rotating Ice Orbs", "Ice Orbs", 50),
-                new HitOnPlayerMechanic(57663, "Ice Crystal",new MechanicPlotlySetting(Symbols.CircleOpen,Colors.LightOrange),"I.Crystal","Ice Crystal", "Ice Crystal", 50),
-                new HitOnPlayerMechanic(new long[] {57678, 57463 }, "Ice Flail",new MechanicPlotlySetting(Symbols.Square,Colors.Pink),"I.Flail","Ice Flail", "Ice Flail", 50),
+                new PlayerDstHitMechanic(DeadlyIceShockWave, "Deadly Ice Shock Wave", new MechanicPlotlySetting(Symbols.CircleOpen, Colors.Red), "D.IceWave", "Hit by Deadly Ice Shock Wave", "Deadly Ice Shock Wave", 0),
+                new PlayerDstHitMechanic(IceArmSwing, "Ice Arm Swing", new MechanicPlotlySetting(Symbols.Star, Colors.Orange), "A.Swing", "Hit by Ice Arm Swing (Spin)", "Ice Arm Swing", 0),
+                new PlayerDstHitMechanic(IceArmSwing, "Ice Arm Swing", new MechanicPlotlySetting(Symbols.Star, Colors.Yellow), "ArmSwing.CC", "Knocked by Ice Arm Swing (Spin)", "Ice Arm Swing", 0).UsingChecker((de, log) => !de.To.HasBuff(log, Stability, de.Time - ServerDelayConstant)),
+                new PlayerDstHitMechanic(IceShatter, "Ice Shatter", new MechanicPlotlySetting(Symbols.TriangleUp, Colors.Pink), "Ice Orbs", "Hit by Rotating Ice Shatter (Orbs)", "Ice Shatter (Orbs)", 50),
+                new PlayerDstHitMechanic(IceCrystal, "Ice Crystal", new MechanicPlotlySetting(Symbols.Circle, Colors.LightOrange), "I.Crystal", "Hit by Ice Crystal (Chill AoE)", "Ice Crystal", 50),
+                new PlayerDstHitMechanic(Frostbite, "Frostbite", new MechanicPlotlySetting(Symbols.Square, Colors.Blue), "Frostbite.H", "Hit by Frostbite", "Frostbite", 0),
+                new PlayerDstHitMechanic(new long[] { IceFrail1, IceFrail2 }, "Ice Flail", new MechanicPlotlySetting(Symbols.Square, Colors.Orange), "I.Flail", "Hit by Ice Flail (Arm Swipe)", "Ice Flail", 50),
+                new PlayerDstHitMechanic(new long[] { IceFrail1, IceFrail2 }, "Ice Flail", new MechanicPlotlySetting(Symbols.Square, Colors.Yellow), "IceFlail.CC", "Knocked by Ice Flail (Arm Swipe)", "Ice Flail", 50).UsingChecker((de, log) => !de.To.HasBuff(log, Stability, de.Time - ServerDelayConstant)),
+                new PlayerDstHitMechanic(new long[] { IceShockWave1, IceShockWave2, IceShockWave3 }, "Ice Shock Wave", new MechanicPlotlySetting(Symbols.CircleOpen, Colors.LightOrange), "ShockWave.H", "Hit by Ice Shock Wave", "Ice Shock Wave", 0),
+                new PlayerDstHitMechanic(new long[] { SpinningIce1, SpinningIce2, SpinningIce3, SpinningIce4 }, "Spinning Ice", new MechanicPlotlySetting(Symbols.CircleOpenDot, Colors.White), "SpinIce.H", "Hit by Spinning Ice", "Spinning Ice", 0),
+                new EnemyCastEndMechanic(DeadlyIceShockWave, "Deadly Ice Shock Wave", new MechanicPlotlySetting(Symbols.CircleOpen, Colors.White), "Deadly Ice Shock Wave", "Cast Deadly Ice Shock Wave", "Cast Deadly Ice Shock Wave", 0),
+                new EnemyCastEndMechanic(IceArmSwing, "Ice Arm Swing", new MechanicPlotlySetting(Symbols.Star, Colors.White), "Ice Arm Swing", "Cast Ice Arm Swing (Spin)", "Cast Ice Arm Swing", 0),
             }
             );
             Extension = "icebrood";
-            Icon = "https://wiki.guildwars2.com/images/thumb/0/07/Icebrood_Construct_%28partially_buried%29.jpg/320px-Icebrood_Construct_%28partially_buried%29.jpg";
+            Icon = EncounterIconIcebroodConstruct;
             EncounterCategoryInformation.SubCategory = EncounterCategory.SubFightCategory.Grothmar;
             EncounterCategoryInformation.InSubCategoryOrder = 0;
             EncounterID |= 0x000001;
@@ -28,7 +40,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/sXvx6AL.png",
+            return new CombatReplayMap(CombatReplayIcebroodConstruct,
                             (729, 581),
                             (-32118, -11470, -28924, -8274)/*,
                             (-0, -0, 0, 0),
@@ -38,14 +50,14 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(57593, 57593), // Frostbite Aura
+                new DamageCastFinder(FrostbiteAuraIcebroodConstruct, FrostbiteAuraIcebroodConstruct),
             };
         }
 
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.IcebroodConstruct);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.IcebroodConstruct));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Icebrood Construct not found");
@@ -56,7 +68,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 return phases;
             }
             // Invul check
-            phases.AddRange(GetPhasesByInvul(log, 757, mainTarget, false, true));
+            phases.AddRange(GetPhasesByInvul(log, Invulnerability757, mainTarget, false, true));
             for (int i = 1; i < phases.Count; i++)
             {
                 PhaseData phase = phases[i];

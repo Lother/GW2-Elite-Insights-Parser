@@ -17,7 +17,11 @@ namespace GW2EIJSON
             /// Total damage taken
             /// </summary>
             public long DamageTaken { get; set; }
-            
+            /// <summary>
+            /// Total damage taken while downed
+            /// </summary>
+            public long DownedDamageTaken { get; set; }
+
             /// <summary>
             /// Total breakbar damage taken
             /// </summary>
@@ -87,8 +91,24 @@ namespace GW2EIJSON
             /// Time passed in disconnected state
             /// </summary>
             public long DcDuration { get; set; }
+            /// <summary>
+            /// Number of time boons were stripped
+            /// </summary>
+            public int BoonStrips { get; set; }
+            /// <summary>
+            /// Total duration of boons stripped
+            /// </summary>
+            public double BoonStripsTime { get; set; }
+            /// <summary>
+            /// Number of time conditions were cleansed
+            /// </summary>
+            public int ConditionCleanses { get; set; }
+            /// <summary>
+            /// Total duration of conditions cleansed
+            /// </summary>
+            public double ConditionCleansesTime { get; set; }
 
-            
+
             public JsonDefensesAll()
             {
 
@@ -189,21 +209,37 @@ namespace GW2EIJSON
             /// Number of damage hit
             /// </summary>
             public int TotalDamageCount { get; set; }
-            
+            /// <summary>
+            /// Total damage
+            /// </summary>
+            public int TotalDmg { get; set; }
+
             /// <summary>
             /// Number of direct damage hit
             /// </summary>
             public int DirectDamageCount { get; set; }
-            
+            /// <summary>
+            /// Total direct damage
+            /// </summary>
+            public int DirectDmg { get; set; }
+
             /// <summary>
             /// Number of connected direct damage hit
             /// </summary>
             public int ConnectedDirectDamageCount { get; set; }
+            /// <summary>
+            /// Total connected direct damage
+            /// </summary>
+            public int ConnectedDirectDmg { get; set; }
 
             /// <summary>
             /// Number of connected damage hit
             /// </summary>
             public int ConnectedDamageCount { get; set; }
+            /// <summary>
+            /// Total connected damage
+            /// </summary>
+            public int ConnectedDmg { get; set; }
 
             /// <summary>
             /// Number of critable hit
@@ -268,8 +304,37 @@ namespace GW2EIJSON
             /// Number of times downed target
             /// </summary>
             public int Downed { get; set; }
+            /// <summary>
+            /// Relevant for WvW, defined as the sum of damage done from 90% to down that led to a death
+            /// </summary>
+            public int DownContribution { get; set; }
 
-            
+            /// <summary>
+            /// Number of times a Power based damage skill hits
+            /// </summary>
+            public int ConnectedPowerCount { get; set; }
+            /// <summary>
+            /// Number of times a Power based damage skill hits while source is above 90% hp
+            /// </summary>
+            public int ConnectedPowerAbove90HPCount { get; set; }
+            /// <summary>
+            /// Number of times a Condition based damage skill hits
+            /// </summary>
+            public int ConnectedConditionCount { get; set; }
+            /// <summary>
+            /// Number of times a Condition based damage skill hits while source is above 90% hp
+            /// </summary>
+            public int ConnectedConditionAbove90HPCount { get; set; }
+            /// <summary>
+            /// Number of times a skill hits while target is downed is downed
+            /// </summary>
+            public int AgainstDownedCount { get; set; }
+            /// <summary>
+            /// Damage done against downed target
+            /// </summary>
+            public int AgainstDownedDamage { get; set; }
+
+
             public JsonGameplayStats()
             {
 
@@ -371,32 +436,32 @@ namespace GW2EIJSON
             public double ResurrectTime { get; set; }
             
             /// <summary>
-            /// Number of time a condition was removed, self excluded
+            /// Number of time a condition was cleansed on a squad mate
             /// </summary>
             public long CondiCleanse { get; set; }
-            
+
             /// <summary>
-            /// Total time of condition removed, self excluded
+            /// Total duration of condition cleansed on a squad mate
             /// </summary>
             public double CondiCleanseTime { get; set; }
             
             /// <summary>
-            /// Number of time a condition was removed from self
+            /// Number of time a condition was cleansed from self
             /// </summary>
             public long CondiCleanseSelf { get; set; }
-            
+
             /// <summary>
-            /// Total time of condition removed from self
+            /// Total duration of condition cleansed from self
             /// </summary>
             public double CondiCleanseTimeSelf { get; set; }
-            
+
             /// <summary>
-            /// Number of time a boon was removed
+            /// Number of time a boon was stripped
             /// </summary>
             public long BoonStrips { get; set; }
-            
+
             /// <summary>
-            /// Total time of boons removed from self
+            /// Total duration of boons stripped from self
             /// </summary>
             public double BoonStripsTime { get; set; }
 

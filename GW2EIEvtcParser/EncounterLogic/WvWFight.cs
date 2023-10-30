@@ -6,6 +6,10 @@ using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -16,7 +20,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         public WvWFight(int triggerID, bool detailed) : base(triggerID)
         {
             Mode = ParseMode.WvW;
-            Icon = "https://wiki.guildwars2.com/images/3/35/WvW_Rank_up.png";
+            Icon = EncounterIconWvW;
             _detailed = detailed;
             Extension = _detailed ? "detailed_wvw" : "wvw";
             _defaultName = _detailed ? "Detailed WvW" : "World vs World";
@@ -32,7 +36,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.WorldVersusWorld);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.WorldVersusWorld));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Main target of the fight not found");
@@ -44,22 +48,25 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
             if (_detailed)
             {
-                phases.Add(new PhaseData(phases[0].Start, phases[0].End)
+                var detailedPhase = new PhaseData(phases[0].Start, phases[0].End)
                 {
                     Name = "Detailed Full Fight",
                     CanBeSubPhase = false
-                });
-                phases[1].AddTargets(Targets);
-                if (phases[1].Targets.Any())
+                };
+                detailedPhase.AddTargets(Targets);
+                if (detailedPhase.Targets.Any())
                 {
-                    phases[1].RemoveTarget(mainTarget);
+                    detailedPhase.RemoveTarget(mainTarget);
                 }
-                phases[0].Dummy = phases[1].Targets.Any();
+                if (detailedPhase.Targets.Any())
+                {
+                    phases[0] = detailedPhase;
+                }
             }
             return phases;
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             return GetGenericFightOffset(fightData);
         }
@@ -75,18 +82,18 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 // EB
                 case 38:
-                    return new CombatReplayMap("https://i.imgur.com/t0khtQd.png", (954, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
+                    return new CombatReplayMap(CombatReplayEternalBattlegrounds, (954, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (8958, 12798, 12030, 15870)*/);
                 // Green Alpine
                 case 95:
-                    return new CombatReplayMap("https://i.imgur.com/nVu2ivF.png", (697, 1000), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (5630, 11518, 8190, 15102)*/);
+                    return new CombatReplayMap(CombatReplayAlpineBorderlands, (697, 1000), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (5630, 11518, 8190, 15102)*/);
                 // Blue Alpine
                 case 96:
-                    return new CombatReplayMap("https://i.imgur.com/nVu2ivF.png", (697, 1000), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (12798, 10878, 15358, 14462)*/);
+                    return new CombatReplayMap(CombatReplayAlpineBorderlands, (697, 1000), (-30720, -43008, 30720, 43008)/*, (-30720, -43008, 30720, 43008), (12798, 10878, 15358, 14462)*/);
                 // Red Desert
                 case 1099:
-                    return new CombatReplayMap("https://i.imgur.com/R5p9fqw.png", (1000, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (9214, 8958, 12286, 12030)*/);
+                    return new CombatReplayMap(CombatReplayDesertBorderlands, (1000, 1000), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (9214, 8958, 12286, 12030)*/);
                 case 968:
-                    return new CombatReplayMap("https://i.imgur.com/iEpKYL0.jpg", (3556, 3646), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (9214, 8958, 12286, 12030)*/);
+                    return new CombatReplayMap(CombatReplayEdgeOfTheMists, (3556, 3646), (-36864, -36864, 36864, 36864)/*, (-36864, -36864, 36864, 36864), (9214, 8958, 12286, 12030)*/);
             }
             return base.GetCombatMapInternal(log);
         }
@@ -102,22 +109,27 @@ namespace GW2EIEvtcParser.EncounterLogic
                 case 38:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.EternalBattlegrounds;
                     EncounterID |= EncounterIDs.WvWMasks.EternalBattlegroundsMask;
+                    Icon = InstanceIconEternalBattlegrounds;
                     return _defaultName + " - Eternal Battlegrounds";
                 case 95:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.GreenAlpineBorderlands;
                     EncounterID |= EncounterIDs.WvWMasks.GreenAlpineBorderlandsMask;
+                    Icon = InstanceIconGreenBorderlands;
                     return _defaultName + " - Green Alpine Borderlands";
                 case 96:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.BlueAlpineBorderlands;
                     EncounterID |= EncounterIDs.WvWMasks.BlueAlpineBorderlandsMask;
+                    Icon = InstanceIconBlueBorderlands;
                     return _defaultName + " - Blue Alpine Borderlands";
                 case 1099:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.RedDesertBorderlands;
                     EncounterID |= EncounterIDs.WvWMasks.RedDesertBorderlandsMask;
+                    Icon = InstanceIconRedBorderlands;
                     return _defaultName + " - Red Desert Borderlands";
                 case 899:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.ObsidianSanctum;
                     EncounterID |= EncounterIDs.WvWMasks.ObsidianSanctumMask;
+                    Icon = InstanceIconEternalBattlegrounds;
                     return _defaultName + " - Obsidian Sanctum";
                 case 968:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.EdgeOfTheMists;
@@ -126,6 +138,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 case 1315:
                     EncounterCategoryInformation.SubCategory = SubFightCategory.ArmisticeBastion;
                     EncounterID |= EncounterIDs.WvWMasks.ArmisticeBastionMask;
+                    Icon = InstanceIconEternalBattlegrounds;
                     return _defaultName + " - Armistice Bastion";
             }
             return _defaultName;
@@ -211,7 +224,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void EIEvtcParse(ulong gw2Build, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
-            AgentItem dummyAgent = agentData.AddCustomNPCAgent(fightData.FightStart, fightData.FightEnd, _detailed ? "Dummy WvW Agent" : "Enemy Players", ParserHelper.Spec.NPC, (int)ArcDPSEnums.TargetID.WorldVersusWorld, true);
+            AgentItem dummyAgent = agentData.AddCustomNPCAgent(fightData.FightStart, fightData.FightEnd, _detailed ? "Dummy WvW Agent" : "Enemy Players", ParserHelper.Spec.NPC, ArcDPSEnums.TargetID.WorldVersusWorld, true);
 
             SolveWvWPlayers(agentData, combatData, extensions);
             if (!_detailed)

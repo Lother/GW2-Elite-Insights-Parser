@@ -3,6 +3,11 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
+using GW2EIEvtcParser.Exceptions;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -13,19 +18,19 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-            new HitOnPlayerMechanic(47303, "Hungering Miasma", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.DarkGreen), "Vomit","Hungering Miasma (Vomit Goo)", "Vomit Dmg",0),
-            new PlayerBuffApplyMechanic(FracturedSpirit, "Fractured Spirit", new MechanicPlotlySetting(Symbols.Circle,Colors.Green), "Orb CD","Applied when taking green", "Green port",0),
+            new PlayerDstHitMechanic(HungeringMiasma, "Hungering Miasma", new MechanicPlotlySetting(Symbols.TriangleLeftOpen,Colors.DarkGreen), "Vomit","Hungering Miasma (Vomit Goo)", "Vomit Dmg",0),
+            new PlayerDstBuffApplyMechanic(FracturedSpirit, "Fractured Spirit", new MechanicPlotlySetting(Symbols.Circle,Colors.Green), "Orb CD","Applied when taking green", "Green port",0),
             }
             );
             Extension = "souleater";
-            Icon = "https://wiki.guildwars2.com/images/thumb/2/24/Eater_of_Souls_%28Hall_of_Chains%29.jpg/194px-Eater_of_Souls_%28Hall_of_Chains%29.jpg";
+            Icon = EncounterIconStatueOfDeath;
             EncounterCategoryInformation.InSubCategoryOrder = 2;
             EncounterID |= 0x000004;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/Owo34RS.png",
+            return new CombatReplayMap(CombatReplayStatueOfDeath,
                             (710, 709),
                             (1306, -9381, 4720, -5968)/*,
                             (-21504, -12288, 24576, 12288),
@@ -35,7 +40,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(48794, 48794), // Hungering Aura
+                new DamageCastFinder(HungeringAura , HungeringAura ), // Hungering Aura
             };
         }
         protected override List<ArcDPSEnums.TrashID> GetTrashMobsIDs()
@@ -51,13 +56,27 @@ namespace GW2EIEvtcParser.EncounterLogic
             };
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
+            AgentItem eaterOfSouls = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.EaterOfSouls).FirstOrDefault();
+            if (eaterOfSouls == null)
+            {
+                throw new MissingKeyActorsException("Eater of Souls not found");
+            }
             long startToUse = GetGenericFightOffset(fightData);
             CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
             if (logStartNPCUpdate != null)
             {
-                startToUse = logStartNPCUpdate.Time;
+                var peasants = new List<AgentItem>(agentData.GetNPCsByID(ArcDPSEnums.TrashID.AscalonianPeasant1));
+                peasants.AddRange(agentData.GetNPCsByID(ArcDPSEnums.TrashID.AscalonianPeasant2));
+                if (peasants.Any())
+                {
+                    startToUse = peasants.Max(x => x.LastAware);
+                } 
+                else
+                {
+                    startToUse = GetPostLogStartNPCUpdateDamageEventTime(fightData, agentData, combatData, logStartNPCUpdate.Time, eaterOfSouls);
+                }
             }
             return startToUse;
         }
@@ -69,16 +88,16 @@ namespace GW2EIEvtcParser.EncounterLogic
             int end = (int)replay.TimeOffsets.end;
             switch (target.ID)
             {
-                case (int)ArcDPSEnums.TargetID.SoulEater:
-                    var breakbar = cls.Where(x => x.SkillId == 48007).ToList();
+                case (int)ArcDPSEnums.TargetID.EaterOfSouls:
+                    var breakbar = cls.Where(x => x.SkillId == Imbibe).ToList();
                     foreach (AbstractCastEvent c in breakbar)
                     {
                         start = (int)c.Time;
                         end = (int)c.EndTime;
-                        replay.Decorations.Add(new CircleDecoration(true, start + c.ExpectedDuration, 180, (start, end), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
-                        replay.Decorations.Add(new CircleDecoration(true, 0, 180, (start, end), "rgba(0, 180, 255, 0.3)", new AgentConnector(target)));
+                        var circle = new CircleDecoration(180, (start, end), "rgba(0, 180, 255, 0.3)", new AgentConnector(target));
+                        replay.AddDecorationWithGrowing(circle, start + c.ExpectedDuration);
                     }
-                    var vomit = cls.Where(x => x.SkillId == 47303).ToList();
+                    var vomit = cls.Where(x => x.SkillId == HungeringMiasma).ToList();
                     foreach (AbstractCastEvent c in vomit)
                     {
                         start = (int)c.Time + 2100;
@@ -86,32 +105,32 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int duration = 15000 + cascading;
                         end = start + duration;
                         int radius = 900;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start);
-                        Point3D position = replay.PolledPositions.LastOrDefault(x => x.Time <= start);
+                        Point3D facing = target.GetCurrentRotation(log, start);
+                        Point3D position = target.GetCurrentPosition(log, start);
                         if (facing != null && position != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, start + cascading, radius, facing, 60, (start, end), "rgba(220,255,0,0.5)", new PositionConnector(position)));
+                            replay.Decorations.Add(new PieDecoration( radius, 60, (start, end), "rgba(220,255,0,0.5)", new PositionConnector(position)).UsingGrowingEnd(start + cascading).UsingRotationConnector(new AngleConnector(facing)));
                         }
                     }
-                    var pseudoDeath = cls.Where(x => x.SkillId == 47440).ToList();
+                    var pseudoDeath = cls.Where(x => x.SkillId == PseudoDeathEaterOfSouls).ToList();
                     foreach (AbstractCastEvent c in pseudoDeath)
                     {
                         start = (int)c.Time;
                         //int duration = 900;
                         end = (int)c.EndTime; //duration;
                         //replay.Actors.Add(new CircleActor(true, 0, 180, (start, end), "rgba(255, 150, 255, 0.35)", new AgentConnector(target)));
-                        replay.Decorations.Add(new CircleDecoration(true, end, 180, (start, end), "rgba(255, 180, 220, 0.7)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(180, (start, end), "rgba(255, 180, 220, 0.7)", new AgentConnector(target)).UsingGrowingEnd(end));
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.GreenSpirit1:
                 case (int)ArcDPSEnums.TrashID.GreenSpirit2:
-                    var green = cls.Where(x => x.SkillId == 47153).ToList();
+                    var green = cls.Where(x => x.SkillId == GreensEaterofSouls).ToList();
                     foreach (AbstractCastEvent c in green)
                     {
                         int gstart = (int)c.Time + 667;
                         int gend = gstart + 5000;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, 240, (gstart, gend), "rgba(0, 255, 0, 0.2)", new AgentConnector(target)));
-                        replay.Decorations.Add(new CircleDecoration(true, gend, 240, (gstart, gend), "rgba(0, 255, 0, 0.2)", new AgentConnector(target)));
+                        var circle = new CircleDecoration(240, (gstart, gend), "rgba(0, 255, 0, 0.2)", new AgentConnector(target));
+                        replay.AddDecorationWithGrowing(circle, gend);
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.SpiritHorde1:
@@ -127,25 +146,25 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
-            var spiritTransform = log.CombatData.GetBuffData(SkillIDs.FracturedSpirit).Where(x => x.To == p.AgentItem && x is BuffApplyEvent).ToList();
+            var spiritTransform = log.CombatData.GetBuffData(FracturedSpirit).Where(x => x.To == p.AgentItem && x is BuffApplyEvent).ToList();
             foreach (AbstractBuffEvent c in spiritTransform)
             {
                 int duration = 30000;
-                AbstractBuffEvent removedBuff = log.CombatData.GetBuffRemoveAllData(SkillIDs.MortalCoilStatueOfDeath).FirstOrDefault(x => x.To == p.AgentItem && x.Time > c.Time && x.Time < c.Time + duration);
+                AbstractBuffEvent removedBuff = log.CombatData.GetBuffRemoveAllData(MortalCoilStatueOfDeath).FirstOrDefault(x => x.To == p.AgentItem && x.Time > c.Time && x.Time < c.Time + duration);
                 int start = (int)c.Time;
                 int end = start + duration;
                 if (removedBuff != null)
                 {
                     end = (int)removedBuff.Time;
                 }
-                replay.Decorations.Add(new CircleDecoration(true, 0, 100, (start, end), "rgba(0, 50, 200, 0.3)", new AgentConnector(p)));
-                replay.Decorations.Add(new CircleDecoration(true, start + duration, 100, (start, end), "rgba(0, 50, 200, 0.5)", new AgentConnector(p)));
+                var circle = new CircleDecoration(100, (start, end), "rgba(0, 50, 200, 0.3)", new AgentConnector(p));
+                replay.AddDecorationWithGrowing(circle, start + duration);
             }
         }
 
         internal override void CheckSuccess(CombatData combatData, AgentData agentData, FightData fightData, IReadOnlyCollection<AgentItem> playerAgents)
         {
-            SetSuccessByDeath(combatData, fightData, playerAgents, true, (int)ArcDPSEnums.TargetID.SoulEater);
+            NoBouncyChestGenericCheckSucess(combatData, agentData, fightData, playerAgents);
         }
 
         internal override string GetLogicName(CombatData combatData, AgentData agentData)

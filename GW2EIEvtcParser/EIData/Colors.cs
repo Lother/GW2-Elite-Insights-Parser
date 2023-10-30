@@ -7,26 +7,36 @@ namespace GW2EIEvtcParser.EIData
 {
     internal class Color
     {
-        private readonly int _r;
-        private readonly int _g;
-        private readonly int _b;
-        private readonly float _a;
+        public byte R { get; set; }
+        public byte G { get; set; }
+        public byte B { get; set; }
+        public float A { get; set; }
 
-        public Color(int r, int g, int b, float a = 1.0f)
+        public Color(byte r, byte g, byte b, float a = 1.0f)
         {
-            _r = r;
-            _g = g;
-            _b = b;
-            _a = a;
+            R = r;
+            G = g;
+            B = b;
+            A = a;
         }
 
-        public string ToString(bool withAlpha)
+        public Color(int rgb, float a = 1.0f)
         {
-            if (withAlpha)
-            {
-                return "rgba(" + _r + ", " + _g + ", " + _b + ", " + _a + "}";
-            }
-            return "rgb(" + _r + ", " + _g + ", " + _b + "}";
+            R = (byte)(rgb >> 16);
+            G = (byte)(rgb >> 8);
+            B = (byte)rgb;
+            A = a;
+        }
+
+        /// <summary>Creates a new color with adjusted alpha value</summary>
+        public Color WithAlpha(float alpha)
+        {
+            return new Color(R, G, B, alpha);
+        }
+
+        public string ToString(bool withAlpha = true)
+        {
+            return withAlpha ? $"rgba({R}, {G}, {B}, {A})" : $"rgb({R}, {G}, {B})";
         }
     }
 
@@ -40,6 +50,7 @@ namespace GW2EIEvtcParser.EIData
         public static Color Brown = new Color(120, 100, 0);
         public static Color Green = new Color(0, 255, 0);
         public static Color DarkGreen = new Color(0, 128, 0);
+        public static Color DarkBlue = new Color(0, 70, 128);
         public static Color Teal = new Color(0, 255, 255);
         public static Color DarkTeal = new Color(0, 160, 150);
         public static Color LightBlue = new Color(0, 140, 255);
@@ -56,5 +67,15 @@ namespace GW2EIEvtcParser.EIData
         public static Color LightGrey = new Color(120, 120, 120);
         public static Color Black = new Color(0, 0, 0);
         public static Color LightRed = new Color(255, 128, 128);
+
+        public static Color Guardian = new Color(0x3399cc);
+        public static Color Revenant = new Color(0xcc6342);
+        public static Color Warrior = new Color(0xff9933);
+        public static Color Engineer = new Color(0x996633);
+        public static Color Ranger = new Color(0x66cc33);
+        public static Color Thief = new Color(0xcc6666);
+        public static Color Elementalist = new Color(0xec5752);
+        public static Color Mesmer = new Color(0x993399);
+        public static Color Necromancer = new Color(0x339966);
     }
 }

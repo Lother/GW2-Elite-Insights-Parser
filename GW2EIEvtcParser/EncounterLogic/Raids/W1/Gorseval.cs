@@ -4,7 +4,12 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -14,25 +19,25 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>
             {
-            new HitOnPlayerMechanic(SpectralImpact, "Spectral Impact", new MechanicPlotlySetting(Symbols.Hexagram,Colors.Red), "Slam","Spectral Impact (KB Slam)", "Slam",4000, (de, log) => !de.To.HasBuff(log, SkillIDs.Stability, de.Time - ParserHelper.ServerDelayConstant)),
-            new PlayerBuffApplyMechanic(GhastlyPrison, "Ghastly Prison", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "Egg","Ghastly Prison (Egged)", "Egged",500),
-            new PlayerBuffApplyMechanic(SpectralDarkness, "Spectral Darkness", new MechanicPlotlySetting(Symbols.Circle,Colors.Blue), "Orb Debuff","Spectral Darkness (Stood in Orb AoE)", "Orb Debuff",100),
-            new EnemyBuffApplyMechanic(SpiritedFusion, "Spirited Fusion", new MechanicPlotlySetting(Symbols.Square,Colors.LightOrange), "Spirit Buff","Spirited Fusion (Consumed a Spirit)", "Ate Spirit",0),
-            new HitOnPlayerMechanic(SpiritKick, "Kick", new MechanicPlotlySetting(Symbols.TriangleRight,Colors.Magenta), "Kick","Kicked by small add", "Spirit Kick",0, (de, log) => !de.To.HasBuff(log, SkillIDs.Stability, de.Time - ParserHelper.ServerDelayConstant)),
-            new PlayerBuffApplyMechanic(Vulnerability, "Ghastly Rampage Black Goo Hit", new MechanicPlotlySetting(Symbols.Circle,Colors.Black), "Black","Hit by Black Goo","Black Goo",3000, (ba,log) => ba.AppliedDuration == 10000),
+            new PlayerDstHitMechanic(SpectralImpact, "Spectral Impact", new MechanicPlotlySetting(Symbols.Hexagram,Colors.Red), "Slam","Spectral Impact (KB Slam)", "Slam",4000).UsingChecker((de, log) => !de.To.HasBuff(log, Stability, de.Time - ParserHelper.ServerDelayConstant)),
+            new PlayerDstBuffApplyMechanic(GhastlyPrison, "Ghastly Prison", new MechanicPlotlySetting(Symbols.Circle,Colors.LightOrange), "Egg","Ghastly Prison (Egged)", "Egged",500),
+            new PlayerDstBuffApplyMechanic(SpectralDarkness, "Spectral Darkness", new MechanicPlotlySetting(Symbols.Circle,Colors.Blue), "Orb Debuff","Spectral Darkness (Stood in Orb AoE)", "Orb Debuff",100),
+            new EnemyDstBuffApplyMechanic(SpiritedFusion, "Spirited Fusion", new MechanicPlotlySetting(Symbols.Square,Colors.LightOrange), "Spirit Buff","Spirited Fusion (Consumed a Spirit)", "Ate Spirit",0),
+            new PlayerDstHitMechanic(SpiritKick, "Kick", new MechanicPlotlySetting(Symbols.TriangleRight,Colors.Magenta), "Kick","Kicked by small add", "Spirit Kick",0).UsingChecker((de, log) => !de.To.HasBuff(log, Stability, de.Time - ParserHelper.ServerDelayConstant)),
+            new PlayerDstBuffApplyMechanic(Vulnerability, "Ghastly Rampage Black Goo Hit", new MechanicPlotlySetting(Symbols.Circle,Colors.Black), "Black","Hit by Black Goo","Black Goo",3000).UsingChecker( (ba,log) => ba.AppliedDuration == 10000),
             new EnemyCastStartMechanic(GhastlyRampage, "Ghastly Rampage", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkTeal), "CC","Ghastly Rampage (Breakbar)", "Breakbar",0),
-            new EnemyCastEndMechanic(GhastlyRampage, "Ghastly Rampage", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "CC End","Ghastly Rampage (Full duration)", "CC ran out",0, (ce,log) => ce.ActualDuration > 21985),
-            new EnemyCastEndMechanic(GhastlyRampage, "Ghastly Rampage", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Ghastly Rampage (Breakbar broken)", "CCed",0, (ce, log) => ce.ActualDuration <= 21985),
+            new EnemyCastEndMechanic(GhastlyRampage, "Ghastly Rampage", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.Red), "CC End","Ghastly Rampage (Full duration)", "CC ran out",0).UsingChecker( (ce,log) => ce.ActualDuration > 21985),
+            new EnemyCastEndMechanic(GhastlyRampage, "Ghastly Rampage", new MechanicPlotlySetting(Symbols.DiamondTall,Colors.DarkGreen), "CCed","Ghastly Rampage (Breakbar broken)", "CCed",0).UsingChecker((ce, log) => ce.ActualDuration <= 21985),
             });
             Extension = "gors";
-            Icon = "https://wiki.guildwars2.com/images/d/d1/Mini_Gorseval_the_Multifarious.png";
+            Icon = EncounterIconGorseval;
             EncounterCategoryInformation.InSubCategoryOrder = 1;
             EncounterID |= 0x000002;
         }
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/U9pH5dG.png",
+            return new CombatReplayMap(CombatReplayGorseval,
                             (957, 1000),
                             (-653, -6754, 3701, -2206)/*,
                             (-15360, -36864, 15360, 39936),
@@ -42,13 +47,13 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>()
             {
-                new DamageCastFinder(HauntingAura, HauntingAura), // Haunting Aura
+                new DamageCastFinder(HauntingAura, HauntingAura),
             };
         }
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Gorseval);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Gorseval));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Gorseval not found");
@@ -100,20 +105,16 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
-            List<AbstractBuffEvent> eggs = GetFilteredList(log.CombatData, GhastlyPrison, p, true, true);
-            int eggStart = 0;
-            foreach (AbstractBuffEvent c in eggs)
+            // Ghastly Prison - Eggs AoEs
+            var eggs = p.GetBuffStatus(log, GhastlyPrison, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+            foreach (Segment seg in eggs)
             {
-                if (c is BuffApplyEvent)
-                {
-                    eggStart = (int)c.Time;
-                }
-                else
-                {
-                    int eggEnd = (int)c.Time;
-                    replay.Decorations.Add(new CircleDecoration(true, 0, 180, (eggStart, eggEnd), "rgba(255, 160, 0, 0.3)", new AgentConnector(p)));
-                }
+                replay.Decorations.Add(new CircleDecoration(180, seg, "rgba(255, 160, 0, 0.3)", new AgentConnector(p)));
             }
+
+            // Spectral Darkness - Orbs Debuff Overhead
+            IEnumerable<Segment> spectralDarknesses = p.GetBuffStatus(log, SpectralDarkness, log.FightData.LogStart, log.FightData.LogEnd).Where(x => x.Value > 0);
+            replay.AddOverheadIcons(spectralDarknesses, p, ParserIcons.SpectralDarknessOverhead);
         }
 
         internal override void ComputeNPCCombatReplayActors(NPC target, ParsedEvtcLog log, CombatReplay replay)
@@ -127,8 +128,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         int start = (int)c.Time;
                         int end = (int)c.EndTime;
-                        replay.Decorations.Add(new CircleDecoration(true, c.ExpectedDuration + start, 600, (start, end), "rgba(255, 125, 0, 0.5)", new AgentConnector(target)));
-                        replay.Decorations.Add(new CircleDecoration(false, 0, 600, (start, end), "rgba(255, 125, 0, 0.5)", new AgentConnector(target)));
+                        replay.AddDecorationWithFilledWithGrowing(new CircleDecoration(600, (start, end), "rgba(255, 125, 0, 0.5)", new AgentConnector(target)).UsingFilled(false), true, c.ExpectedDuration + start);
                     }
                     IReadOnlyList<PhaseData> phases = log.FightData.GetPhases(log);
                     if (phases.Count > 1)
@@ -146,7 +146,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             int start = (int)c.Time;
                             int end = (int)c.EndTime;
-                            replay.Decorations.Add(new CircleDecoration(true, 0, 180, (start, end), "rgba(0, 125, 255, 0.3)", new AgentConnector(target)));
+                            replay.Decorations.Add(new CircleDecoration(180, (start, end), "rgba(0, 125, 255, 0.3)", new AgentConnector(target)));
                             // or spawn -> 3 secs -> explosion -> 0.5 secs -> fade -> 0.5  secs-> next
                             int ticks = (int)Math.Min(Math.Ceiling(c.ActualDuration / 4000.0), 6);
                             int phaseIndex;
@@ -209,42 +209,45 @@ namespace GW2EIEvtcParser.EncounterLogic
                             start += 2200;
                             for (int i = 0; i < ticks; i++)
                             {
-                                int tickStart = start + 4000 * i;
-                                int explosion = tickStart + 3000;
-                                int tickEnd = tickStart + 3500;
                                 byte pattern = patterns[i];
+                                var connector = new PositionConnector(pos);
+                                var color = "rgba(25,25,112, 0.25)";
+                                //
+                                var nonFullDecorations = new List<FormDecoration>();
+                                int tickStartNonFull = start + 4000 * i;
+                                int explosionNonFull = tickStartNonFull + 3000;
+                                int tickEndNonFull = tickStartNonFull + 3500;
+                                (int, int) lifespanRampageNonFull = (tickStartNonFull, tickEndNonFull);
                                 if ((pattern & first) > 0)
                                 {
-                                    replay.Decorations.Add(new CircleDecoration(true, explosion, 360, (tickStart, tickEnd), "rgba(25,25,112, 0.2)", new PositionConnector(pos)));
-                                    replay.Decorations.Add(new CircleDecoration(true, 0, 360, (tickStart, tickEnd), "rgba(25,25,112, 0.4)", new PositionConnector(pos)));
+                                    nonFullDecorations.Add(new CircleDecoration(360, lifespanRampageNonFull, color, connector));
                                 }
                                 if ((pattern & second) > 0)
                                 {
-                                    replay.Decorations.Add(new DoughnutDecoration(true, explosion, 360, 720, (tickStart, tickEnd), "rgba(25,25,112, 0.2)", new PositionConnector(pos)));
-                                    replay.Decorations.Add(new DoughnutDecoration(true, 0, 360, 720, (tickStart, tickEnd), "rgba(25,25,112, 0.4)", new PositionConnector(pos)));
+                                    nonFullDecorations.Add(new DoughnutDecoration(360, 720, lifespanRampageNonFull, color, connector));
                                 }
                                 if ((pattern & third) > 0)
                                 {
-                                    replay.Decorations.Add(new DoughnutDecoration(true, explosion, 720, 1080, (tickStart, tickEnd), "rgba(25,25,112, 0.2)", new PositionConnector(pos)));
-                                    replay.Decorations.Add(new DoughnutDecoration(true, 0, 720, 1080, (tickStart, tickEnd), "rgba(25,25,112, 0.4)", new PositionConnector(pos)));
+                                    nonFullDecorations.Add(new DoughnutDecoration(720, 1080, lifespanRampageNonFull, color, connector));
                                 }
                                 if ((pattern & fourth) > 0)
                                 {
-                                    replay.Decorations.Add(new DoughnutDecoration(true, explosion, 1080, 1440, (tickStart, tickEnd), "rgba(25,25,112, 0.2)", new PositionConnector(pos)));
-                                    replay.Decorations.Add(new DoughnutDecoration(true, 0, 1080, 1440, (tickStart, tickEnd), "rgba(25,25,112, 0.4)", new PositionConnector(pos)));
+                                    nonFullDecorations.Add(new DoughnutDecoration(1080, 1440, lifespanRampageNonFull, color, connector));
                                 }
                                 if ((pattern & fifth) > 0)
                                 {
-                                    replay.Decorations.Add(new DoughnutDecoration(true, explosion, 1440, 1800, (tickStart, tickEnd), "rgba(25,25,112, 0.2)", new PositionConnector(pos)));
-                                    replay.Decorations.Add(new DoughnutDecoration(true, 0, 1440, 1800, (tickStart, tickEnd), "rgba(25,25,112, 0.4)", new PositionConnector(pos)));
+                                    nonFullDecorations.Add(new DoughnutDecoration(1440, 1800, lifespanRampageNonFull, color, connector));
                                 }
+                                foreach (FormDecoration decoration in nonFullDecorations)
+                                {
+                                    replay.AddDecorationWithGrowing(decoration, explosionNonFull);
+                                }
+                                // Full a different timings
                                 if ((pattern & full) > 0)
                                 {
-                                    tickStart -= 1000;
-                                    explosion -= 1000;
-                                    tickEnd -= 1000;
-                                    replay.Decorations.Add(new CircleDecoration(true, explosion, 1800, (tickStart, tickEnd), "rgba(25,25,112, 0.2)", new PositionConnector(pos)));
-                                    replay.Decorations.Add(new CircleDecoration(true, 0, 1800, (tickStart, tickEnd), "rgba(25,25,112, 0.4)", new PositionConnector(pos)));
+                                    (int, int) fullLifespanRampage = (tickStartNonFull - 1000, tickEndNonFull - 1000);
+                                    int fullExplosion = explosionNonFull - 1000;
+                                    replay.AddDecorationWithGrowing(new CircleDecoration(1800, fullLifespanRampage, color, connector), fullExplosion);
                                 }
                             }
                         }
@@ -257,27 +260,18 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int impactTime = start + impactPoint;
                         int end = Math.Min((int)c.EndTime, impactTime);
                         int radius = 320;
-                        replay.Decorations.Add(new CircleDecoration(true, 0, radius, (start, end), "rgba(255, 0, 0, 0.2)", new AgentConnector(target)));
-                        replay.Decorations.Add(new CircleDecoration(true, 0, radius, (impactTime, impactTime + 100), "rgba(255, 0, 0, 0.4)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(radius, (start, end), "rgba(255, 0, 0, 0.2)", new AgentConnector(target)));
+                        replay.Decorations.Add(new CircleDecoration(radius, (impactTime, impactTime + 100), "rgba(255, 0, 0, 0.4)", new AgentConnector(target)));
                     }
-                    List<AbstractBuffEvent> protection = GetFilteredList(log.CombatData, ProtectiveShadow, target, true, true);
-                    int protectionStart = 0;
-                    foreach (AbstractBuffEvent c in protection)
+                    var protection = target.GetBuffStatus(log, ProtectiveShadow, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+                    foreach (Segment seg in protection)
                     {
-                        if (c is BuffApplyEvent)
-                        {
-                            protectionStart = (int)c.Time;
-                        }
-                        else
-                        {
-                            int protectionEnd = (int)c.Time;
-                            replay.Decorations.Add(new CircleDecoration(true, 0, 300, (protectionStart, protectionEnd), "rgba(0, 180, 255, 0.5)", new AgentConnector(target)));
-                        }
+                        replay.Decorations.Add(new CircleDecoration(300, seg, "rgba(0, 180, 255, 0.5)", new AgentConnector(target)));
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.ChargedSoul:
                     var lifespan = ((int)replay.TimeOffsets.start, (int)replay.TimeOffsets.end);
-                    replay.Decorations.Add(new CircleDecoration(false, 0, 220, lifespan, "rgba(255, 150, 0, 0.5)", new AgentConnector(target)));
+                    replay.Decorations.Add(new CircleDecoration(220, lifespan, "rgba(255, 150, 0, 0.5)", new AgentConnector(target)).UsingFilled(false));
                     break;
                 default:
                     break;

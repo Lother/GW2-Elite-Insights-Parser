@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
@@ -6,9 +7,13 @@ namespace GW2EIEvtcParser.EIData
     public class FinalOffensiveStats
     {
         public int TotalDamageCount { get; }
+        public int TotalDmg { get; }
         public int DirectDamageCount { get; }
+        public int DirectDmg { get; }
         public int ConnectedDamageCount { get; }
+        public int ConnectedDmg { get; }
         public int ConnectedDirectDamageCount { get; }
+        public int ConnectedDirectDmg { get; }
         public int CritableDirectDamageCount { get; }
         public int CriticalCount { get; }
         public int CriticalDmg { get; }
@@ -22,6 +27,16 @@ namespace GW2EIEvtcParser.EIData
         public int Invulned { get; }
         public int Killed { get; }
         public int Downed { get; }
+
+        public int AgainstDownedCount { get; }
+        public int AgainstDownedDamage { get; }
+
+        public int ConnectedPowerCount { get; }
+        public int ConnectedPowerAbove90HPCount { get; }
+        public int ConnectedConditionCount { get; }
+        public int ConnectedConditionAbove90HPCount { get; }
+
+    public int DownContribution { get; }
 
 
         internal FinalOffensiveStats(ParsedEvtcLog log, long start, long end, AbstractSingleActor actor, AbstractSingleActor target)
@@ -54,6 +69,7 @@ namespace GW2EIEvtcParser.EIData
                                 GlanceCount++;
                             }
                             ConnectedDirectDamageCount++;
+                            ConnectedDirectDmg += dl.HealthDamage;
                         }
 
                         if (dl.IsBlind)
@@ -71,6 +87,7 @@ namespace GW2EIEvtcParser.EIData
                         if (!dl.DoubleProcHit)
                         {
                             DirectDamageCount++;
+                            DirectDmg += dl.HealthDamage;
                         }
                     }
                     if (dl.IsAbsorbed)
@@ -80,14 +97,42 @@ namespace GW2EIEvtcParser.EIData
                     if (!dl.DoubleProcHit)
                     {
                         TotalDamageCount++;
+                        TotalDmg += dl.HealthDamage;
                     }
 
                     if (dl.HasHit)
                     {
                         ConnectedDamageCount++;
+                        ConnectedDmg += dl.HealthDamage;
+                        IReadOnlyList<Last90BeforeDownEvent> last90BeforeDownEvents = log.CombatData.GetLast90BeforeDownEvents(dl.To);
+                        if (last90BeforeDownEvents.Any(x => dl.Time <= x.Time && dl.Time >= x.Time - x.TimeSinceLast90))
+                        {
+                            DownContribution += dl.HealthDamage;
+                        }
                         if (dl.AgainstMoving)
                         {
                             AgainstMovingCount++;
+                        }
+                        if (dl.ConditionDamageBased(log))
+                        {
+                            ConnectedConditionCount++;
+                            if (dl.IsOverNinety)
+                            {
+                                ConnectedConditionAbove90HPCount++;
+                            }
+                        } 
+                        else
+                        {
+                            ConnectedPowerCount++;
+                            if (dl.IsOverNinety)
+                            {
+                                ConnectedPowerAbove90HPCount++;
+                            }
+                        }
+                        if (dl.AgainstDowned)
+                        {
+                            AgainstDownedCount++;
+                            AgainstDownedDamage += dl.HealthDamage;
                         }
                     }
                 }
@@ -107,7 +152,6 @@ namespace GW2EIEvtcParser.EIData
                 {
                     Downed++;
                 }
-
             }
         }
     }

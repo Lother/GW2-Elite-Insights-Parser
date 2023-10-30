@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using static GW2EIEvtcParser.ArcDPSEnums;
 
 namespace GW2EIEvtcParser.ParsedData
 {
@@ -47,6 +48,16 @@ namespace GW2EIEvtcParser.ParsedData
             return agent;
         }
 
+        internal AgentItem AddCustomNPCAgent(long start, long end, string name, ParserHelper.Spec spec, ArcDPSEnums.TrashID ID, bool isFake, ushort toughness = 0, ushort healing = 0, ushort condition = 0, ushort concentration = 0, uint hitboxWidth = 0, uint hitboxHeight = 0)
+        {
+            return AddCustomNPCAgent(start, end, name, spec, (int)ID, isFake, toughness, healing, condition, concentration, hitboxWidth, hitboxHeight);
+        }
+
+        internal AgentItem AddCustomNPCAgent(long start, long end, string name, ParserHelper.Spec spec, ArcDPSEnums.TargetID ID, bool isFake, ushort toughness = 0, ushort healing = 0, ushort condition = 0, ushort concentration = 0, uint hitboxWidth = 0, uint hitboxHeight = 0)
+        {
+            return AddCustomNPCAgent(start, end, name, spec, (int)ID, isFake, toughness, healing, condition, concentration, hitboxWidth, hitboxHeight);
+        }
+
         public AgentItem GetAgent(ulong agentAddress, long time)
         {
             if (agentAddress != 0)
@@ -73,6 +84,42 @@ namespace GW2EIEvtcParser.ParsedData
             }
             return new List<AgentItem>();
         }
+        public IReadOnlyList<AgentItem> GetNPCsByIDAndAgent(int id, ulong agent)
+        {
+            if (agent == 0)
+            {
+                return GetNPCsByID(id);
+            }
+            return GetNPCsByID(id).Where(x => x.Agent == agent).ToList();
+        }
+
+        public IReadOnlyList<AgentItem> GetNPCsByID(ArcDPSEnums.TrashID id)
+        {
+            return GetNPCsByID((int)id);
+        }
+        public IReadOnlyList<AgentItem> GetNPCsByIDAndAgent(ArcDPSEnums.TrashID id, ulong agent)
+        {
+            return GetNPCsByIDAndAgent((int)id, agent);
+        }
+
+        public IReadOnlyList<AgentItem> GetNPCsByID(ArcDPSEnums.TargetID id)
+        {
+            return GetNPCsByID((int)id);
+        }
+        public IReadOnlyList<AgentItem> GetNPCsByIDAndAgent(ArcDPSEnums.TargetID id, ulong agent)
+        {
+            return GetNPCsByIDAndAgent((int)id, agent);
+        }
+
+        public IReadOnlyList<AgentItem> GetNPCsByID(ArcDPSEnums.MinionID id)
+        {
+            return GetNPCsByID((int)id);
+        }
+        public IReadOnlyList<AgentItem> GetNPCsByIDAndAgent(ArcDPSEnums.MinionID id, ulong agent)
+        {
+            return GetNPCsByIDAndAgent((int)id, agent);
+        }
+
 
         public IReadOnlyList<AgentItem> GetGadgetsByID(int id)
         {
@@ -81,6 +128,25 @@ namespace GW2EIEvtcParser.ParsedData
                 return list;
             }
             return new List<AgentItem>();
+        }
+
+        public IReadOnlyList<AgentItem> GetGadgetsByID(ArcDPSEnums.TrashID id)
+        {
+            return GetGadgetsByID((int)id);
+        }
+
+        public IReadOnlyList<AgentItem> GetGadgetsByID(ArcDPSEnums.TargetID id)
+        {
+            return GetGadgetsByID((int)id);
+        }
+        public IReadOnlyList<AgentItem> GetGadgetsByID(ArcDPSEnums.MinionID id)
+        {
+            return GetGadgetsByID((int)id);
+        }
+
+        public IReadOnlyList<AgentItem> GetGadgetsByID(ArcDPSEnums.ChestID id)
+        {
+            return GetGadgetsByID((int)id);
         }
 
         public AgentItem GetAgentByInstID(ushort instid, long time)
@@ -99,6 +165,12 @@ namespace GW2EIEvtcParser.ParsedData
                 }
             }
             return ParserHelper._unknownAgent;
+        }
+
+        public bool HasSpawnedMinion(MinionID minion, AgentItem master, long time, long epsilon = ParserHelper.ServerDelayConstant)
+        {
+            return GetNPCsByID(minion)
+                .Any(agent => agent.GetFinalMaster() == master && Math.Abs(agent.FirstAware - time) < epsilon);
         }
 
         internal void ReplaceAgentsFromID(AgentItem agentItem)
@@ -156,17 +228,18 @@ namespace GW2EIEvtcParser.ParsedData
                     a.SetMaster(to);
                 }
             }
-        }
-
-        internal void SwapMasters(AgentItem from, AgentItem to)
-        {
-            foreach (AgentItem a in GetAgentByType(AgentItem.AgentType.NPC))
+            foreach (AgentItem a in GetAgentByType(AgentItem.AgentType.Gadget))
             {
-                if (a.Master != null && a.Master == from)
+                if (a.Master != null && froms.Contains(a.Master))
                 {
                     a.SetMaster(to);
                 }
             }
+        }
+
+        internal void SwapMasters(AgentItem from, AgentItem to)
+        {
+            SwapMasters(new HashSet<AgentItem> { from }, to);
         }
     }
 }

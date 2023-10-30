@@ -43,6 +43,32 @@ namespace GW2EIEvtcParser.EIData
             Character = name[0];
             AgentItem = agent;
         }
+
+        public bool IsSpecies(int id)
+        {
+            return AgentItem.IsSpecies(id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.TrashID id)
+        {
+            return AgentItem.IsSpecies(id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.TargetID id)
+        {
+            return AgentItem.IsSpecies(id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.MinionID id)
+        {
+            return AgentItem.IsSpecies(id);
+        }
+
+        public bool IsSpecies(ArcDPSEnums.ChestID id)
+        {
+            return AgentItem.IsSpecies(id);
+        }
+
         // Getters
         // Damage logs
         public abstract IReadOnlyList<AbstractHealthDamageEvent> GetDamageEvents(AbstractSingleActor target, ParsedEvtcLog log, long start, long end);
@@ -66,6 +92,9 @@ namespace GW2EIEvtcParser.EIData
                         break;
                     case ParserHelper.DamageType.Strike:
                         dls.RemoveAll(x => x is NonDirectHealthDamageEvent);
+                        break;
+                    case ParserHelper.DamageType.LifeLeech:
+                        dls.RemoveAll(x => x is NonDirectHealthDamageEvent ndhd && !ndhd.IsLifeLeech);
                         break;
                     case ParserHelper.DamageType.Condition:
                         dls.RemoveAll(x => !x.ConditionDamageBased(log));

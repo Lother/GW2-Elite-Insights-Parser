@@ -32,7 +32,7 @@ namespace GW2EIEvtcParser.Extensions
             SymbolOfProtection, 
             SymbolOfSpears,
             SymbolOfLight,
-            BlueberryPieAndSliceOFRainbowCake,
+            BlueberryPieAndSliceOfRainbowCake,
             StrawberryPieAndCupcake, 
             CherryPie, 
             BlackberryPie,
@@ -54,7 +54,7 @@ namespace GW2EIEvtcParser.Extensions
             BattleScars,
             MendersRebuke,
             SymbolOfEnergy,
-            WellOfRecall, 
+            WellOfRecall_Senility, 
             GravityWell, 
             VampiricAura,
             YourSoulIsMine, 
@@ -68,7 +68,7 @@ namespace GW2EIEvtcParser.Extensions
             Sieche,
             BreakingWave, 
             Riptide,
-            SoulcleavesSummit,
+            SoulcleavesSummitBuff,
             Claptosis,
             TransmuteFrost, 
             FacetOfNatureAssassin,
@@ -88,7 +88,7 @@ namespace GW2EIEvtcParser.Extensions
             LifeTransfer, 
             GatheringPlague,
             SoulSpiral,
-            GarishPillar,
+            GarishPillarSkill,
             WingsOfResolveSkill,
             ElixirOfPromise,
             HauntShot,
@@ -235,6 +235,11 @@ namespace GW2EIEvtcParser.Extensions
             return true;
         }
 
+        internal override bool IsSkillID(CombatItem c)
+        {
+            return true;
+        }
+
         internal override bool SrcIsAgent(CombatItem c)
         {
             return IsHealingEvent(c) || IsBarrierEvent(c);
@@ -247,6 +252,11 @@ namespace GW2EIEvtcParser.Extensions
         internal override bool IsDamage(CombatItem c)
         {
             return SrcIsAgent(c);
+        }
+
+        internal override bool IsDamagingDamage(CombatItem c)
+        {
+            return IsDamage(c);
         }
 
         internal override void InsertEIExtensionEvent(CombatItem c, AgentData agentData, SkillData skillData)
@@ -342,7 +352,7 @@ namespace GW2EIEvtcParser.Extensions
                 combatData.EXTBarrierCombatData = new EXTBarrierCombatData(barrierData, barrierReceivedData, barrierDataById);
                 operation.UpdateProgressWithCancellationCheck("Attached " + _barrierEvents.Count + " barrier events to CombatData");
             }
-            int running = RunningExtensionInternal.Count;
+            int running = Math.Max(RunningExtensionInternal.Count, 1);
             operation.UpdateProgressWithCancellationCheck(running != 1 ? running + " players have the extension running" : running + " player has the extension running");
             //
             operation.UpdateProgressWithCancellationCheck("Attached healing extension combat events");

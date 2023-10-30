@@ -1,5 +1,6 @@
 ﻿using GW2EIGW2API.GW2API;
 
+[assembly: System.CLSCompliant(false)]
 namespace GW2EIGW2API
 {
     public class GW2APIController
@@ -43,11 +44,7 @@ namespace GW2EIGW2API
         /// <returns></returns>
         public GW2APISkill GetAPISkill(long id)
         {
-            if (skillAPIController.GetAPISkills(null).Items.TryGetValue(id, out GW2APISkill skill))
-            {
-                return skill;
-            }
-            return null;
+            return skillAPIController.GetAPISkills(null).Items.TryGetValue(id, out GW2APISkill skill) ? skill : null;
         }
 
         public void WriteAPISkillsToFile(string filePath)
@@ -65,11 +62,7 @@ namespace GW2EIGW2API
         /// <returns></returns>
         public GW2APISpec GetAPISpec(int id)
         {
-            if (specAPIController.GetAPISpecs(null).Items.TryGetValue(id, out GW2APISpec spec))
-            {
-                return spec;
-            }
-            return null;
+            return specAPIController.GetAPISpecs(null).Items.TryGetValue(id, out GW2APISpec spec) ? spec : null;
         }
 
         public void WriteAPISpecsToFile(string filePath)
@@ -89,11 +82,7 @@ namespace GW2EIGW2API
         /// <returns></returns>
         public GW2APITrait GetAPITrait(long id)
         {
-            if (traitAPIController.GetAPITraits(null).Items.TryGetValue(id, out GW2APITrait trait))
-            {
-                return trait;
-            }
-            return null;
+            return traitAPIController.GetAPITraits(null).Items.TryGetValue(id, out GW2APITrait trait) ? trait : null;
         }
         public void WriteAPITraitsToFile(string filePath)
         {

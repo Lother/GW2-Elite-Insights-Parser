@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using GW2EIEvtcParser.EIData.Buffs;
 using GW2EIEvtcParser.EIData.BuffSourceFinders;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.ArcDPSEnums;
@@ -19,22 +20,25 @@ namespace GW2EIEvtcParser.EIData
         private readonly BuffSourceFinder _buffSourceFinder;
 
 
-        internal BuffsContainer(ulong build, CombatData combatData, ParserController operation)
+        internal BuffsContainer(CombatData combatData, ParserController operation)
         {
             var AllBuffs = new List<List<Buff>>()
             {
-                Boons,
-                Conditions,
-                Commons,
-                Gear,
-                NormalFoods,
-                AscendedFood,
-                FoodProcs,
-                Utilities,
-                Potions,
-                Writs,
-                FightSpecific,
-                FractalInstabilities,
+                CommonBuffs.Boons,
+                CommonBuffs.Conditions,
+                CommonBuffs.Commons,
+                CommonBuffs.Gear,
+                FoodBuffs.NormalFoods,
+                FoodBuffs.AscendedFood,
+                FoodBuffs.FoodProcs,
+                UtilityBuffs.Utilities,
+                UtilityBuffs.SlayingPotions,
+                UtilityBuffs.Writs,
+                UtilityBuffs.OtherConsumables,
+                UtilityBuffs.UtilityProcs,
+                EncounterBuffs.FightSpecific,
+                EncounterBuffs.FractalInstabilities,
+                WvWBuffs.Commons,
                 //
                 RevenantHelper.Buffs,
                 HeraldHelper.Buffs,
@@ -84,7 +88,7 @@ namespace GW2EIEvtcParser.EIData
             var currentBuffs = new List<Buff>();
             foreach (List<Buff> buffs in AllBuffs)
             {
-                currentBuffs.AddRange(buffs.Where(x => x.Available(build)));
+                currentBuffs.AddRange(buffs.Where(x => x.Available(combatData)));
             }
             _buffsByName = currentBuffs.GroupBy(x => x.Name).ToDictionary(x => x.Key, x =>
             {
@@ -97,16 +101,35 @@ namespace GW2EIEvtcParser.EIData
             });
             // Unknown consumables
             var buffIDs = new HashSet<long>(currentBuffs.Select(x => x.ID));
-            var foodAndUtility = new List<BuffInfoEvent>(combatData.GetBuffInfoEvent(BuffCategory.Enhancement));
-            foodAndUtility.AddRange(combatData.GetBuffInfoEvent(BuffCategory.Food));
-            foreach (BuffInfoEvent buffInfoEvent in foodAndUtility)
+            var foodInfoEvents = FoodBuffs.NormalFoods.Select(x => combatData.GetBuffInfoEvent(x.ID)).Where(x => x != null).ToList();
+            foodInfoEvents.AddRange(FoodBuffs.AscendedFood.Select(x => combatData.GetBuffInfoEvent(x.ID)).Where(x => x != null));
+            var foodIDs = foodInfoEvents.Select(x => x.CategoryByte).Distinct().ToList();
+            if (foodIDs.Count == 1)
             {
-                if (!buffIDs.Contains(buffInfoEvent.BuffID))
+                var foodID = foodIDs[0];
+                foreach (BuffInfoEvent buffInfoEvent in combatData.GetBuffInfoEvent(foodID))
                 {
-                    string name = buffInfoEvent.Category == BuffCategory.Enhancement ? "Utility" : "Food";
-                    string link = buffInfoEvent.Category == BuffCategory.Enhancement ? "https://wiki.guildwars2.com/images/2/23/Nourishment_utility.png" : "https://wiki.guildwars2.com/images/c/ca/Nourishment_food.png";
-                    operation.UpdateProgressWithCancellationCheck("Creating consumable " + name + " " + buffInfoEvent.BuffID);
-                    currentBuffs.Add(CreateCustomConsumable(name, buffInfoEvent.BuffID, link, buffInfoEvent.MaxStacks));
+                    if (!buffIDs.Contains(buffInfoEvent.BuffID))
+                    {
+                        operation.UpdateProgressWithCancellationCheck("Creating nourishement " + buffInfoEvent.BuffID);
+                        currentBuffs.Add(CreateCustomBuff("Unknown Nourishment", buffInfoEvent.BuffID, "https://wiki.guildwars2.com/images/c/ca/Nourishment_food.png", buffInfoEvent.MaxStacks, BuffClassification.Nourishment));
+                    }
+                }
+            }
+            var enhancementInfoEvents = UtilityBuffs.Utilities.Select(x => combatData.GetBuffInfoEvent(x.ID)).Where(x => x != null).ToList();
+            enhancementInfoEvents.AddRange(UtilityBuffs.Writs.Select(x => combatData.GetBuffInfoEvent(x.ID)).Where(x => x != null));
+            enhancementInfoEvents.AddRange(UtilityBuffs.SlayingPotions.Select(x => combatData.GetBuffInfoEvent(x.ID)).Where(x => x != null));
+            var enhancementIDs = enhancementInfoEvents.Select(x => x.CategoryByte).Distinct().ToList();
+            if (enhancementIDs.Count == 1)
+            {
+                var enhancementID = enhancementIDs[0];
+                foreach (BuffInfoEvent buffInfoEvent in combatData.GetBuffInfoEvent(enhancementID))
+                {
+                    if (!buffIDs.Contains(buffInfoEvent.BuffID))
+                    {
+                        operation.UpdateProgressWithCancellationCheck("Creating enhancement " + buffInfoEvent.BuffID);
+                        currentBuffs.Add(CreateCustomBuff("Unknown Enhancement", buffInfoEvent.BuffID, "https://wiki.guildwars2.com/images/2/23/Nourishment_utility.png", buffInfoEvent.MaxStacks, BuffClassification.Enhancement));
+                    }
                 }
             }
             //
@@ -120,7 +143,7 @@ namespace GW2EIEvtcParser.EIData
                 return x.First();
             });
             operation.UpdateProgressWithCancellationCheck("Adjusting Buffs");
-            BuffInfoSolver.AdjustBuffs(combatData, BuffsByIds, operation, build);
+            BuffInfoSolver.AdjustBuffs(combatData, BuffsByIds, operation);
             foreach (Buff buff in currentBuffs)
             {
                 BuffInfoEvent buffInfoEvt = combatData.GetBuffInfoEvent(buff.ID);
@@ -130,7 +153,7 @@ namespace GW2EIEvtcParser.EIData
                     {
                         if (formula.Attr1 == BuffAttribute.Unknown)
                         {
-                            operation.UpdateProgressWithCancellationCheck("Unknown Formula for " + buff.Name + ": " + formula.GetDescription(true, BuffsByIds));
+                            operation.UpdateProgressWithCancellationCheck("Unknown Formula for " + buff.Name + ": " + formula.GetDescription(true, BuffsByIds, buff));
                         }
                     }
                 }
@@ -138,7 +161,7 @@ namespace GW2EIEvtcParser.EIData
             BuffsByClassification = currentBuffs.GroupBy(x => x.Classification).ToDictionary(x => x.Key, x => (IReadOnlyList<Buff>)x.ToList());
             BuffsBySource = currentBuffs.GroupBy(x => x.Source).ToDictionary(x => x.Key, x => (IReadOnlyList<Buff>)x.ToList());
             //
-            _buffSourceFinder = GetBuffSourceFinder(build, new HashSet<long>(BuffsByClassification[BuffClassification.Boon].Select(x => x.ID)));
+            _buffSourceFinder = GetBuffSourceFinder(combatData, new HashSet<long>(BuffsByClassification[BuffClassification.Boon].Select(x => x.ID)));
         }
 
         public bool TryGetBuffByName(string name, out Buff buff)
@@ -146,9 +169,9 @@ namespace GW2EIEvtcParser.EIData
             return _buffsByName.TryGetValue(name, out buff);
         }
 
-        internal AgentItem TryFindSrc(AgentItem dst, long time, long extension, ParsedEvtcLog log, long buffID)
+        internal AgentItem TryFindSrc(AgentItem dst, long time, long extension, ParsedEvtcLog log, long buffID, uint buffInstance)
         {
-            return _buffSourceFinder.TryFindSrc(dst, time, extension, log, buffID);
+            return _buffSourceFinder.TryFindSrc(dst, time, extension, log, buffID, buffInstance);
         }
 
         // Non shareable buffs

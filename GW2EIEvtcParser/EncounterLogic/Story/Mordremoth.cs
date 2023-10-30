@@ -7,6 +7,10 @@ using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -15,7 +19,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         public Mordremoth(int triggerID) : base(triggerID)
         {
             Extension = "mordr";
-            Icon = "https://i.imgur.com/4pNive1.png";
+            Icon = EncounterIconMordremoth;
             EncounterCategoryInformation.InSubCategoryOrder = 0;
             EncounterID |= 0x000201;
         }
@@ -30,7 +34,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/HHDVDPb.png",
+            return new CombatReplayMap(CombatReplayMordremoth,
                             (899, 1172),
                             (-9059, 10171, -6183, 13149));
         }
@@ -38,7 +42,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Mordremoth);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Mordremoth));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Vale Guardian not found");
@@ -80,7 +84,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void CheckSuccess(CombatData combatData, AgentData agentData, FightData fightData, IReadOnlyCollection<AgentItem> playerAgents)
         {
-            AbstractSingleActor mordremoth = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Mordremoth);
+            AbstractSingleActor mordremoth = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Mordremoth));
             if (mordremoth == null)
             {
                 throw new EvtcAgentException("Mordremoth not found");
@@ -94,7 +98,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            AbstractSingleActor mordremoth = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Mordremoth);
+            AbstractSingleActor mordremoth = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Mordremoth));
             if (mordremoth == null)
             {
                 throw new MissingKeyActorsException("Mordremoth not found");

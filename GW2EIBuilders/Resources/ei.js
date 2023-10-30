@@ -83,13 +83,52 @@ function compileTemplates() {
             });
         }
     });
+    Vue.component("table-scroll-component", {
+        props: ["min", "max", "width", "height", "transform", "pagestructure"],
+        template : `      
+        <input 
+            style="background-color: #888888;" 
+            :style=getStyle()
+            type="range" :min="min" :max="max" :value="min" class="slider" @input="updateOffset($event.target.value)">
+        `,
+        methods: {
+            updateOffset: function(value) {
+                this.pagestructure.offset = parseInt(value);
+            },
+            getStyle: function() {
+                var res = {
+                    width: this.width,
+                    height: this.height,
+                    transform: this.transform
+                };
+                return res;
+            },
+        }
+    });
+    Vue.component("targetperplayer-graphs-tab-component", {
+        props: ["targetindex", "phaseindex", 'light', 'playerindex'],
+        template : `      
+        <div>            
+            <keep-alive>  
+                <targetperplayer-graph-tab-component v-for="(player, pId) in players" v-if="pId === playerindex"
+                :key="phaseindex + 'perplayer' + pId" :targetindex="targetindex" :phaseindex="phaseindex" :light="light"
+                :playerindex="playerindex">
+                </targetperplayer-graph-tab-component>           
+            <keep-alive>
+        </div>
+        `,
+        computed: {
+            players: function() {
+                return logData.players;
+            }
+        }
+    });
     TEMPLATE_COMPILE
 };
 
 function mainLoad() {
     // make some additional variables reactive
-    var nonDummyPhases = logData.phases.filter(x => !x.dummy);
-    var firstActive = nonDummyPhases[0];
+    var firstActive = logData.phases[0];
     for (var i = 0; i < logData.phases.length; i++) {
         var phase = logData.phases[i];
         phase.durationS = phase.duration / 1000.0
@@ -198,7 +237,8 @@ function mainLoad() {
     });
     $("body").tooltip({
         selector: "[data-original-title]",
-        html: true
+        html: true,
+        boundary: "window"
     });
 };
 

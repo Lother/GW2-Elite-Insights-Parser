@@ -17,12 +17,13 @@ namespace GW2EIBuilders.HtmlModels.HTMLMetaData
         public BuffDto(Buff buff, ParsedEvtcLog log) : base(buff, log)
         {
             Stacking = (buff.Type == Buff.BuffType.Intensity);
-            Consumable = (buff.Classification == Buff.BuffClassification.Consumable);
+            Consumable = (buff.Classification == Buff.BuffClassification.Nourishment || buff.Classification == Buff.BuffClassification.Enhancement || buff.Classification == Buff.BuffClassification.OtherConsumable);
             FightSpecific = (buff.Source == ParserHelper.Source.FightSpecific || buff.Source == ParserHelper.Source.FractalInstability);
             BuffInfoEvent buffInfoEvent = log.CombatData.GetBuffInfoEvent(buff.ID);
             if (buffInfoEvent != null)
             {
                 var descriptions = new List<string>() {
+                    "ID: " + buff.ID,
                     "Max Stack(s) " + buffInfoEvent.MaxStacks
                 };
                 if (buffInfoEvent.DurationCap > 0)
@@ -35,7 +36,7 @@ namespace GW2EIBuilders.HtmlModels.HTMLMetaData
                     {
                         continue;
                     }
-                    string desc = formula.GetDescription(false, log.Buffs.BuffsByIds);
+                    string desc = formula.GetDescription(false, log.Buffs.BuffsByIds, buff);
                     if (desc.Length > 0)
                     {
                         descriptions.Add(desc);

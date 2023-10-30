@@ -1,19 +1,20 @@
 <template>
     <div>
         <ul v-if="showNormalPhases" class="nav nav-pills d-flex flex-row justify-content-center">
-            <li class="nav-item" v-for="(phase, id) in phases" v-show="!getPhaseData(id).breakbarPhase && !getPhaseData(id).dummy"
+            <li class="nav-item" v-for="(phase, id) in phases" v-show="!getPhaseData(id).breakbarPhase"
                 :data-original-title="getPhaseData(id).durationS + ' seconds'">
                 <a class="nav-link" @click="select(phase)" :class="{active: phase.active}">{{getPhaseData(id).name}}</a>
             </li>
         </ul>
-        <div v-if="hasBreakbarPhases" class="d-flex flew-row justify-content-center align-items-center">
+        <div v-if="hasBreakbarPhases" class="d-flex flex-row justify-content-center align-items-center">
             <span class="mr-1">Breakbar Phases: </span>
-            <div v-for="data in breakbarPhasesPerTarget"
-                class="d-flex flew-row justify-content-center align-items-center mr-1 ml-1">
-                <img class="icon-l mr-2" :src="getTargetData(data.targetId).icon"
+            <div style="max-width: 1200px;" class="d-flex flex-row align-items-center scrollable-x">
+                <div v-for="data in breakbarPhasesPerTarget"
+                class="d-flex flex-row flex-nowrap  align-items-center mr-1 ml-1">
+                <img class="icon-sl mr-2" :src="getTargetData(data.targetId).icon"
                     :alt="getTargetData(data.targetId).name" :data-original-title="getTargetData(data.targetId).name"
                     v-if="breakbarPhasesPerTarget.length > 1">
-                <ul class="nav nav-pills d-flex flex-row justify-content-center">
+                <ul class="nav nav-pills d-flex flex-row flex-nowrap">
                     <li class="nav-item" v-for="(phaseId, id) in data.phaseIds"
                         v-show="getPhaseData(phaseId).breakbarPhase"
                         :data-original-title="getPhaseData(phaseId).durationS + ' seconds'">
@@ -21,6 +22,7 @@
                             :class="{active: getReactivePhaseData(phaseId).active}">{{id + 1}}</a>
                     </li>
                 </ul>
+            </div>
             </div>
 
         </div>
@@ -37,7 +39,7 @@
                 return this.normalPhases.length > 1 || this.hasBreakbarPhases;
             },
             normalPhases: function () {
-                return logData.phases.filter(phase => !phase.breakbarPhase && !phase.dummy);
+                return logData.phases.filter(phase => !phase.breakbarPhase);
             },
             hasBreakbarPhases: function () {
                 return this.breakbarPhasesPerTarget.length > 0;
@@ -45,7 +47,7 @@
             breakbarPhasesPerTarget: function () {
                 var res = [];
                 for (var targetId = 0; targetId < logData.targets.length; targetId++) {
-                    var brPhases = logData.phases.filter(phase => phase.breakbarPhase && !phase.dummy && phase.targets.indexOf(targetId) > -1);
+                    var brPhases = logData.phases.filter(phase => phase.breakbarPhase && phase.targets.indexOf(targetId) > -1);
                     var phaseIds = [];
                     for (var brPhaseId = 0; brPhaseId < brPhases.length; brPhaseId++) {
                         phaseIds.push(logData.phases.indexOf(brPhases[brPhaseId]));

@@ -4,7 +4,13 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.ParserHelper;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -14,19 +20,19 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             MechanicList.AddRange(new List<Mechanic>()
             {
-            new PlayerBuffApplyMechanic(ShellShocked, "Shell-Shocked", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkGreen), "Launchd","Shell-Shocked (Launched from pad)", "Shell-Shocked",0),
-            new HitOnPlayerMechanic(OverheadSmashBerg, "Overhead Smash", new MechanicPlotlySetting(Symbols.TriangleLeft,Colors.Orange), "Smash","Overhead Smash (CC Attack Berg)", "CC Smash",0),
-            new HitOnPlayerMechanic(HailOfBulletsZane, "Hail of Bullets", new MechanicPlotlySetting(Symbols.TriangleRightOpen,Colors.Red), "Zane Cone","Hail of Bullets (Zane Cone Shot)", "Hail of Bullets",0),
-            new HitOnPlayerMechanic(FieryVortexNarella, "Fiery Vortex", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Yellow), "Tornado","Fiery Vortex (Tornado)", "Tornado",250),
+            new PlayerDstBuffApplyMechanic(ShellShocked, "Shell-Shocked", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.DarkGreen), "Launchd","Shell-Shocked (Launched from pad)", "Shell-Shocked",0),
+            new PlayerDstHitMechanic(OverheadSmashBerg, "Overhead Smash", new MechanicPlotlySetting(Symbols.TriangleLeft,Colors.Orange), "Smash","Overhead Smash (CC Attack Berg)", "CC Smash",0),
+            new PlayerDstHitMechanic(HailOfBulletsZane, "Hail of Bullets", new MechanicPlotlySetting(Symbols.TriangleRightOpen,Colors.Red), "Zane Cone","Hail of Bullets (Zane Cone Shot)", "Hail of Bullets",0),
+            new PlayerDstHitMechanic(FieryVortexNarella, "Fiery Vortex", new MechanicPlotlySetting(Symbols.CircleOpen,Colors.Yellow), "Tornado","Fiery Vortex (Tornado)", "Tornado",250),
             });
             Extension = "trio";
             GenericFallBackMethod = FallBackMethod.None;
-            Icon = "https://i.imgur.com/UZZQUdf.png";
+            Icon = EncounterIconBanditTrio;
             EncounterCategoryInformation.InSubCategoryOrder = 2;
             EncounterID |= 0x000002;
         }
 
-        protected override List<int> GetSuccessCheckIds()
+        protected override List<int> GetSuccessCheckIDs()
         {
             return new List<int>
             {
@@ -46,7 +52,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override CombatReplayMap GetCombatMapInternal(ParsedEvtcLog log)
         {
-            return new CombatReplayMap("https://i.imgur.com/dDvhEOP.png",
+            return new CombatReplayMap(CombatReplayBanditTrio,
                             (1000, 913),
                             (-2900, -12251, 2561, -7265)/*,
                             (-12288, -27648, 12288, 27648),
@@ -58,7 +64,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             base.CheckSuccess(combatData, agentData, fightData, playerAgents);
             if (!fightData.Success)
             {
-                IReadOnlyList<AgentItem> prisoners = agentData.GetNPCsByID((int)ArcDPSEnums.TrashID.Prisoner2);
+                IReadOnlyList<AgentItem> prisoners = agentData.GetNPCsByID(ArcDPSEnums.TrashID.Prisoner2);
                 var prisonerDeaths = new List<DeadEvent>();
                 foreach (AgentItem prisoner in prisoners)
                 {
@@ -66,7 +72,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 }
                 if (prisonerDeaths.Count == 0)
                 {
-                    AbstractSingleActor narella = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Narella);
+                    AbstractSingleActor narella = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Narella));
                     if (narella == null)
                     {
                         throw new MissingKeyActorsException("Narella not found");
@@ -77,31 +83,31 @@ namespace GW2EIEvtcParser.EncounterLogic
                         fightData.SetSuccess(true, deadEvent.Time);
                         return;
                     }
-                    SetSuccessByCombatExit(new HashSet<int>(GetSuccessCheckIds()), combatData, fightData, playerAgents);
+                    SetSuccessByCombatExit(GetSuccessCheckTargets(), combatData, fightData, playerAgents);
                 }
             }
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             long startToUse = GetGenericFightOffset(fightData);
             CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
             if (logStartNPCUpdate != null)
             {
                 startToUse = long.MaxValue;
-                AgentItem berg = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Berg).FirstOrDefault();
+                AgentItem berg = agentData.GetNPCsByID(ArcDPSEnums.TargetID.Berg).FirstOrDefault();
                 if (berg == null)
                 {
                     throw new MissingKeyActorsException("Berg not found");
                 }
                 startToUse = Math.Min(berg.FirstAware, startToUse);
-                AgentItem zane = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Zane).FirstOrDefault();
+                AgentItem zane = agentData.GetNPCsByID(ArcDPSEnums.TargetID.Zane).FirstOrDefault();
                 if (zane == null)
                 {
                     throw new MissingKeyActorsException("Zane not found");
                 }
                 startToUse = Math.Min(zane.FirstAware, startToUse);
-                AgentItem narella = agentData.GetNPCsByID((int)ArcDPSEnums.TargetID.Narella).FirstOrDefault();
+                AgentItem narella = agentData.GetNPCsByID(ArcDPSEnums.TargetID.Narella).FirstOrDefault();
                 if (narella == null)
                 {
                     throw new MissingKeyActorsException("Narella not found");
@@ -156,17 +162,17 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor berg = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Berg);
+            AbstractSingleActor berg = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Berg));
             if (berg == null)
             {
                 throw new MissingKeyActorsException("Berg not found");
             }
-            AbstractSingleActor zane = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Zane);
+            AbstractSingleActor zane = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Zane));
             if (zane == null)
             {
                 throw new MissingKeyActorsException("Zane not found");
             }
-            AbstractSingleActor narella = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Narella);
+            AbstractSingleActor narella = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Narella));
             if (narella == null)
             {
                 throw new MissingKeyActorsException("Narella not found");
@@ -189,19 +195,25 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 ArcDPSEnums.TrashID.BanditSaboteur,
                 ArcDPSEnums.TrashID.Warg,
-                ArcDPSEnums.TrashID.CagedWarg,
+                ArcDPSEnums.TrashID.VeteranTorturedWarg,
                 ArcDPSEnums.TrashID.BanditAssassin,
-                ArcDPSEnums.TrashID.BanditSapperTrio ,
+                ArcDPSEnums.TrashID.BanditAssassin2,
+                ArcDPSEnums.TrashID.BanditSapperTrio,
                 ArcDPSEnums.TrashID.BanditDeathsayer,
+                ArcDPSEnums.TrashID.BanditDeathsayer2,
                 ArcDPSEnums.TrashID.BanditBrawler,
+                ArcDPSEnums.TrashID.BanditBrawler2,
                 ArcDPSEnums.TrashID.BanditBattlemage,
+                ArcDPSEnums.TrashID.BanditBattlemage2,
                 ArcDPSEnums.TrashID.BanditCleric,
+                ArcDPSEnums.TrashID.BanditCleric2,
                 ArcDPSEnums.TrashID.BanditBombardier,
                 ArcDPSEnums.TrashID.BanditSniper,
                 ArcDPSEnums.TrashID.NarellaTornado,
                 ArcDPSEnums.TrashID.OilSlick,
                 ArcDPSEnums.TrashID.Prisoner1,
-                ArcDPSEnums.TrashID.Prisoner2
+                ArcDPSEnums.TrashID.Prisoner2,
+                ArcDPSEnums.TrashID.InsectSwarm,
             };
         }
 
@@ -221,20 +233,22 @@ namespace GW2EIEvtcParser.EncounterLogic
                     var bulletHail = cls.Where(x => x.SkillId == HailOfBulletsZane).ToList();
                     foreach (AbstractCastEvent c in bulletHail)
                     {
-                        int start = (int)c.Time;
-                        int firstConeStart = start;
-                        int secondConeStart = start + 800;
-                        int thirdConeStart = start + 1600;
-                        int firstConeEnd = firstConeStart + 400;
-                        int secondConeEnd = secondConeStart + 400;
-                        int thirdConeEnd = thirdConeStart + 400;
+                        long start = c.Time;
+                        long firstConeStart = start;
+                        long secondConeStart = start + 800;
+                        long thirdConeStart = start + 1600;
+                        long firstConeEnd = firstConeStart + 400;
+                        long secondConeEnd = secondConeStart + 400;
+                        long thirdConeEnd = thirdConeStart + 400;
                         int radius = 1500;
-                        Point3D facing = replay.Rotations.LastOrDefault(x => x.Time <= start);
+                        Point3D facing = target.GetCurrentRotation(log, start);
                         if (facing != null)
                         {
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 28, (firstConeStart, firstConeEnd), "rgba(255,200,0,0.3)", new AgentConnector(target)));
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 54, (secondConeStart, secondConeEnd), "rgba(255,200,0,0.3)", new AgentConnector(target)));
-                            replay.Decorations.Add(new PieDecoration(true, 0, radius, facing, 81, (thirdConeStart, thirdConeEnd), "rgba(255,200,0,0.3)", new AgentConnector(target)));
+                            var connector = new AgentConnector(target);
+                            var rotationConnector = new AngleConnector(facing);
+                            replay.Decorations.Add(new PieDecoration(radius, 28, (firstConeStart, firstConeEnd), "rgba(255,200,0,0.3)", connector).UsingRotationConnector(rotationConnector));
+                            replay.Decorations.Add(new PieDecoration(radius, 54, (secondConeStart, secondConeEnd), "rgba(255,200,0,0.3)", connector).UsingRotationConnector(rotationConnector));
+                            replay.Decorations.Add(new PieDecoration(radius, 81, (thirdConeStart, thirdConeEnd), "rgba(255,200,0,0.3)", connector).UsingRotationConnector(rotationConnector));
                         }
                     }
                     break;
@@ -243,6 +257,35 @@ namespace GW2EIEvtcParser.EncounterLogic
                     break;
                 default:
                     break;
+            }
+        }
+
+        internal override void ComputePlayerCombatReplayActors(AbstractPlayer player, ParsedEvtcLog log, CombatReplay replay)
+        {
+            // Sapper bombs
+            var sapperBombs = player.GetBuffStatus(log, SapperBombBuff, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
+            foreach (Segment seg in sapperBombs)
+            {
+                var circle = new CircleDecoration(180, seg, "rgba(200, 255, 100, 0.5)", new AgentConnector(player));
+                replay.AddDecorationWithFilledWithGrowing(circle.UsingFilled(false), true, seg.Start + 5000);
+                replay.AddOverheadIcon(seg, player, ParserIcons.BombOverhead);
+            }
+        }
+
+        protected override void SetInstanceBuffs(ParsedEvtcLog log)
+        {
+            base.SetInstanceBuffs(log);
+            IReadOnlyList<AbstractBuffEvent> environmentallyFriendly = log.CombatData.GetBuffData(EnvironmentallyFriendly);
+            if (environmentallyFriendly.Any() && log.FightData.Success)
+            {
+                foreach (Player p in log.PlayerList)
+                {
+                    if (p.HasBuff(log, EnvironmentallyFriendly, log.FightData.FightEnd - ServerDelayConstant))
+                    {
+                        InstanceBuffs.Add((log.Buffs.BuffsByIds[EnvironmentallyFriendly], 1));
+                        break;
+                    }
+                }
             }
         }
     }

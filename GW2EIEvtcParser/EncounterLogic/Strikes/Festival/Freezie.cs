@@ -4,6 +4,10 @@ using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.SkillIDs;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -12,15 +16,15 @@ namespace GW2EIEvtcParser.EncounterLogic
         public Freezie(int triggerID) : base(triggerID)
         {
             Extension = "freezie";
-            Icon = "https://wiki.guildwars2.com/images/thumb/8/8b/Freezie.jpg/189px-Freezie.jpg";
+            Icon = EncounterIconFreezie;
             EncounterID |= 0x000001;
         }
 
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TargetID.Freezie);
-            AbstractSingleActor heartTarget = Targets.FirstOrDefault(x => x.ID == (int)ArcDPSEnums.TrashID.FreeziesFrozenHeart);
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Freezie));
+            AbstractSingleActor heartTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TrashID.FreeziesFrozenHeart));
             if (mainTarget == null)
             {
                 throw new MissingKeyActorsException("Freezie not found");
@@ -71,6 +75,16 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 (int)ArcDPSEnums.TargetID.Freezie,
                 (int)ArcDPSEnums.TrashID.FreeziesFrozenHeart
+            };
+        }
+
+        protected override List<ArcDPSEnums.TrashID> GetTrashMobsIDs()
+        {
+            return new List<ArcDPSEnums.TrashID>()
+            {
+                ArcDPSEnums.TrashID.IceStormer,
+                ArcDPSEnums.TrashID.IceSpiker,
+                ArcDPSEnums.TrashID.IcyProtector
             };
         }
     }

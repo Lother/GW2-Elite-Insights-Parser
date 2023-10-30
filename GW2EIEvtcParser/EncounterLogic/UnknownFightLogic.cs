@@ -4,6 +4,10 @@ using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -12,7 +16,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         public UnknownFightLogic(int triggerID) : base(triggerID)
         {
             Extension = "boss";
-            Icon = "https://wiki.guildwars2.com/images/d/d2/Guild_emblem_004.png";
+            Icon = EncounterIconGeneric;
             EncounterCategoryInformation.Category = FightCategory.UnknownEncounter;
             EncounterCategoryInformation.SubCategory = SubFightCategory.UnknownEncounter;
         }
@@ -22,19 +26,20 @@ namespace GW2EIEvtcParser.EncounterLogic
             return new HashSet<int>();
         }
 
-        internal override long GetFightOffset(FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
             if (logStartNPCUpdate != null)
             {
-                return logStartNPCUpdate.Time;
+                AgentItem target = agentData.GetNPCsByID(GenericTriggerID).FirstOrDefault() ?? agentData.GetGadgetsByID(GenericTriggerID).FirstOrDefault();
+                return GetPostLogStartNPCUpdateDamageEventTime(fightData, agentData, combatData, logStartNPCUpdate.Time, target);
             }
             return GetGenericFightOffset(fightData);
         }
 
         internal override void ComputeFightTargets(AgentData agentData, List<CombatItem> combatItems, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
-            int id = GetTargetsIDs().First();
+            int id = GenericTriggerID;
             AgentItem agentItem = agentData.GetNPCsByID(id).FirstOrDefault();
             // Trigger ID is not NPC
             if (agentItem == null)
@@ -50,9 +55,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 _targets.Add(new NPC(agentItem));
             }
             //
-            TargetAgents = new HashSet<AgentItem>(_targets.Select(x => x.AgentItem));
-            NonPlayerFriendlyAgents = new HashSet<AgentItem>(_nonPlayerFriendlies.Select(x => x.AgentItem));
-            TrashMobAgents = new HashSet<AgentItem>(_trashMobs.Select(x => x.AgentItem));
+            FinalizeComputeFightTargets();
         }
     }
 }
