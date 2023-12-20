@@ -100,6 +100,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 new DamageCastFinder(SpontaneousCombustion, SpontaneousCombustion),
                 new DamageCastFinder(SnowstormSkill, SnowstormSkill),
                 new DamageCastFinder(DownpourSkill, DownpourSkill),
+                new BuffLossCastFinder(UnstableBloodMagic, UnstableBloodMagic),
             };
         }
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
@@ -129,7 +130,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     if (abo != null)
                     {
                         phases.Add(new PhaseData(downPour.Time, abo.Time));
-                        AbstractBuffEvent invulRemove = log.CombatData.GetBuffData(mainTarget.AgentItem).FirstOrDefault(x => x.Time >= abo.Time && x.Time <= abo.Time + 10000 && x.BuffID == Invulnerability757 && !(x is BuffApplyEvent));
+                        AbstractBuffEvent invulRemove = log.CombatData.GetBuffDataByDst(mainTarget.AgentItem).FirstOrDefault(x => x.Time >= abo.Time && x.Time <= abo.Time + 10000 && x.BuffID == Invulnerability757 && !(x is BuffApplyEvent));
                         if (invulRemove != null)
                         {
                             phases.Add(new PhaseData(invulRemove.Time, fightEnd));
@@ -316,6 +317,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(p, log, replay);
             // Corruption
             IEnumerable<Segment> corruptedMatthias = p.GetBuffStatus(log, new long[] { Corruption1, Corruption2 }, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0);
             foreach (Segment seg in corruptedMatthias)

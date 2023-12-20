@@ -199,10 +199,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                 {
                     return;
                 }
-                AbstractHealthDamageEvent lastDamageTaken = combatData.GetDamageTakenData(deimos.AgentItem).LastOrDefault(x => (x.HealthDamage > 0) && x.Time > _deimos10PercentTime && playerAgents.Contains(x.From.GetFinalMaster()));
+                AbstractHealthDamageEvent lastDamageTaken = combatData.GetDamageTakenData(deimos.AgentItem).LastOrDefault(x => (x.HealthDamage > 0) && x.Time > _deimos10PercentTime && playerAgents.Contains(x.From.GetFinalMaster()) && !x.ToFriendly);
                 if (lastDamageTaken != null)
                 {
-                    if (!AtLeastOnePlayerAlive(combatData, fightData, notAttackableEvent.Time, playerAgents))
+                    // This means Deimos received damage after becoming non attackable, that means it did not die
+                    AbstractHealthDamageEvent friendlyDamageToDeimos = combatData.GetDamageTakenData(deimos.AgentItem).LastOrDefault(x => (x.HealthDamage > 0) && x.Time > _deimos10PercentTime && x.Time > lastDamageTaken.Time && x.ToFriendly);
+                    if (friendlyDamageToDeimos != null || !AtLeastOnePlayerAlive(combatData, fightData, notAttackableEvent.Time, playerAgents))
                     {
                         return;
                     }
@@ -379,6 +381,19 @@ namespace GW2EIEvtcParser.EncounterLogic
                     string name = (target.IsSpecies(ArcDPSEnums.TrashID.Thief) ? "Thief" : (target.IsSpecies(ArcDPSEnums.TrashID.Drunkard) ? "Drunkard" : (target.IsSpecies(ArcDPSEnums.TrashID.Gambler) ? "Gambler" : "")));
                     target.OverrideName(name);
                 }
+            }
+        }
+
+        internal override FightData.EncounterStartStatus GetEncounterStartStatus(CombatData combatData, AgentData agentData, FightData fightData)
+        {
+            // We expect pre event with logs with LogStartNPCUpdate events
+            if (!_hasPreEvent && combatData.GetLogStartNPCUpdateEvents().Any())
+            {
+                return FightData.EncounterStartStatus.NoPreEvent;
+            }
+            else
+            {
+                return FightData.EncounterStartStatus.Normal;
             }
         }
 
@@ -639,6 +654,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(p, log, replay);
             // teleport zone
             var tpDeimos = p.GetBuffStatus(log, DeimosSelectedByGreen, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
             foreach (Segment seg in tpDeimos)

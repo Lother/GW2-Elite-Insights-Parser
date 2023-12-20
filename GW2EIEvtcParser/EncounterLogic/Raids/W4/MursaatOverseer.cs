@@ -9,6 +9,7 @@ using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
 using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
+using static GW2EIEvtcParser.ArcDPSEnums;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -58,6 +59,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             return new List<InstantCastFinder>()
             {
                 new DamageCastFinder(PunishementAura, PunishementAura),
+                new EffectCastFinder(ProtectSAK, EffectGUIDs.MursaarOverseerProtectBubble),
             };
         }
 
@@ -115,6 +117,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer player, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(player, log, replay);
             IEnumerable<Segment> claims = player.GetBuffStatus(log, ClaimBuff, log.FightData.LogStart, log.FightData.LogEnd).Where(x => x.Value > 0);
             replay.AddOverheadIcons(claims, player, ParserIcons.FixationPurpleOverhead);
         }
@@ -127,6 +130,45 @@ namespace GW2EIEvtcParser.EncounterLogic
                 throw new MissingKeyActorsException("Mursaat Overseer not found");
             }
             return (target.GetHealth(combatData) > 25e6) ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal;
+        }
+
+        internal override List<AbstractCastEvent> SpecialCastEventProcess(CombatData combatData, SkillData skillData)
+        {
+            List<AbstractCastEvent> res = base.SpecialCastEventProcess(combatData, skillData);
+
+            var claimApply = combatData.GetBuffData(ClaimBuff).OfType<BuffApplyEvent>().ToList();
+            var dispelApply = combatData.GetBuffData(DispelBuff).OfType<BuffApplyEvent>().ToList();
+
+            SkillItem claimSkill = skillData.Get(ClaimSAK);
+            SkillItem dispelSkill = skillData.Get(DispelSAK);
+
+            if (combatData.TryGetEffectEventsByGUID(EffectGUIDs.MursaarOverseerClaimMarker, out IReadOnlyList<EffectEvent> claims))
+            {
+                skillData.NotAccurate.Add(ClaimSAK);
+                foreach (EffectEvent effect in claims)
+                {
+                    BuffApplyEvent src = claimApply.LastOrDefault(x => x.Time <= effect.Time);
+                    if (src != null) 
+                    {
+                        res.Add(new InstantCastEvent(effect.Time, claimSkill, src.To));
+                    }
+                }
+            }
+
+            if (combatData.TryGetEffectEventsByGUID(EffectGUIDs.MursaarOverseerDispelProjectile, out IReadOnlyList<EffectEvent> dispels))
+            {
+                skillData.NotAccurate.Add(DispelSAK);
+                foreach (EffectEvent effect in dispels)
+                {
+                    BuffApplyEvent src = dispelApply.LastOrDefault(x => x.Time <= effect.Time);
+                    if (src != null)
+                    {
+                        res.Add(new InstantCastEvent(effect.Time, dispelSkill, src.To));
+                    }
+                }
+            }
+
+            return res;
         }
     }
 }

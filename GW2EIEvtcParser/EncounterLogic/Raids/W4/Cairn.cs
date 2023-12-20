@@ -208,8 +208,16 @@ namespace GW2EIEvtcParser.EncounterLogic
             return GetGenericFightOffset(fightData);
         }
 
+        internal override List<AbstractCastEvent> SpecialCastEventProcess(CombatData combatData, SkillData skillData)
+        {
+            List<AbstractCastEvent> res = base.SpecialCastEventProcess(combatData, skillData);
+            res.AddRange(ProfHelper.ComputeUnderBuffCastEvents(combatData, skillData, CelestialDashSAK, CelestialDashBuff));
+            return res;
+        }
+
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(p, log, replay);
             // shared agony
             var agony = log.CombatData.GetBuffData(SharedAgony).Where(x => (x.To == p.AgentItem && x is BuffApplyEvent)).ToList();
             foreach (AbstractBuffEvent c in agony)

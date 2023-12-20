@@ -17,6 +17,7 @@ namespace GW2EIBuilders.HtmlModels
         public double Start { get; set; }
         public double End { get; set; }
         public List<int> Targets { get; set; } = new List<int>();
+        public List<bool> SecondaryTargets { get; set; } = new List<bool>();
         public bool BreakbarPhase { get; set; }
 
         public List<List<object>> DpsStats { get; set; }
@@ -95,6 +96,11 @@ namespace GW2EIBuilders.HtmlModels
         public List<DamageModData> DmgModifiersItem { get; set; }
         public List<DamageModData> DmgModifiersPers { get; set; }
 
+
+        public List<DamageModData> DmgIncModifiersCommon { get; set; }
+        public List<DamageModData> DmgIncModifiersItem { get; set; }
+        public List<DamageModData> DmgIncModifiersPers { get; set; }
+
         public List<List<BuffData>> TargetsCondiStats { get; set; }
         public List<BuffData> TargetsCondiTotals { get; set; }
         public List<BuffData> TargetsBoonTotals { get; set; }
@@ -107,16 +113,19 @@ namespace GW2EIBuilders.HtmlModels
         public List<AreaLabelDto> MarkupAreas { get; set; }
         public List<int> SubPhases { get; set; }
 
-        public PhaseDto(PhaseData phase, IReadOnlyList<PhaseData> phases, ParsedEvtcLog log, IReadOnlyDictionary<Spec, IReadOnlyList<Buff>> persBuffDict, IReadOnlyList<DamageModifier> commonDamageModifiers, IReadOnlyList<DamageModifier> itemDamageModifiers, IReadOnlyDictionary<Spec, IReadOnlyList<DamageModifier>> persDamageModDict)
+        public PhaseDto(PhaseData phase, IReadOnlyList<PhaseData> phases, ParsedEvtcLog log, IReadOnlyDictionary<Spec, IReadOnlyList<Buff>> persBuffDict, 
+            IReadOnlyList<OutgoingDamageModifier> commonOutDamageModifiers, IReadOnlyList<OutgoingDamageModifier> itemOutDamageModifiers, IReadOnlyDictionary<Spec, IReadOnlyList<OutgoingDamageModifier>> persOutDamageModDict,
+            IReadOnlyList<IncomingDamageModifier> commonIncDamageModifiers, IReadOnlyList<IncomingDamageModifier> itemIncDamageModifiers, IReadOnlyDictionary<Spec, IReadOnlyList<IncomingDamageModifier>> persIncDamageModDict)
         {
             Name = phase.Name;
             Duration = phase.DurationInMS;
             Start = phase.Start / 1000.0;
             End = phase.End / 1000.0;
             BreakbarPhase = phase.BreakbarPhase;
-            foreach (AbstractSingleActor target in phase.Targets)
+            foreach (AbstractSingleActor target in phase.AllTargets)
             {
                 Targets.Add(log.FightData.Logic.Targets.IndexOf(target));
+                SecondaryTargets.Add(phase.IsSecondaryTarget(target));
             }
             PlayerActiveTimes = new List<long>();
             foreach (AbstractSingleActor actor in log.Friendlies)
@@ -237,16 +246,19 @@ namespace GW2EIBuilders.HtmlModels
             DefBuffGenActiveOGroupStats = BuffData.BuildActiveBuffGenerationData(log, statistics.PresentDefbuffs, phase, BuffEnum.OffGroup);
             DefBuffGenActiveSquadStats = BuffData.BuildActiveBuffGenerationData(log, statistics.PresentDefbuffs, phase, BuffEnum.Squad);
             //
-            DmgModifiersCommon = DamageModData.BuildDmgModifiersData(log, phase, commonDamageModifiers);
-            DmgModifiersItem = DamageModData.BuildDmgModifiersData(log, phase, itemDamageModifiers);
-            DmgModifiersPers = DamageModData.BuildPersonalDmgModifiersData(log, phase, persDamageModDict);
+            DmgModifiersCommon = DamageModData.BuildOutgoingDmgModifiersData(log, phase, commonOutDamageModifiers);
+            DmgModifiersItem = DamageModData.BuildOutgoingDmgModifiersData(log, phase, itemOutDamageModifiers);
+            DmgModifiersPers = DamageModData.BuildPersonalOutgoingDmgModifiersData(log, phase, persOutDamageModDict);
+            DmgIncModifiersCommon = DamageModData.BuildIncomingDmgModifiersData(log, phase, commonIncDamageModifiers);
+            DmgIncModifiersItem = DamageModData.BuildIncomingDmgModifiersData(log, phase, itemIncDamageModifiers);
+            DmgIncModifiersPers = DamageModData.BuildPersonalIncomingDmgModifiersData(log, phase, persIncDamageModDict);
             TargetsCondiStats = new List<List<BuffData>>();
             TargetsCondiTotals = new List<BuffData>();
             TargetsBoonTotals = new List<BuffData>();
             MechanicStats = MechanicDto.BuildPlayerMechanicData(log, phase);
             EnemyMechanicStats = MechanicDto.BuildEnemyMechanicData(log, phase);
 
-            foreach (AbstractSingleActor target in phase.Targets)
+            foreach (AbstractSingleActor target in phase.AllTargets)
             {
                 TargetsCondiStats.Add(BuffData.BuildTargetCondiData(log, phase, target));
                 TargetsCondiTotals.Add(BuffData.BuildTargetCondiUptimeData(log, phase, target));
@@ -419,7 +431,7 @@ namespace GW2EIBuilders.HtmlModels
             {
                 var playerData = new List<List<object>>();
 
-                foreach (AbstractSingleActor target in phase.Targets)
+                foreach (AbstractSingleActor target in phase.AllTargets)
                 {
                     playerData.Add(GetDPSStatData(actor.GetDPSStats(target, log, phase.Start, phase.End)));
                 }
@@ -457,7 +469,7 @@ namespace GW2EIBuilders.HtmlModels
             foreach (AbstractSingleActor actor in log.Friendlies)
             {
                 var playerData = new List<List<object>>();
-                foreach (AbstractSingleActor target in phase.Targets)
+                foreach (AbstractSingleActor target in phase.AllTargets)
                 {
                     FinalOffensiveStats statsTarget = actor.GetOffensiveStats(target, log, phase.Start, phase.End);
                     playerData.Add(GetOffensiveStatData(statsTarget));

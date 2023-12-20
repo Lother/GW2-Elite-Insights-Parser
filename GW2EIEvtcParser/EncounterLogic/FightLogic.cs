@@ -301,6 +301,17 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
         }
 
+        protected void AddSecondaryTargetsToPhase(PhaseData phase, List<int> ids)
+        {
+            foreach (AbstractSingleActor target in Targets)
+            {
+                if (ids.Contains(target.ID) && phase.InInterval(Math.Max(target.FirstAware + ParserHelper.ServerDelayConstant, 0)))
+                {
+                    phase.AddSecondaryTarget(target);
+                }
+            }
+        }
+
         protected void AddTargetsToPhaseAndFit(PhaseData phase, List<int> ids, ParsedEvtcLog log)
         {
             AddTargetsToPhase(phase, ids);
@@ -348,6 +359,11 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal virtual FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
             return FightData.EncounterMode.Normal;
+        }
+
+        internal virtual FightData.EncounterStartStatus GetEncounterStartStatus(CombatData combatData, AgentData agentData, FightData fightData)
+        {
+            return FightData.EncounterStartStatus.Normal;
         }
 
         protected virtual List<int> GetSuccessCheckIDs()

@@ -30,6 +30,7 @@ namespace GW2EIEvtcParser.EIData
                 .UsingICD(500)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             new EXTHealingCastFinder(WaterBlastCombo1, WaterBlastCombo1),
+            new EXTHealingCastFinder(WaterBlastCombo2, WaterBlastCombo2),
             new EXTHealingCastFinder(WaterLeapCombo, WaterLeapCombo),
             new EffectCastFinderByDst(RuneOfNightmare, EffectGUIDs.RuneOfNightmare)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
@@ -40,6 +41,10 @@ namespace GW2EIEvtcParser.EIData
             new BuffGainCastFinder(RelicOfVass, RelicOfVass)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             new BuffGainCastFinder(RelicOfTheFirebrand, RelicOfTheFirebrand)
+                .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
+            new BuffGainCastFinder(NouryssHungerDamageBuff, NouryssHungerDamageBuff)
+                .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
+            new BuffGainCastFinder(MabonsStrength, MabonsStrength)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             //new BuffGainCastFinder(RelicOfIsgarrenTargetBuff, RelicTargetPlayerBuff).UsingChecker((bae, combatData, agentData, skillData) =>
             //{
@@ -58,7 +63,7 @@ namespace GW2EIEvtcParser.EIData
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             new EffectCastFinder(RelicOfFireworks, EffectGUIDs.RelicOfFireworks)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
-            new EffectCastFinder(RelicOfPeithaTargetBuff, EffectGUIDs.RelicOfPeitha)
+            new EffectCastFinder(RelicOfPeithaBlade, EffectGUIDs.RelicOfPeitha)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             //new EffectCastFinder(RelicOfTheCitadel, EffectGUIDs.RelicWhiteCircle).UsingChecker((evt, combatData, agentData, skillData) =>
             //{
@@ -77,6 +82,14 @@ namespace GW2EIEvtcParser.EIData
             //}).UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             new EffectCastFinder(RelicOfTheWizardsTower, EffectGUIDs.RelicWhiteCircle)
                 .UsingSecondaryEffectChecker(EffectGUIDs.RelicOfTheWizardsTower)
+                .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
+            new EXTHealingCastFinder(RelicOfKarakosaHealing, RelicOfKarakosaHealing)
+                .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
+            new EXTHealingCastFinder(RelicOfNayosHealing, RelicOfNayosHealing)
+                .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
+            new EXTHealingCastFinder(RelicOfTheDefenderHealing, RelicOfTheDefenderHealing)
+                .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
+            new EXTBarrierCastFinder(RelicOfTheFlock, RelicOfTheFlock)
                 .UsingOrigin(InstantCastFinder.InstantCastOrigin.Gear),
             // Mounts
             new BuffGainCastFinder(BondOfLifeSkill, BondOfLifeBuff),
@@ -553,9 +566,9 @@ namespace GW2EIEvtcParser.EIData
         /// </summary>
         internal static long ComputeEffectEndTime(ParsedEvtcLog log,EffectEvent effect, long maxDuration, AgentItem agent = null, long? associatedBuff = null)
         {
-            if (log.CombatData.TryGetEffectEndByTrackingId(effect.TrackingID, effect.Time, out long end))
+            if (effect.EndEvent != null)
             {
-                return end;
+                return effect.EndEvent.Time;
             }
             if (associatedBuff != null)
             {
@@ -602,6 +615,37 @@ namespace GW2EIEvtcParser.EIData
             long start = effect.Time;
             long end = ComputeEffectEndTime(log, effect, durationToUse, agent, associatedBuff);
             return (start, end);
+        }
+
+
+        private static IReadOnlyList<AnimatedCastEvent> ComputeUnderBuffCastEvents(IReadOnlyList<AbstractBuffEvent> buffs, SkillItem skill)
+        {
+            var res = new List<AnimatedCastEvent>();
+            var applies = buffs.OfType<BuffApplyEvent>().ToList();
+            var removals = buffs.OfType<BuffRemoveAllEvent>().ToList();
+            for (int i = 0; i < applies.Count && i < removals.Count; i++)
+            {
+                res.Add(new AnimatedCastEvent(applies[i].To, skill, applies[i].Time, removals[i].Time - applies[i].Time));
+            }
+            return res;
+        }
+
+        internal static IReadOnlyList<AnimatedCastEvent> ComputeUnderBuffCastEvents(AbstractSingleActor actor, CombatData combatData, SkillData skillData, long skillId, long buffId)
+        {
+            SkillItem skill = skillData.Get(skillId);
+            return ComputeUnderBuffCastEvents(combatData.GetBuffData(buffId).Where(x => x.To == actor.AgentItem).ToList(), skill);
+        }
+
+        internal static IReadOnlyList<AnimatedCastEvent> ComputeUnderBuffCastEvents(CombatData combatData, SkillData skillData, long skillId, long buffId)
+        {
+            SkillItem skill = skillData.Get(skillId);
+            var dict = combatData.GetBuffData(buffId).GroupBy(x => x.To).ToDictionary(x => x.Key, x => x.ToList());
+            var res = new List<AnimatedCastEvent>();
+            foreach (KeyValuePair<AgentItem, List<AbstractBuffEvent>> pair in dict)
+            {
+                res.AddRange(ComputeUnderBuffCastEvents(pair.Value, skill));
+            }
+            return res;
         }
     }
 }

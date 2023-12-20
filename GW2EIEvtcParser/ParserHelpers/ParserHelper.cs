@@ -54,6 +54,7 @@ namespace GW2EIEvtcParser
             Thief, Daredevil, Deadeye, Specter,
             Ranger, Druid, Soulbeast, Untamed,
             Engineer, Scrapper, Holosmith, Mechanist,
+            PetSpecific,
             FightSpecific,
             FractalInstability,
             Unknown
@@ -301,8 +302,9 @@ namespace GW2EIEvtcParser
                 }
             }
             // Copy attack targets
-            var attackTargetAgents = new List<AgentItem>();
+            var attackTargetAgents = new HashSet<AgentItem>();
             var attackTargets = combatData.Where(x => x.IsStateChange == StateChange.AttackTarget && x.DstMatchesAgent(redirectFrom)).ToList();
+            var targetableOns = combatData.Where(x => x.IsStateChange == StateChange.Targetable && x.DstAgent == 1).ToList();
             foreach (CombatItem c in attackTargets)
             {
                 var cExtra = new CombatItem(c);
@@ -310,7 +312,7 @@ namespace GW2EIEvtcParser
                 cExtra.OverrideDstAgent(to.Agent);
                 combatData.Add(cExtra);
                 AgentItem at = agentData.GetAgent(c.SrcAgent, c.Time);
-                if (combatData.Any(x => x.IsStateChange == StateChange.Targetable && x.DstAgent == 1 && x.SrcMatchesAgent(at)))
+                if (targetableOns.Any(x => x.SrcMatchesAgent(at)))
                 {
                     attackTargetAgents.Add(at);
                 }
@@ -801,6 +803,34 @@ namespace GW2EIEvtcParser
                     break;
             }
             return res;
+        }
+        public static void Add<TKey, TValue>(Dictionary<TKey, List<TValue>> dict, TKey key, TValue evt)
+        {
+            if (dict.TryGetValue(key, out List<TValue> list))
+            {
+                list.Add(evt);
+            }
+            else
+            {
+                dict[key] = new List<TValue>()
+                {
+                    evt
+                };
+            }
+        }
+        public static void Add<TKey, TValue>(Dictionary<TKey, HashSet<TValue>> dict, TKey key, TValue evt)
+        {
+            if (dict.TryGetValue(key, out HashSet<TValue> list))
+            {
+                list.Add(evt);
+            }
+            else
+            {
+                dict[key] = new HashSet<TValue>()
+                {
+                    evt
+                };
+            }
         }
 
         public static int IndexOf<T>(this IReadOnlyList<T> self, T elementToFind)

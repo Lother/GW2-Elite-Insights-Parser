@@ -207,7 +207,7 @@ namespace GW2EIEvtcParser.ParsedData
             {
                 dc.Add(new Segment(cTime, nextTime, 1));
             }
-            else if (index == 0)
+            else if (index == 0 && cTime - minTime > 50)
             {
                 dc.Add(new Segment(minTime, cTime, 1));
             }
@@ -342,10 +342,10 @@ namespace GW2EIEvtcParser.ParsedData
         /// <param name="buffId"></param>
         /// <param name="time"></param>
         /// <returns></returns>
-        public bool HasBuff(ParsedEvtcLog log, long buffId, long time)
+        public bool HasBuff(ParsedEvtcLog log, long buffId, long time, long window = 0)
         {
             AbstractSingleActor actor = log.FindActor(this);
-            return actor.HasBuff(log, buffId, time);
+            return actor.HasBuff(log, buffId, time, window);
         }
 
         /// <summary>
@@ -477,22 +477,22 @@ namespace GW2EIEvtcParser.ParsedData
             return IsSpecies((int)id);
         }
 
-        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.TrashID> ids)
+        public bool IsAnySpecies(IEnumerable<ArcDPSEnums.TrashID> ids)
         {
             return ids.Any(x => IsSpecies(x));
         }
 
-        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.TargetID> ids)
+        public bool IsAnySpecies(IEnumerable<ArcDPSEnums.TargetID> ids)
         {
             return ids.Any(x => IsSpecies(x));
         }
 
-        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.MinionID> ids)
+        public bool IsAnySpecies(IEnumerable<ArcDPSEnums.MinionID> ids)
         {
             return ids.Any(x => IsSpecies(x));
         }
 
-        public bool IsAnySpecies(IReadOnlyList<ArcDPSEnums.ChestID> ids)
+        public bool IsAnySpecies(IEnumerable<ArcDPSEnums.ChestID> ids)
         {
             return ids.Any(x => IsSpecies(x));
         }

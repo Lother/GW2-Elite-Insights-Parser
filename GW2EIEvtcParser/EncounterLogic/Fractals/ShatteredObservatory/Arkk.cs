@@ -137,7 +137,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 long start = bloom.FirstAware;
                 long end = bloom.LastAware;
-                PhaseData phase = bloomPhases.FirstOrDefault(x => Math.Abs(x.Start - start) < ServerDelayConstant);
+                PhaseData phase = bloomPhases.FirstOrDefault(x => Math.Abs(x.Start - start) < 100); // some blooms can be delayed
                 if (phase != null)
                 {
                     phase.OverrideStart(Math.Min(phase.Start, start));
@@ -284,7 +284,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                                 ParametricPoint3D rotation = replay.PolledRotations.FirstOrDefault(x => x.Time >= cast.Time);
                                 if (rotation != null)
                                 {
-                                    IEnumerable<BuffApplyEvent> applies = log.CombatData.GetBuffData(target.AgentItem).OfType<BuffApplyEvent>().Where(x => x.Time > cast.Time);
+                                    IEnumerable<BuffApplyEvent> applies = log.CombatData.GetBuffDataByDst(target.AgentItem).OfType<BuffApplyEvent>().Where(x => x.Time > cast.Time);
                                     BuffApplyEvent nextInvul = applies.FirstOrDefault(x => x.BuffID == Determined762);
                                     BuffApplyEvent nextStun = applies.FirstOrDefault(x => x.BuffID == Stun);
                                     long cap = Math.Min(nextInvul?.Time ?? log.FightData.FightEnd, nextStun?.Time ?? log.FightData.FightEnd);
@@ -319,7 +319,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                                 ParametricPoint3D rotation = replay.PolledRotations.FirstOrDefault(x => x.Time >= cast.Time);
                                 if (rotation != null)
                                 {
-                                    IEnumerable<BuffApplyEvent> applies = log.CombatData.GetBuffData(target.AgentItem).OfType<BuffApplyEvent>().Where(x => x.Time > cast.Time);
+                                    IEnumerable<BuffApplyEvent> applies = log.CombatData.GetBuffDataByDst(target.AgentItem).OfType<BuffApplyEvent>().Where(x => x.Time > cast.Time);
                                     BuffApplyEvent nextInvul = applies.FirstOrDefault(x => x.BuffID == Determined762);
                                     BuffApplyEvent nextStun = applies.FirstOrDefault(x => x.BuffID == Stun);
                                     long cap = Math.Min(nextInvul?.Time ?? log.FightData.FightEnd, nextStun?.Time ?? log.FightData.FightEnd);
@@ -381,6 +381,13 @@ namespace GW2EIEvtcParser.EncounterLogic
                     EnvironmentDecorations.Add(new PieDecoration( 1400, 30, (end, end + 300), "rgba(255, 0, 0, 0.2)", new PositionConnector(effect.Position)).UsingRotationConnector(rotation));
                 }
             }
+        }
+
+        internal override List<AbstractCastEvent> SpecialCastEventProcess(CombatData combatData, SkillData skillData)
+        {
+            List<AbstractCastEvent> res = base.SpecialCastEventProcess(combatData, skillData);
+            res.AddRange(ProfHelper.ComputeUnderBuffCastEvents(combatData, skillData, HypernovaLaunchSAK, HypernovaLaunchBuff));
+            return res;
         }
     }
 }

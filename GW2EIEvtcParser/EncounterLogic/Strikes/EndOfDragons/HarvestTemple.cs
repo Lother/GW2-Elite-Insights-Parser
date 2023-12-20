@@ -202,6 +202,12 @@ namespace GW2EIEvtcParser.EncounterLogic
             };
         }
 
+        internal override FightData.EncounterStartStatus GetEncounterStartStatus(CombatData combatData, AgentData agentData, FightData fightData)
+        {
+            // To investigate
+            return FightData.EncounterStartStatus.Normal;
+        }
+
         internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             long startToUse = GetGenericFightOffset(fightData);
@@ -337,26 +343,30 @@ namespace GW2EIEvtcParser.EncounterLogic
                 ArcDPSEnums.TargetID.TheDragonVoidZhaitan,
                 ArcDPSEnums.TargetID.TheDragonVoidSooWon,
             };
-            int index = 0;
+            var targetableEvents = combatData.Where(y => y.IsStateChange == ArcDPSEnums.StateChange.Targetable).GroupBy(x => agentData.GetAgent(x.SrcAgent, x.Time)).ToDictionary(x => x.Key, x => x.Where(y => y.Time > 2000).ToList());
             attackTargetEvents = attackTargetEvents.OrderBy(x =>
             {
                 AgentItem atAgent = agentData.GetAgent(x.SrcAgent, x.Time);
-                // We take attack events, filter out the first one, present at spawn, that is always a non targetable event
-                var targetables = combatData.Where(y => y.IsStateChange == ArcDPSEnums.StateChange.Targetable && y.SrcMatchesAgent(atAgent) && y.Time > 2000).ToList();
-                return targetables.Any() ? targetables.Min(y => y.Time) : long.MaxValue;
+                if (targetableEvents.TryGetValue(atAgent, out List<CombatItem> targetables))
+                {
+                    return targetables.Any() ? targetables.Min(y => y.Time) : long.MaxValue;
+                }
+                return long.MaxValue;
             }).ToList();
+            int index = 0;
+            var processedAttackTargets = new HashSet<AgentItem>();
             foreach (CombatItem at in attackTargetEvents)
             {
-                AgentItem dragonVoid = agentData.GetAgent(at.DstAgent, at.Time);
-                var copyEventsFrom = new List<AgentItem>() { dragonVoid };
                 AgentItem atAgent = agentData.GetAgent(at.SrcAgent, at.Time);
                 // We take attack events, filter out the first one, present at spawn, that is always a non targetable event
-                var targetables = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.Targetable && x.SrcMatchesAgent(atAgent) && x.Time > 2000).ToList();
                 // There are only two relevant attack targets, one represents the first five and the last one Soo Won
-                if (!targetables.Any())
+                if (processedAttackTargets.Contains(atAgent) || !targetableEvents.TryGetValue(atAgent, out List<CombatItem> targetables) || !targetables.Any())
                 {
                     continue;
                 }
+                AgentItem dragonVoid = agentData.GetAgent(at.DstAgent, at.Time);
+                var copyEventsFrom = new List<AgentItem>() { dragonVoid };
+                processedAttackTargets.Add(atAgent);
                 var targetOns = targetables.Where(x => x.DstAgent == 1).ToList();
                 var targetOffs = targetables.Where(x => x.DstAgent == 0).ToList();
                 //
@@ -385,7 +395,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                             {
                                 // Avoid making the gadget go back to 100% hp on "death"
                                 // Regenerating back to full HP
-                                if (evt.DstAgent > lastHPUpdate && evt.DstAgent > 9900)
+                                // use mid life check to allow hp going back up to 100% around first aware
+                                if (evt.DstAgent > lastHPUpdate && evt.DstAgent > 9900 && evt.Time > (to.LastAware + to.FirstAware) / 2)
                                 {
                                     return false;
                                 }
@@ -840,7 +851,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                                 lastEnd = (int)(phaseTarget.LastAware + 6000);
                                 break;
                             case (int)ArcDPSEnums.TargetID.TheDragonVoidSooWon:
-                                if (phaseTarget.GetCurrentHealthPercent(log, target.FirstAware) > 50)
+                                if (phaseTarget.GetCurrentHealthPercent(log, Math.Max(target.FirstAware, phaseTarget.FirstAware + 500)) > 50)
                                 {
                                     // Soo-Won 1
                                     AbstractSingleActor killableHeart = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TrashID.KillableVoidAmalgamate));
@@ -1002,6 +1013,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(p, log, replay);
             var knownEffectsIDs = new HashSet<long>();
             if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleSpreadCM, out IReadOnlyList<EffectEvent> spreadEffectsCM))
             {

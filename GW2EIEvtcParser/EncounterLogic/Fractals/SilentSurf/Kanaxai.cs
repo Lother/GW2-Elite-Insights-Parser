@@ -262,7 +262,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 throw new MissingKeyActorsException("Kanaxai not found");
             }
-            BuffApplyEvent invul762Gain = combatData.GetBuffData(Determined762).OfType<BuffApplyEvent>().Where(x => x.To == kanaxai.AgentItem).FirstOrDefault();
+            BuffApplyEvent invul762Gain = combatData.GetBuffData(Determined762).OfType<BuffApplyEvent>().Where(x => x.To == kanaxai.AgentItem).FirstOrDefault(x => x.Time > 0);
             if (invul762Gain != null)
             {
                 fightData.SetSuccess(true, invul762Gain.Time);
@@ -271,6 +271,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer player, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(player, log, replay);
             long maxEnd = log.FightData.FightEnd;
 
             // Orange Tether from Aspect to player

@@ -111,6 +111,16 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 (int)ArcDPSEnums.TargetID.MinisterLi,
                 (int)ArcDPSEnums.TargetID.MinisterLiCM,
+                (int)ArcDPSEnums.TrashID.TheEnforcer,
+                (int)ArcDPSEnums.TrashID.TheMindblade,
+                (int)ArcDPSEnums.TrashID.TheMechRider,
+                (int)ArcDPSEnums.TrashID.TheRitualist,
+                (int)ArcDPSEnums.TrashID.TheSniper,
+                (int)ArcDPSEnums.TrashID.TheEnforcerCM,
+                (int)ArcDPSEnums.TrashID.TheMindbladeCM,
+                (int)ArcDPSEnums.TrashID.TheMechRiderCM,
+                (int)ArcDPSEnums.TrashID.TheRitualistCM,
+                (int)ArcDPSEnums.TrashID.TheSniperCM,
             };
         }
 
@@ -139,7 +149,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 }
                 if (cbtEnter != null)
                 {
-                    AbstractBuffEvent nextPhaseStartEvt = log.CombatData.GetBuffData(ministerLi.AgentItem).FirstOrDefault(x => x is BuffRemoveAllEvent && x.BuffID == Determined762 && x.Time > cbtEnter.Time);
+                    AbstractBuffEvent nextPhaseStartEvt = log.CombatData.GetBuffDataByDst(ministerLi.AgentItem).FirstOrDefault(x => x is BuffRemoveAllEvent && x.BuffID == Determined762 && x.Time > cbtEnter.Time);
                     long phaseEnd = nextPhaseStartEvt != null ? nextPhaseStartEvt.Time : log.FightData.FightEnd;
                     var addPhase = new PhaseData(cbtEnter.Time, phaseEnd, "Split Phase " + phaseID);
                     addPhase.AddTargets(targets);
@@ -162,6 +172,18 @@ namespace GW2EIEvtcParser.EncounterLogic
                 throw new MissingKeyActorsException("Minister Li not found");
             }
             phases[0].AddTarget(ministerLi);
+            //
+            AbstractSingleActor enforcer = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheEnforcerCM : (int)ArcDPSEnums.TrashID.TheEnforcer));
+            AbstractSingleActor mindblade = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheMindbladeCM : (int)ArcDPSEnums.TrashID.TheMindblade));
+            AbstractSingleActor mechRider = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheMechRiderCM : (int)ArcDPSEnums.TrashID.TheMechRider));
+            AbstractSingleActor sniper = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheSniperCM : (int)ArcDPSEnums.TrashID.TheSniper));
+            AbstractSingleActor ritualist = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheRitualistCM : (int)ArcDPSEnums.TrashID.TheRitualist));
+            //
+            phases[0].AddSecondaryTarget(enforcer);
+            phases[0].AddSecondaryTarget(mindblade);
+            phases[0].AddSecondaryTarget(mechRider);
+            phases[0].AddSecondaryTarget(sniper);
+            phases[0].AddSecondaryTarget(ritualist);
             if (!requirePhases)
             {
                 return phases;
@@ -175,12 +197,6 @@ namespace GW2EIEvtcParser.EncounterLogic
             // when wiped during a split phase, Li's LastAware is well before fight end
             subPhases.RemoveAll(x => (x.End + x.Start) / 2 > ministerLi.LastAware + ServerDelayConstant);
             phases.AddRange(subPhases);
-            //
-            AbstractSingleActor enforcer = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheEnforcerCM : (int)ArcDPSEnums.TrashID.TheEnforcer));
-            AbstractSingleActor mindblade = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheMindbladeCM : (int)ArcDPSEnums.TrashID.TheMindblade));
-            AbstractSingleActor mechRider = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheMechRiderCM : (int)ArcDPSEnums.TrashID.TheMechRider));
-            AbstractSingleActor sniper = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheSniperCM : (int)ArcDPSEnums.TrashID.TheSniper));
-            AbstractSingleActor ritualist = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheRitualistCM : (int)ArcDPSEnums.TrashID.TheRitualist));
             AddSplitPhase(phases, new List<AbstractSingleActor>() { enforcer, mindblade, ritualist }, ministerLi, log, 1);
             AddSplitPhase(phases, new List<AbstractSingleActor>() { mechRider, sniper }, ministerLi, log, 2);
             return phases;
@@ -208,6 +224,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputePlayerCombatReplayActors(AbstractPlayer p, ParsedEvtcLog log, CombatReplay replay)
         {
+            base.ComputePlayerCombatReplayActors(p, log, replay);
             // Target Order
             replay.AddOverheadIcons(p.GetBuffStatus(log, TargetOrder1, log.FightData.LogStart, log.FightData.LogEnd).Where(x => x.Value > 0), p, ParserIcons.TargetOrder1Overhead);
             replay.AddOverheadIcons(p.GetBuffStatus(log, TargetOrder2, log.FightData.LogStart, log.FightData.LogEnd).Where(x => x.Value > 0), p, ParserIcons.TargetOrder2Overhead);
@@ -368,6 +385,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     // Jade Buster Cannon
                     var cannon = casts.Where(x => x.SkillId == JadeBusterCannonMechRider).ToList();
                     int warningDuration = 2800;
+                    var offset = new Point3D(0, -1400);
                     // Warning decoration
                     if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.KainengOverlookJadeBusterCannonWarning, out IReadOnlyList<EffectEvent> warningRectangle))
                     {
@@ -375,7 +393,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                         {
                             (long, long) lifespanWarning = ProfHelper.ComputeEffectLifespan(log, effect, warningDuration);
                             var connector = new AgentConnector(target);
-                            var rectangle = new RectangleDecoration(375, 3000, lifespanWarning, "rgba(200, 120, 0, 0.2)", connector.WithOffset(new Point3D(0, -1350), true));
+                            var rotationConnector = new AgentFacingConnector(target, 90, AgentFacingConnector.RotationOffsetMode.AddToMaster);
+                            var rectangle = (RectangleDecoration)new RectangleDecoration(375, 3000, lifespanWarning, "rgba(200, 120, 0, 0.2)", connector.WithOffset(offset, true)).UsingRotationConnector(rotationConnector);
                             replay.AddDecorationWithBorder(rectangle, "rgba(250, 50, 0, 0.2)");
                         }
                     }
@@ -385,8 +404,9 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int durationCastTime = 10367;
                         (long, long) lifespan = (c.Time + warningDuration, c.Time + durationCastTime - warningDuration);
                         var connector = new AgentConnector(target);
-                        var rectangle = new RectangleDecoration(375, 3000, lifespan, "rgba(30, 120, 40, 0.4)", connector.WithOffset(new Point3D(0, -1350), true));
-                        replay.AddDecorationWithBorder(rectangle, "rgba(250, 50, 0, 0.2)");
+                        var rotationConnector = new AgentFacingConnector(target, 90, AgentFacingConnector.RotationOffsetMode.AddToMaster);
+                        var rectangle = (RectangleDecoration)new RectangleDecoration(375, 3000, lifespan, "rgba(30, 120, 40, 0.4)", connector.WithOffset(offset, true)).UsingRotationConnector(rotationConnector);
+                        replay.AddDecorationWithBorder(rectangle, "rgba(255, 0, 0, 0.2)");
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.TheEnforcer:

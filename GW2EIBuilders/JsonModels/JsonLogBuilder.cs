@@ -83,7 +83,8 @@ namespace GW2EIBuilders.JsonModels
                 Description = damageModifier.Tooltip,
                 NonMultiplier = !damageModifier.Multiplier,
                 SkillBased = damageModifier.SkillBased,
-                Approximate = damageModifier.Approximate
+                Approximate = damageModifier.Approximate,
+                Incoming = damageModifier.Incoming,
             };
             return damageModDesc;
         }
@@ -115,6 +116,8 @@ namespace GW2EIBuilders.JsonModels
             jsonLog.LanguageID = (byte)log.LogData.LanguageID;
             jsonLog.FractalScale = log.CombatData.GetFractalScaleEvent() != null ? log.CombatData.GetFractalScaleEvent().Scale : 0;
             jsonLog.IsCM = log.FightData.IsCM;
+            jsonLog.IsLateStart = log.FightData.IsLateStart;
+            jsonLog.MissingPreEvent = log.FightData.MissingPreEvent;
             jsonLog.Anonymous = log.ParserSettings.AnonymousPlayers;
             jsonLog.DetailedWvW = log.ParserSettings.DetailedWvWParse && log.FightData.Logic.Mode == FightLogic.ParseMode.WvW;
             var personalBuffs = new Dictionary<string, HashSet<long>>();
