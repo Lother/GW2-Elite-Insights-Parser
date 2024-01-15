@@ -47,6 +47,7 @@
         internal const string NourishmentUtility = "https://wiki.guildwars2.com/images/2/23/Nourishment_utility.png";
         internal const string RuneOfRanger = "https://wiki.guildwars2.com/images/a/ad/Superior_Rune_of_the_Ranger.png";
         internal const string RuneOfMesmer = "https://wiki.guildwars2.com/images/2/24/Superior_Rune_of_the_Mesmer.png";
+        internal const string RangerPets = "https://i.imgur.com/Q8HBNzz.png";
         internal const string Downed = "https://wiki.guildwars2.com/images/d/dd/Downed.png";
         internal const string Exhaustion = "https://wiki.guildwars2.com/images/8/88/Exhaustion.png";
         internal const string Stealth = "https://wiki.guildwars2.com/images/1/19/Stealth.png";
@@ -333,7 +334,9 @@
         // Samarog
         internal const string SoulSwarm = "https://wiki.guildwars2.com/images/0/0e/Soul_Swarm_%28effect%29.png";
         internal const string FixateRigom = "https://wiki.guildwars2.com/images/f/f9/Fixate_%28Rigom%29.png";
+        internal const string StrengthenedBondRigom = "https://wiki.guildwars2.com/images/a/a2/Right-Side_Up.png";
         internal const string FixateGuldhem = "https://wiki.guildwars2.com/images/8/83/Fixate_%28Guldhem%29.png";
+        internal const string StrengthenedBondGuldhem = "https://wiki.guildwars2.com/images/3/33/Strengthened_Bond_%28Guldhem%29.png";
         internal const string Burrowed = "https://wiki.guildwars2.com/images/e/e3/Burrowed.png";
         // Deimos
         internal const string UnnaturalSignet = "https://wiki.guildwars2.com/images/2/20/Unnatural_Signet.png";
@@ -412,7 +415,6 @@
         // Strikes
         internal const string Hypothermia = "https://wiki.guildwars2.com/images/d/d5/Hypothermia_%28story_effect%29.png";
         internal const string Frostbite = "https://wiki.guildwars2.com/images/6/6a/Frostbite_%28Bitterfrost_Frontier%29.png";
-        internal const string IcyBarrier = "https://wiki.guildwars2.com/images/3/38/Shield_of_Ice.png";
         internal const string Darkness = "https://wiki.guildwars2.com/images/c/c0/Darkness.png";
         internal const string Windfall = "https://wiki.guildwars2.com/images/6/65/Windfall.png";
         internal const string SoulBinder = "https://wiki.guildwars2.com/images/6/63/Use_Soul_Binder.png";

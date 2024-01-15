@@ -4,14 +4,21 @@ namespace GW2EIEvtcParser.EIData
 {
     internal class LineDecoration : FormDecoration
     {
-        public Connector ConnectedFrom { get; }
+        public GeographicalConnector ConnectedFrom { get; }
 
-        public LineDecoration((long start, long end) lifespan, string color, Connector connector, Connector targetConnector) : base( lifespan, color, connector)
+        public LineDecoration((long start, long end) lifespan, string color, GeographicalConnector connector, GeographicalConnector targetConnector) : base( lifespan, color, connector)
         {
             ConnectedFrom = targetConnector;
         }
 
-        public LineDecoration(Segment lifespan, string color, Connector connector, Connector targetConnector) : this((lifespan.Start, lifespan.End), color, connector, targetConnector)
+        public LineDecoration((long start, long end) lifespan, Color color, double opacity, GeographicalConnector connector, GeographicalConnector targetConnector) : this(lifespan, color.WithAlpha(opacity).ToString(true), connector, targetConnector)
+        {
+        }
+
+        public LineDecoration(Segment lifespan, string color, GeographicalConnector connector, GeographicalConnector targetConnector) : this((lifespan.Start, lifespan.End), color, connector, targetConnector)
+        {
+        }
+        public LineDecoration(Segment lifespan, Color color, double opacity, GeographicalConnector connector, GeographicalConnector targetConnector) : this((lifespan.Start, lifespan.End), color.WithAlpha(opacity).ToString(true), connector, targetConnector)
         {
         }
         public override FormDecoration UsingFilled(bool filled)
