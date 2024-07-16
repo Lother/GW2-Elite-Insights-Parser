@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
+using GW2EIEvtcParser.EIData;
+using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
-using GW2EIEvtcParser.EIData;
 using static GW2EIEvtcParser.SkillIDs;
-using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -19,7 +19,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 new PlayerDstBuffApplyMechanic(Infirmity, "Infirmity", new MechanicPlotlySetting(Symbols.TriangleUp, Colors.Purple, 10), "Infirmity", "Infirmity Applied (Reduced incoming healing)", "Infirmity", 0),
             }
             );
-            Mode = ParseMode.Instanced10;
+            ParseMode = ParseModeEnum.Instanced10;
+            SkillMode = SkillModeEnum.PvE;
             EncounterCategoryInformation.Category = FightCategory.Strike;
             EncounterID |= EncounterIDs.EncounterMasks.StrikeMask;
         }

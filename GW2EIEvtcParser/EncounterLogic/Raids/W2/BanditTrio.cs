@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
+using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
 using GW2EIEvtcParser.ParserHelpers;
-using static GW2EIEvtcParser.SkillIDs;
-using static GW2EIEvtcParser.ParserHelper;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
-using GW2EIEvtcParser.Extensions;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.ParserHelper;
+using static GW2EIEvtcParser.SkillIDs;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -81,39 +81,43 @@ namespace GW2EIEvtcParser.EncounterLogic
                             (2688, 11906, 3712, 14210)*/);
         }
 
-        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             long startToUse = GetGenericFightOffset(fightData);
-            CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
+            CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogNPCUpdate);
             if (logStartNPCUpdate != null)
             {
                 startToUse = long.MaxValue;
-                AgentItem berg = agentData.GetNPCsByID(ArcDPSEnums.TargetID.Berg).FirstOrDefault();
-                if (berg == null)
+                if (!agentData.TryGetFirstAgentItem(ArcDPSEnums.TargetID.Berg, out AgentItem berg))
                 {
                     throw new MissingKeyActorsException("Berg not found");
                 }
                 startToUse = Math.Min(berg.FirstAware, startToUse);
-                AgentItem zane = agentData.GetNPCsByID(ArcDPSEnums.TargetID.Zane).FirstOrDefault();
-                if (zane == null)
+                if (!agentData.TryGetFirstAgentItem(ArcDPSEnums.TargetID.Zane, out AgentItem zane))
                 {
                     throw new MissingKeyActorsException("Zane not found");
                 }
                 startToUse = Math.Min(zane.FirstAware, startToUse);
-                AgentItem narella = agentData.GetNPCsByID(ArcDPSEnums.TargetID.Narella).FirstOrDefault();
-                if (narella == null)
+                if (!agentData.TryGetFirstAgentItem(ArcDPSEnums.TargetID.Narella, out AgentItem narella))
                 {
                     throw new MissingKeyActorsException("Narella not found");
                 }
                 startToUse = Math.Min(narella.FirstAware, startToUse);
+                var friendlies = agentData.GetNPCsByID(ArcDPSEnums.TrashID.VeteranTorturedWarg).ToList();
+                friendlies.AddRange(agentData.GetNPCsByID(ArcDPSEnums.TrashID.Prisoner1));
+                friendlies.AddRange(agentData.GetNPCsByID(ArcDPSEnums.TrashID.Prisoner2));
+                if (friendlies.Count > 0)
+                {
+                    startToUse = Math.Min(friendlies.Min(x => x.FirstAware), startToUse);
+                }
             }
             return startToUse;
         }
 
-        internal override void EIEvtcParse(ulong gw2Build, int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
+        internal override void EIEvtcParse(ulong gw2Build, EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
             // Cage
-            AgentItem cage = combatData.Where(x => x.DstAgent == 224100 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 238 && x.HitboxHeight == 300).FirstOrDefault();
+            AgentItem cage = combatData.Where(x => MaxHealthUpdateEvent.GetMaxHealth(x) == 224100 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 238 && x.HitboxHeight == 300).FirstOrDefault();
             if (cage != null)
             {
                 cage.OverrideType(AgentItem.AgentType.NPC);
@@ -121,7 +125,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
 
             // Bombs
-            var bombs = combatData.Where(x => x.DstAgent == 0 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxHeight == 240).ToList();
+            var bombs = combatData.Where(x => MaxHealthUpdateEvent.GetMaxHealth(x) == 0 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxHeight == 240).ToList();
             foreach (AgentItem bomb in bombs)
             {
                 bomb.OverrideType(AgentItem.AgentType.NPC);
@@ -129,8 +133,8 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
 
             // Reward Chest
-            FindChestGadget(ChestID, agentData, combatData, ChestOfPrisonCampPosition, (agentItem) => agentItem.HitboxHeight == 1200 && agentItem.HitboxWidth == 100);
-            
+            FindChestGadget(ChestID, agentData, combatData, ChestOfPrisonCampPosition, (agentItem) => agentItem.HitboxHeight == 0 || (agentItem.HitboxHeight == 1200 && agentItem.HitboxWidth == 100));
+
             agentData.Refresh();
             ComputeFightTargets(agentData, combatData, extensions);
         }
@@ -140,6 +144,19 @@ namespace GW2EIEvtcParser.EncounterLogic
             if (TargetHPPercentUnderThreshold(ArcDPSEnums.TargetID.Berg, fightData.FightStart, combatData, Targets))
             {
                 return FightData.EncounterStartStatus.Late;
+            }
+            if (agentData.TryGetFirstAgentItem(ArcDPSEnums.TargetID.Berg, out AgentItem berg) && combatData.GetLogNPCUpdateEvents().Count > 0)
+            {
+                var movements = combatData.GetMovementData(berg).Where(x => x.Time > berg.FirstAware + MinimumInCombatDuration).ToList();
+                if (movements.Count != 0)
+                {
+                    AbstractMovementEvent firstMove = movements.First();
+                    // two minutes
+                    if (firstMove.Time < 120000)
+                    {
+                        return FightData.EncounterStartStatus.Late;
+                    }
+                }
             }
             return FightData.EncounterStartStatus.Normal;
         }
@@ -189,21 +206,9 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor berg = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Berg));
-            if (berg == null)
-            {
-                throw new MissingKeyActorsException("Berg not found");
-            }
-            AbstractSingleActor zane = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Zane));
-            if (zane == null)
-            {
-                throw new MissingKeyActorsException("Zane not found");
-            }
-            AbstractSingleActor narella = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Narella));
-            if (narella == null)
-            {
-                throw new MissingKeyActorsException("Narella not found");
-            }
+            AbstractSingleActor berg = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Berg)) ?? throw new MissingKeyActorsException("Berg not found");
+            AbstractSingleActor zane = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Zane)) ?? throw new MissingKeyActorsException("Zane not found");
+            AbstractSingleActor narella = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Narella)) ?? throw new MissingKeyActorsException("Narella not found");
             phases[0].AddTargets(Targets);
             if (!requirePhases)
             {

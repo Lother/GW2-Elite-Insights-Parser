@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using GW2EIEvtcParser.EIData.Buffs;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.EIData.Buff;
 using static GW2EIEvtcParser.ParserHelper;
@@ -51,6 +51,8 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Mistlock Instability: Vengeance", MistlockInstabilityVengeance, Source.FractalInstability, BuffClassification.Other, BuffImages.InstabilityVengeance),
             new Buff("Mistlock Instability: We Bleed Fire", MistlockInstabilityWeBleedFire, Source.FractalInstability, BuffClassification.Other, BuffImages.InstabilityWeBleedFire),
             new Buff("Mistlock Instability: Toxic Sickness", MistlockInstabilityToxicSickness, Source.FractalInstability, BuffClassification.Other, BuffImages.InstabilityToxicSickness),
+            // Related buffs
+            new Buff("Flux Bomb Target", FluxBombBuff, Source.FightSpecific, BuffClassification.Other, BuffImages.InstabilityFluxBomb),
         };
 
         internal static readonly List<Buff> FightSpecific = new List<Buff>
@@ -69,7 +71,8 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Enraged (300%)", Enraged_300_strike_75_reduc, Source.FightSpecific, BuffClassification.Other, BuffImages.Enraged),
             new Buff("Enraged (500%)", Enraged_500, Source.FightSpecific, BuffClassification.Other, BuffImages.Enraged),
             new Buff("Call of the Mists", CallOfTheMists, Source.FightSpecific, BuffClassification.Other, BuffImages.CallOfTheMists),
-            new Buff("Untargetable", Untargetable, Source.FightSpecific, BuffClassification.Other, BuffImages.Determined ),
+            new Buff("Untargetable", Untargetable, Source.FightSpecific, BuffClassification.Other, BuffImages.Determined),
+            new Buff("Resistance (Unremovable)", ResistanceUnremovable, Source.FightSpecific,BuffStackType.Queue, 5, BuffClassification.Other, BuffImages.Resistance),
             // Strike Essences
             new Buff("Essence of Vigilance Tier 1", EssenceOfVigilanceTier1, Source.FightSpecific,BuffStackType.StackingConditionalLoss, 30, BuffClassification.Other, BuffImages.EssenceOfVigilance),
             new Buff("Essence of Vigilance Tier 2", EssenceOfVigilanceTier2, Source.FightSpecific,BuffStackType.StackingConditionalLoss, 30, BuffClassification.Other, BuffImages.EssenceOfVigilance),
@@ -423,6 +426,8 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Fixated (Fear 2)", FixatedFear2, Source.FightSpecific, BuffStackType.Stacking, 10, BuffClassification.Other, BuffImages.Fixated),
             new Buff("Fixated (Fear 1)", FixatedFear1, Source.FightSpecific, BuffStackType.Stacking, 10, BuffClassification.Other, BuffImages.Fixated),
             new Buff("Fixated (Fear 4)", FixatedFear4, Source.FightSpecific, BuffStackType.Stacking, 10, BuffClassification.Other, BuffImages.Fixated),
+            new Buff("Fixated (Enraged Water Sprite)", FixatedEnragedWaterSprite, Source.FightSpecific, BuffClassification.Debuff, BuffImages.Fixated),
+            new Buff("Fixated (Guilt)", FixatedGuilt, Source.FightSpecific, BuffClassification.Debuff, BuffImages.Fixated),
             new Buff("Charged Leap", ChargedLeap, Source.FightSpecific, BuffStackType.StackingConditionalLoss, 3, BuffClassification.Other, BuffImages.IgniteArrowsDominion),
             new Buff("Tidal Bargain", TidalBargain, Source.FightSpecific, BuffStackType.Stacking, 10, BuffClassification.Debuff, BuffImages.Waterlogged),
             new Buff("Achievement Eligibility: Dancing with Demons", AchievementEligibilityDancingWithDemons, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
@@ -449,6 +454,32 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Achievement Eligibility: The Fearless Few", AchievementEligibilityTheFearlessFew, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
             new Buff("Achievement Eligibility: Peace and Quiet", AchievementEligibilityPeaceAndQuiet, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
             new Buff("Achievement Eligibility: Jade Sea Legs", AchievementEligibilityJadeSeaLegs, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
+            // Lonely Tower - Cerus and Deimos
+            new Buff("Deimos's Focus", DeimossFocus, Source.FightSpecific, BuffClassification.Other, BuffImages.Fixated),
+            new Buff("Cerus's Focus", CerussFocus, Source.FightSpecific, BuffClassification.Other, BuffImages.Fixated),
+            new Buff("Brothers United", BrothersUnited, Source.FightSpecific, BuffClassification.Other, BuffImages.BrothersUnited),
+            new Buff("Enraged (Lonely Tower)", EnragedLonelyTower, Source.FightSpecific, BuffClassification.Other, BuffImages.Enraged),
+            new Buff("Devour (Lonely Tower)", DevourLonelyTower, Source.FightSpecific, BuffStackType.Stacking, 99, BuffClassification.Other, BuffImages.Devour),
+            new Buff("Achievement Eligibility: Brothers, Together", AchievementEligibilityBrothersTogether, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
+            // Lonely Tower - Eparch
+            new Buff("Despair Attunement", DespairAttunement, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Defensive, BuffImages.DespairAttunement),
+            new Buff("Envy Attunement", EnvyAttunement, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Offensive, BuffImages.EnvyAttunement),
+            new Buff("Gluttony Attunement", GluttonyAttunement, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Offensive, BuffImages.GluttonyAttunement),
+            new Buff("Malice Attunement", MaliceAttunement, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Support, BuffImages.MaliceAttunement),
+            new Buff("Rage Attunement", RageAttunement, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Offensive, BuffImages.RageAttunement),
+            new Buff("Regret Attunement", RegretAttunement, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Support, BuffImages.RegretAttunement),
+            new Buff("Consume", Consume, Source.FightSpecific, BuffClassification.Other, BuffImages.Consumed),
+            new Buff("Consumed", Consumed, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Debuff, BuffImages.Consumed),
+            new Buff("Despair Empowerment", DespairEmpowerment, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Other, BuffImages.DespairAttunement),
+            new Buff("Envy Empowerment", EnvyEmpowerment, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Other, BuffImages.EnvyAttunement),
+            new Buff("Gluttony Empowerment", GluttonyEmpowerment, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Other, BuffImages.GluttonyAttunement),
+            new Buff("Malice Empowerment", MaliceEmpowerment, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Other, BuffImages.MaliceAttunement),
+            new Buff("Rage Empowerment", RageEmpowerment, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Other, BuffImages.RageAttunement),
+            new Buff("Regret Empowerment", RegretEmpowerment, Source.FightSpecific, BuffStackType.Stacking, 20, BuffClassification.Other, BuffImages.RegretAttunement),
+            new Buff("Determination", DeterminationEparch, Source.FightSpecific, BuffStackType.Stacking, 25, BuffClassification.Other, BuffImages.IonShield),
+            new Buff("Fear of the King", FearOfTheKing, Source.FightSpecific, BuffClassification.Other, BuffImages.Crazed),
+            new Buff("Achievement Eligibility: Fissure Walker", AchievementEligibilityFissureWalker, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
+            new Buff("Determined (Kryptis Rift)", DeterminedKryptisRift, Source.FightSpecific, BuffClassification.Other, BuffImages.Determined),
             // Strike Mission
             new Buff("Exposed (Player)", ExposedPlayer, Source.Common, BuffStackType.Stacking, 10, BuffClassification.Debuff, BuffImages.Exposed),
             // Icebrood
@@ -563,8 +594,8 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Ergo Shear CM", ErgoShearCM, Source.FightSpecific, BuffClassification.Other, BuffImages.ErgoShear),
             new Buff("Tidal Torment", TidalTorment, Source.FightSpecific, BuffClassification.Other, BuffImages.TidalTorment),
             new Buff("Tidal Torment CM", TidalTormentCM, Source.FightSpecific, BuffClassification.Other, BuffImages.TidalTorment),
-            new Buff("Naked Singularity", NakedSingularity, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Other, BuffImages.Unknown),
-            new Buff("Naked Singularity CM", NakedSingularityCM, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Other, BuffImages.Unknown),
+            new Buff("Naked Singularity", NakedSingularity, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Other, BuffImages.SporeInducedRage),
+            new Buff("Naked Singularity CM", NakedSingularityCM, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Other, BuffImages.SporeInducedRage),
             new Buff("Ley-Woven Shielding", LeyWovenShielding, Source.FightSpecific, BuffClassification.Other, BuffImages.LeyEnergyShield),
             new Buff("Malfunctioning Ley-Woven Shielding", MalfunctioningLeyWovenShielding, Source.FightSpecific, BuffClassification.Other, BuffImages.Unblockable),
             new Buff("Power Transfer", PowerTransfer, Source.FightSpecific, BuffStackType.Queue, 99, BuffClassification.Other, BuffImages.SpiritEnergyTracker),
@@ -577,17 +608,19 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Beam of Light Duration", BeamOfLightDuration, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Other, BuffImages.Unknown),
             new Buff("Dagda Phasing", DagdaDuringPhase75_50_25, Source.FightSpecific, BuffClassification.Other, BuffImages.Unknown),
             new Buff("Soul Feast Something", SoulFeastSomethingBuff, Source.FightSpecific, BuffClassification.Hidden, BuffImages.Unknown),
-            new Buff("Lost Control (Cosmic Observatory)", CosmicObservatoryLostControlBuff, Source.FightSpecific, BuffClassification.Debuff, BuffImages.Unknown),
+            new Buff("Lost Control (Cosmic Observatory)", CosmicObservatoryLostControlBuff, Source.FightSpecific, BuffClassification.Debuff, BuffImages.ThrowCursedArtifact),
             new Buff("Shooting Stars Target", ShootingStarsTargetBuff, Source.FightSpecific, BuffClassification.Other, BuffImages.Target),
             new Buff("Demonic Aura", DagdaDemonicAura, Source.FightSpecific, BuffStackType.Stacking, 10, BuffClassification.Other, BuffImages.ChampionOfTheCrown),
             new Buff("Demonic Aura Timer", DagdaDemonicAuraTimer, Source.FightSpecific, BuffClassification.Other, BuffImages.ExposeWeakness),
             new Buff("Planetary Weight", PlanetaryWeight, Source.FightSpecific, BuffStackType.Stacking, 6, BuffClassification.Other, BuffImages.ChallengeOfTheAncients),
             new Buff("Summoned Phantom", SummonedPhantom, Source.FightSpecific, BuffClassification.Other, BuffImages.Unknown),
-            new Buff("Immune to Damage", ImmuneToDamage, Source.FightSpecific, BuffClassification.Other, BuffImages.Unknown),
-            new Buff("Shared Destruction Target (Meteor Crash)", DagdaSharedDestruction_MeteorCrash, Source.FightSpecific, BuffClassification.Other, BuffImages.Unknown),
+            new Buff("Immune to Damage", ImmuneToDamage, Source.FightSpecific, BuffClassification.Other, BuffImages.Determined),
+            new Buff("Shared Destruction Target (Meteor Crash)", DagdaSharedDestruction_MeteorCrash, Source.FightSpecific, BuffClassification.Other, BuffImages.MonsterSkill),
+            new Buff("Achievement Eligibility: Danced with the Stars", AchievementEligibilityDancedWithTheStars, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
+            new Buff("Achievement Eligibility: Precision Anxiety", AchievementEligibilityPrecisionAnxiety, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
             // Temple of Febe
             new Buff("Insatiable", Insatiable, Source.FightSpecific, BuffStackType.Stacking, 99, BuffClassification.Other, BuffImages.VoidCorruption),
-            new Buff("Malicious Intent Target", MaliciousIntentTargetBuff, Source.FightSpecific, BuffClassification.Other, BuffImages.Unknown),
+            new Buff("Malicious Intent Target", MaliciousIntentTargetBuff, Source.FightSpecific, BuffClassification.Other, BuffImages.MonsterSkill),
             new Buff("Empowered (Cerus)", EmpoweredCerus, Source.FightSpecific, BuffStackType.Stacking, 99, BuffClassification.Other, BuffImages.EmpoweredMursaarOverseer),
             new Buff("Empowered Despair (Cerus)", EmpoweredDespairCerus, Source.FightSpecific, BuffClassification.Other, BuffImages.ExcessMagic),
             new Buff("Empowered Envy (Cerus)", EmpoweredEnvyCerus, Source.FightSpecific, BuffClassification.Other, BuffImages.ExcessMagic),
@@ -601,9 +634,12 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Empowered Malice (Embodiment)", EmpoweredMaliceEmbodiment, Source.FightSpecific, BuffClassification.Other, BuffImages.ExcessMagic),
             new Buff("Empowered Rage (Embodiment)", EmpoweredRageEmbodiment, Source.FightSpecific, BuffClassification.Other, BuffImages.ExcessMagic),
             new Buff("Empowered Regret (Embodiment)", EmpoweredRegretEmbodiment, Source.FightSpecific, BuffClassification.Other, BuffImages.ExcessMagic),
-            new Buff("Kryptis-Possessed", KryptisPossessed, Source.FightSpecific, BuffClassification.Other, BuffImages.Unknown),
+            new Buff("Kryptis-Possessed", KryptisPossessed, Source.FightSpecific, BuffClassification.Other, BuffImages.Madness),
+            new Buff("Kryptis-Possessed (CM)", KryptisPossessedCM, Source.FightSpecific, BuffClassification.Other, BuffImages.Madness),
             new Buff("Invulnerability (Cerus)", InvulnerabilityCerus, Source.FightSpecific, BuffClassification.Other, BuffImages.Determined),
             new Buff("Invulnerability (Embodiment)", InvulnerabilityEmbodiment, Source.FightSpecific, BuffClassification.Other, BuffImages.Determined),
+            new Buff("Achievement Eligibility: Unbounded Optimism", AchievementEligibilityUnboundedOptimism, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
+            new Buff("Achievement Eligibility: Apathetic", AchievementEligibilityApathetic, Source.FightSpecific, BuffClassification.Other, BuffImages.AchievementEffect),
             //Open World Soo-Won
             new Buff("Jade Tech Offensive Overcharge", JadeTechOffensiveOvercharge, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Offensive, BuffImages.JadeTechOffensive),
             new Buff("Jade Tech Defensive Overcharge", JadeTechDefensiveOvercharge, Source.FightSpecific, BuffStackType.Queue, 9, BuffClassification.Defensive, BuffImages.JadeTechDefensive),

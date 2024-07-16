@@ -5,13 +5,11 @@ using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.ParsedData;
 using GW2EIEvtcParser.ParserHelpers;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
-using System.Runtime.CompilerServices;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -149,7 +147,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 }
                 if (cbtEnter != null)
                 {
-                    AbstractBuffEvent nextPhaseStartEvt = log.CombatData.GetBuffDataByDst(ministerLi.AgentItem).FirstOrDefault(x => x is BuffRemoveAllEvent && x.BuffID == Determined762 && x.Time > cbtEnter.Time);
+                    AbstractBuffEvent nextPhaseStartEvt = log.CombatData.GetBuffDataByIDByDst(Determined762, ministerLi.AgentItem).FirstOrDefault(x => x is BuffRemoveAllEvent && x.Time > cbtEnter.Time);
                     long phaseEnd = nextPhaseStartEvt != null ? nextPhaseStartEvt.Time : log.FightData.FightEnd;
                     var addPhase = new PhaseData(cbtEnter.Time, phaseEnd, "Split Phase " + phaseID);
                     addPhase.AddTargets(targets);
@@ -166,11 +164,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor ministerLi = GetMinisterLi(log.FightData);
-            if (ministerLi == null)
-            {
-                throw new MissingKeyActorsException("Minister Li not found");
-            }
+            AbstractSingleActor ministerLi = GetMinisterLi(log.FightData) ?? throw new MissingKeyActorsException("Minister Li not found");
             phases[0].AddTarget(ministerLi);
             //
             AbstractSingleActor enforcer = Targets.LastOrDefault(x => x.IsSpecies(log.FightData.IsCM ? (int)ArcDPSEnums.TrashID.TheEnforcerCM : (int)ArcDPSEnums.TrashID.TheEnforcer));
@@ -204,13 +198,9 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void CheckSuccess(CombatData combatData, AgentData agentData, FightData fightData, IReadOnlyCollection<AgentItem> playerAgents)
         {
-            AbstractSingleActor ministerLi = GetMinisterLi(fightData);
-            if (ministerLi == null)
-            {
-                throw new MissingKeyActorsException("Minister Li not found");
-            }
-            var buffApplies = combatData.GetBuffData(Resurrection).OfType<BuffApplyEvent>().Where(x => x.To == ministerLi.AgentItem).ToList();
-            if (buffApplies.Any())
+            AbstractSingleActor ministerLi = GetMinisterLi(fightData) ?? throw new MissingKeyActorsException("Minister Li not found");
+            var buffApplies = combatData.GetBuffDataByIDByDst(Resurrection, ministerLi.AgentItem).OfType<BuffApplyEvent>().ToList();
+            if (buffApplies.Count != 0)
             {
                 fightData.SetSuccess(true, buffApplies[0].Time);
             }
@@ -439,7 +429,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     break;
                 case (int)ArcDPSEnums.TrashID.SpiritOfDestruction:
                     // Volatile Burst - Orange AoE around the spirit with safe zone in the center
-                    if (log.CombatData.TryGetEffectEventsBySrcWithGUID(target.AgentItem,EffectGUIDs.KainengOverlookVolatileBurstAoE, out IReadOnlyList<EffectEvent> volatileBurst))
+                    if (log.CombatData.TryGetEffectEventsBySrcWithGUID(target.AgentItem, EffectGUIDs.KainengOverlookVolatileBurstAoE, out IReadOnlyList<EffectEvent> volatileBurst))
                     {
                         foreach (EffectEvent effect in volatileBurst)
                         {
@@ -553,7 +543,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     (long, long) lifespan = effect.ComputeLifespan(log, 0);
                     var connector = new PositionConnector(effect.Position);
                     var rotationConnector = new AngleConnector(effect.Rotation.Z);
-                    EnvironmentDecorations.Add(new RectangleDecoration( 50, 145, lifespan, Colors.Red, 0.2, connector).UsingRotationConnector(rotationConnector));
+                    EnvironmentDecorations.Add(new RectangleDecoration(50, 145, lifespan, Colors.Red, 0.2, connector).UsingRotationConnector(rotationConnector));
                 }
             }
 
@@ -595,7 +585,10 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal static void AddFallOfTheAxeDecoration(ParsedEvtcLog log, NPC target, CombatReplay replay, (long, long) lifespan, int duration, int angle)
         {
             Point3D facingDirection = target.GetCurrentRotation(log, lifespan.Item1 + 100, duration);
-            if (facingDirection == null) { return; }
+            if (facingDirection == null)
+            {
+                return;
+            }
             var connector = new AgentConnector(target);
             var rotationConnector = new AngleConnector(facingDirection);
             var pie = (PieDecoration)new PieDecoration(480, angle, lifespan, Colors.Orange, 0.2, connector).UsingRotationConnector(rotationConnector);
@@ -606,7 +599,10 @@ namespace GW2EIEvtcParser.EncounterLogic
         private static void AddDragonSlashWaveDecoration(ParsedEvtcLog log, NPC target, CombatReplay replay, (long, long) lifespan, int duration)
         {
             Point3D facingDirection = target.GetCurrentRotation(log, lifespan.Item1 + 100, duration);
-            if (facingDirection == null) { return; }
+            if (facingDirection == null)
+            {
+                return;
+            }
             var connector = new AgentConnector(target);
             var rotationConnector = new AngleConnector(facingDirection);
             var pie = (PieDecoration)new PieDecoration(1200, 160, lifespan, Colors.Orange, 0.2, connector).UsingRotationConnector(rotationConnector);

@@ -71,15 +71,11 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override List<AbstractHealthDamageEvent> SpecialDamageEventProcess(CombatData combatData, SkillData skillData)
         {
-            AbstractSingleActor samarog = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Samarog));
-            if (samarog == null)
-            {
-                throw new MissingKeyActorsException("Samarog not found");
-            }
+            AbstractSingleActor samarog = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Samarog)) ?? throw new MissingKeyActorsException("Samarog not found");
             IReadOnlyList<AbstractHealthDamageEvent> damageTaken = combatData.GetDamageTakenData(samarog.AgentItem);
             var fanaticalResilienceTimes = GetFilteredList(combatData, FanaticalResilience, samarog, true, false).Select(x => x.Time).ToList();
             var fanaticalResilienceSegments = new List<Segment>();
-            for (int i = 0; i < fanaticalResilienceTimes.Count; i +=2)
+            for (int i = 0; i < fanaticalResilienceTimes.Count; i += 2)
             {
                 long start = fanaticalResilienceTimes[i];
                 long end = long.MaxValue;
@@ -103,11 +99,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Samarog));
-            if (mainTarget == null)
-            {
-                throw new MissingKeyActorsException("Samarog not found");
-            }
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Samarog)) ?? throw new MissingKeyActorsException("Samarog not found");
             phases[0].AddTarget(mainTarget);
             if (!requirePhases)
             {
@@ -137,13 +129,13 @@ namespace GW2EIEvtcParser.EncounterLogic
             return phases;
         }
 
-        internal override void EIEvtcParse(ulong gw2Build, int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
+        internal override void EIEvtcParse(ulong gw2Build, EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
             // With lingering agents, last aware of the spears are properly set
-            if (evtcVersion >= ArcDPSEnums.ArcDPSBuilds.LingeringAgents)
+            if (evtcVersion.Build >= ArcDPSEnums.ArcDPSBuilds.LingeringAgents)
             {
-                var spearAgents = combatData.Where(x => x.DstAgent == 104580 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 100 && x.HitboxHeight == 300).ToList();
-                if (spearAgents.Any())
+                var spearAgents = combatData.Where(x => MaxHealthUpdateEvent.GetMaxHealth(x) == 104580 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxWidth == 100 && x.HitboxHeight == 300).ToList();
+                if (spearAgents.Count != 0)
                 {
                     foreach (AgentItem spear in spearAgents)
                     {
@@ -181,7 +173,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         protected override List<ArcDPSEnums.TrashID> GetTrashMobsIDs()
         {
-            return new List<ArcDPSEnums.TrashID>() { 
+            return new List<ArcDPSEnums.TrashID>() {
                 ArcDPSEnums.TrashID.SpearAggressionRevulsion
             };
         }
@@ -205,10 +197,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                 case (int)ArcDPSEnums.TrashID.SpearAggressionRevulsion:
                     var spearLifespan = new Segment(target.FirstAware, target.LastAware, 1);
                     replay.Decorations.Add(new CircleDecoration(240, spearLifespan, Colors.Orange, 0.1, new AgentConnector(target)));
-                    if (log.CombatData.GetBuffData(SpearOfAggressionBuff).Any(x => x.To == target.AgentItem))
+                    if (log.CombatData.GetBuffDataByIDByDst(SpearOfAggressionBuff, target.AgentItem).Any())
                     {
                         replay.AddOverheadIcon(spearLifespan, target, BuffImages.Taunt, 15);
-                    } 
+                    }
                     else
                     {
                         replay.AddOverheadIcon(spearLifespan, target, BuffImages.Fear, 15);
@@ -223,7 +215,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             base.ComputePlayerCombatReplayActors(p, log, replay);
             // big bomb
-            var bigbomb = log.CombatData.GetBuffData(InevitableBetrayalBig).Where(x => (x.To == p.AgentItem && x is BuffApplyEvent)).ToList();
+            var bigbomb = log.CombatData.GetBuffDataByIDByDst(InevitableBetrayalBig, p.AgentItem).Where(x => x is BuffApplyEvent).ToList();
             foreach (AbstractBuffEvent c in bigbomb)
             {
                 int bigStart = (int)c.Time;
@@ -232,7 +224,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 replay.AddDecorationWithGrowing(circle, bigEnd);
             }
             // small bomb
-            var smallbomb = log.CombatData.GetBuffData(InevitableBetrayalSmall).Where(x => (x.To == p.AgentItem && x is BuffApplyEvent)).ToList();
+            var smallbomb = log.CombatData.GetBuffDataByIDByDst(InevitableBetrayalSmall, p.AgentItem).Where(x => x is BuffApplyEvent).ToList();
             foreach (AbstractBuffEvent c in smallbomb)
             {
                 int smallStart = (int)c.Time;
@@ -261,7 +253,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
             //fixated Rigom
             var fixatedRigom = p.GetBuffStatus(log, FixatedRigom, log.FightData.FightStart, log.FightData.FightEnd).Where(x => x.Value > 0).ToList();
-            foreach (Segment seg in fixatedGuldhem)
+            foreach (Segment seg in fixatedRigom)
             {
                 long mid = (seg.Start + seg.End) / 2;
                 AbstractSingleActor rigom = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TrashID.Rigom) && mid >= x.FirstAware && mid <= x.LastAware);
@@ -274,11 +266,7 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            AbstractSingleActor target = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Samarog));
-            if (target == null)
-            {
-                throw new MissingKeyActorsException("Samarog not found");
-            }
+            AbstractSingleActor target = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.Samarog)) ?? throw new MissingKeyActorsException("Samarog not found");
             return (target.GetHealth(combatData) > 30e6) ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal;
         }
     }

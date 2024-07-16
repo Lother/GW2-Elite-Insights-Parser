@@ -1,10 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using GW2EIEvtcParser.EIData.Buffs;
-using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.EIData.Buff;
-using static GW2EIEvtcParser.EIData.DamageModifier;
 using static GW2EIEvtcParser.EIData.DamageModifiersUtils;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
@@ -22,9 +19,12 @@ namespace GW2EIEvtcParser.EIData
             new EffectCastFinderByDst(UnnaturalTraversal, EffectGUIDs.UntamedUnnaturalTraversal).UsingDstSpecChecker(Spec.Untamed),
 
             // Pet
-            new EffectCastFinderFromMinion(VenomousOutburst, EffectGUIDs.UntamedVenomousOutburst),
-            new EffectCastFinderFromMinion(RendingVines, EffectGUIDs.UntamedRendingVines),
-            new EffectCastFinderFromMinion(EnvelopingHaze, EffectGUIDs.UntamedEnvelopingHaze),
+            new EffectCastFinder(VenomousOutburst, EffectGUIDs.UntamedVenomousOutburst)
+                .WithMinions(true),
+            new EffectCastFinder(RendingVines, EffectGUIDs.UntamedRendingVines)
+                .WithMinions(true),
+            new EffectCastFinder(EnvelopingHaze, EffectGUIDs.UntamedEnvelopingHaze)
+                .WithMinions(true),
         };
 
         internal static readonly List<DamageModifierDescriptor> OutgoingDamageModifiers = new List<DamageModifierDescriptor>

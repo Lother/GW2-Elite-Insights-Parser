@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using GW2EIEvtcParser.EIData.Buffs;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.EIData.Buff;
-using static GW2EIEvtcParser.EIData.DamageModifier;
 using static GW2EIEvtcParser.EIData.DamageModifiersUtils;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
@@ -32,7 +31,7 @@ namespace GW2EIEvtcParser.EIData
             new BuffGainCastFinder(SharpenSpinesBeastmode, SharpenSpinesBuff),
             new EffectCastFinder(EternalBondSkill, EffectGUIDs.SoulbeastEternalBond)
                 .UsingSrcSpecChecker(Spec.Soulbeast)
-                .WithBuilds(GW2Builds.October2022Balance, GW2Builds.EndOfLife),
+                .WithBuilds(GW2Builds.October2022Balance),
         };
 
         internal static readonly List<DamageModifierDescriptor> OutgoingDamageModifiers = new List<DamageModifierDescriptor>

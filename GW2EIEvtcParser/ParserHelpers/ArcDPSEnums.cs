@@ -43,6 +43,7 @@ namespace GW2EIEvtcParser
             internal const ulong EODBeta2 = 119939;
             internal const ulong EODBeta3 = 121168;
             internal const ulong EODBeta4 = 122479;
+            internal const ulong EODRelease = 125589;
             internal const ulong March2022Balance = 126520;
             internal const ulong March2022Balance2 = 127285;
             internal const ulong May2022Balance = 128773;
@@ -58,12 +59,19 @@ namespace GW2EIEvtcParser
             internal const ulong May2023Balance = 145038;
             internal const ulong May2023BalanceHotFix = 146069;
             internal const ulong June2023Balance = 147734;
-            internal const ulong SOTOBetaAndSilentSurfNM = 147830; 
+            internal const ulong SOTOBetaAndSilentSurfNM = 147830;
             internal const ulong July2023BalanceAndSilentSurfCM = 148697;
             internal const ulong SOTOReleaseAndBalance = 150431;
             internal const ulong September2023Balance = 151966;
             internal const ulong DagdaNMHPChangedAndCMRelease = 153978;
             internal const ulong November2023Balance = 154949;
+            internal const ulong January2024Balance = 157732;
+            internal const ulong February2024NewWeapons = 158837;
+            internal const ulong February2024CerusCMHPFix = 158968;
+            internal const ulong March2024BalanceAndCerusLegendary = 159951;
+            internal const ulong May2024LonelyTowerFractalRelease = 163141;
+            internal const ulong June2024LonelyTowerCMRelease = 163807;
+            internal const ulong June2024Balance = 164824;
             //
             internal const ulong EndOfLife = ulong.MaxValue;
         }
@@ -84,6 +92,14 @@ namespace GW2EIEvtcParser
             internal const int BuffExtensionBroken = 20230905;
             internal const int BuffExtensionOverstackValueChanged = 20231107;
             internal const int LingeringAgents = 20231110;
+            internal const int RemovedDurationForInfiniteDurationStacksChanged = 20240211;
+            internal const int NewMarkerEventBehavior = 20240418;
+            internal const int Last90BeforeDownRetired = 20240529;
+            internal const int StackType0ActiveChange = 20240609;
+            internal const int TeamChangeOnDespawn = 20240612;
+            internal const int WeaponSwapValueIsPrevious_CrowdControlEvents_GliderEvents = 20240627;
+            internal const int MovementSkillDetection = 20240709;
+            internal const int EICanDoManualBuffAttributes = int.MaxValue;
             //
             internal const int EndOfLife = int.MaxValue;
         }
@@ -97,6 +113,21 @@ namespace GW2EIEvtcParser
             public const int SecondWaterSet = 1;
             public const int TransformSet = 3;
             public const int KitSet = 2;
+
+            public static bool IsWeaponSet(int set)
+            {
+                return IsLandSet(set) || IsWaterSet(set);
+            }
+
+            public static bool IsLandSet(int set)
+            {
+                return set == FirstLandSet || set == SecondLandSet;
+            }
+
+            public static bool IsWaterSet(int set)
+            {
+                return set == FirstWaterSet || set == SecondWaterSet;
+            }
         }
 
         /// <summary>
@@ -104,6 +135,7 @@ namespace GW2EIEvtcParser
         /// </summary>
         internal static class RewardTypes
         {
+            internal const int Daily = 13;
             internal const int OldRaidReward1 = 55821; // On each kill
             internal const int OldRaidReward2 = 60685; // On each kill
             internal const int CurrentRaidReward = 22797; // Once per week
@@ -193,6 +225,7 @@ namespace GW2EIEvtcParser
             Downed = 9,
             BreakbarDamage = 10,
             Activation = 11,
+            CrowdControl = 12,
 
             Unknown
         };
@@ -230,8 +263,8 @@ namespace GW2EIEvtcParser
             Spawn = 6,
             Despawn = 7,
             HealthUpdate = 8,
-            LogStart = 9,
-            LogEnd = 10,
+            SquadCombatStart = 9,
+            SquadCombatEnd = 10,
             WeaponSwap = 11,
             MaxHealthUpdate = 12,
             PointOfView = 13,
@@ -257,10 +290,10 @@ namespace GW2EIEvtcParser
             SkillTiming = 33,
             BreakbarState = 34,
             BreakbarPercent = 35,
-            Error = 36,
-            Tag = 37,
+            Integrity = 36,
+            Marker = 37,
             BarrierUpdate = 38,
-            StatReset = 39, 
+            StatReset = 39,
             Extension = 40,
             APIDelayed = 41,
             InstanceStart = 42,
@@ -268,11 +301,16 @@ namespace GW2EIEvtcParser
             Last90BeforeDown = 44,
             Effect_45 = 45,
             EffectIDToGUID = 46,
-            LogStartNPCUpdate = 47,
+            LogNPCUpdate = 47,
             Idle = 48,
             ExtensionCombat = 49,
             FractalScale = 50,
             Effect_51 = 51,
+            RuleSet = 52,
+            SquadMarker = 53,
+            ArcBuild = 54,
+            Glider = 55,
+            StunBreak = 56,
             Unknown
         };
 
@@ -327,15 +365,15 @@ namespace GW2EIEvtcParser
             Expertise = 9,
             Armor = 10,
             Agony = 11,
-            StatInc = 12,
-            FlatInc = 13,
-            PhysInc = 14,
-            CondInc = 15,
-            PhysRec = 16,
-            CondRec = 17,
+            StatOutgoing = 12,
+            FlatOutgoing = 13,
+            PhysOutgoing = 14,
+            CondOutgoing = 15,
+            PhysIncomingAdditive = 16,
+            CondIncomingAdditive = 17,
             AttackSpeed = 18,
-            UnusedSiphonInc_Arc = 19, // Unused due to being auto detected by the solver
-            SiphonRec = 20,
+            UnusedSiphonOutgoing_Arc = 19, // Unused due to being auto detected by the solver
+            SiphonIncomingAdditive1 = 20,
             //
             Unknown = short.MaxValue,
             //
@@ -362,7 +400,7 @@ namespace GW2EIEvtcParser
             ExperienceFromAll = 100,
             WXP = 112,*/
             // Custom Ids, matched using a very simple pattern detection, see BuffInfoSolver.cs
-            ConditionDurationInc = -1,
+            ConditionDurationOutgoing = -1,
             DamageFormulaSquaredLevel = -2,
             CriticalChance = -3,
             StrikeDamageToHP = -4,
@@ -372,9 +410,9 @@ namespace GW2EIEvtcParser
             DamageFormula = -8,
             MovementActivationDamageFormula = -9,
             EnduranceRegeneration = -10,
-            HealingEffectivenessRec = -11,
-            HealingEffectivenessFlatInc = -12,
-            HealingEffectivenessConvInc = -13,
+            HealingEffectivenessIncomingNonStacking = -11,
+            HealingEffectivenessOutgoingAdditive = -12,
+            HealingEffectivenessConvOutgoing = -13,
             HealingOutputFormula = -14,
             ExperienceFromKills = -15,
             GoldFind = -16,
@@ -384,38 +422,45 @@ namespace GW2EIEvtcParser
             MagicFind = -20,
             ExperienceFromAll = -21,
             WXP = -22,
-            SiphonInc = -23,
-            PhysRec2 = -24,
-            CondRec2 = -25,
-            BoonDurationInc = -26,
-            HealingEffectivenessRec2 = -27,
+            SiphonOutgoing = -23,
+            PhysIncomingMultiplicative = -24,
+            CondIncomingMultiplicative = -25,
+            BoonDurationOutgoing = -26,
+            HealingEffectivenessIncomingAdditive = -27,
             MovementSpeedStacking = -28,
             MovementSpeedStacking2 = -29,
             FishingPower = -30,
             MaximumHP = -31,
             VitalityPercent = -32,
             DefensePercent = -33,
+            SiphonIncomingAdditive2 = -34,
+            HealingEffectivenessIncomingMultiplicative = -35,
         }
-        internal static BuffAttribute GetBuffAttribute(short bt, int evtcVersion)
+        internal static BuffAttribute GetBuffAttribute(short bt, int evtcBuild)
         {
+            if (evtcBuild >= ArcDPSBuilds.EICanDoManualBuffAttributes)
+            {
+                return BuffAttribute.Unknown;
+            }
             BuffAttribute res;
-            if (evtcVersion >= ArcDPSBuilds.BuffAttrFlatIncRemoved)
+            if (evtcBuild >= ArcDPSBuilds.BuffAttrFlatIncRemoved)
             {
                 // Enum has shifted by -1
-                if (bt <= (byte)BuffAttribute.SiphonRec - 1)
+                if (bt <= (byte)BuffAttribute.SiphonIncomingAdditive1 - 1)
                 {
                     // only apply +1 shift to enum higher or equal to the one removed
-                    res = bt < (byte)BuffAttribute.FlatInc ? (BuffAttribute)(bt) : (BuffAttribute)(bt + 1);
-                } 
+                    res = bt < (byte)BuffAttribute.FlatOutgoing ? (BuffAttribute)(bt) : (BuffAttribute)(bt + 1);
+                }
                 else
                 {
                     res = BuffAttribute.Unknown;
                 }
-            } else
-            {
-                res = bt <= (byte)BuffAttribute.SiphonRec ? (BuffAttribute)bt : BuffAttribute.Unknown;
             }
-            if (res == BuffAttribute.UnusedSiphonInc_Arc)
+            else
+            {
+                res = bt <= (byte)BuffAttribute.SiphonIncomingAdditive1 ? (BuffAttribute)bt : BuffAttribute.Unknown;
+            }
+            if (res == BuffAttribute.UnusedSiphonOutgoing_Arc)
             {
                 res = BuffAttribute.Unknown;
             }
@@ -453,8 +498,27 @@ namespace GW2EIEvtcParser
             return Enum.IsDefined(typeof(SkillAction), bt) ? (SkillAction)bt : SkillAction.Unknown;
         }
 
-        // Content local
+        // Squad Marker index
 
+        public enum SquadMarkerIndex : byte
+        {
+            // To be verified
+            Arrow = 0,
+            Circle = 1,
+            Heart = 2,
+            Square = 3,
+            Star = 4,
+            Swirl = 5,
+            Triangle = 6,
+            X = 7,
+            Unknown
+        }
+        internal static SquadMarkerIndex GetSquadMarkerIndex(byte bt)
+        {
+            return bt < (byte)SquadMarkerIndex.Unknown ? (SquadMarkerIndex)bt : SquadMarkerIndex.Unknown;
+        }
+
+        // Content local
         public enum ContentLocal : byte
         {
             Effect = 0,
@@ -533,6 +597,15 @@ namespace GW2EIEvtcParser
         private const int QadimPlatform = -49;
         private const int GravityBall = -50;
         private const int JormagMovingFrostBeam = -51;
+        private const int GrandStrikeChest = -52;
+        private const int PermanentEmbodimentOfGluttony = -53;
+        private const int PermanentEmbodimentOfRage = -54;
+        private const int PermanentEmbodimentOfDespair = -55;
+        private const int PermanentEmbodimentOfRegret = -56;
+        private const int PermanentEmbodimentOfEnvy = -57;
+        private const int PermanentEmbodimentOfMalice = -58;
+        private const int KryptisRift = -59;
+        private const int EparchLonelyTowerDummy = -60;
         public const int NonIdentifiedSpecies = 0;
 
         //
@@ -866,6 +939,8 @@ namespace GW2EIEvtcParser
             VoidGoliath = 24761,
             DragonEnergyOrb = DragonOrb,
             GravityBall = ArcDPSEnums.GravityBall,
+            JormagMovingFrostBeamCenter = 23747,
+            JormagMovingFrostBeamNorth = 24541,
             JormagMovingFrostBeam = ArcDPSEnums.JormagMovingFrostBeam,
             // Aetherblade Hideout
             MaiTrinStrikeDuringEcho = 23826,
@@ -919,6 +994,13 @@ namespace GW2EIEvtcParser
             EmbodimentOfEnvy = 25967,
             EmbodimentOfMalice = 25700,
             MaliciousShadow = 25747,
+            MaliciousShadowCM = 25645,
+            PermanentEmbodimentOfGluttony = ArcDPSEnums.PermanentEmbodimentOfGluttony,
+            PermanentEmbodimentOfRage = ArcDPSEnums.PermanentEmbodimentOfRage,
+            PermanentEmbodimentOfDespair = ArcDPSEnums.PermanentEmbodimentOfDespair,
+            PermanentEmbodimentOfRegret = ArcDPSEnums.PermanentEmbodimentOfRegret,
+            PermanentEmbodimentOfEnvy = ArcDPSEnums.PermanentEmbodimentOfEnvy,
+            PermanentEmbodimentOfMalice = ArcDPSEnums.PermanentEmbodimentOfMalice,
             // Freezie
             FreeziesFrozenHeart = 21328,
             IceStormer = 21325,
@@ -997,6 +1079,14 @@ namespace GW2EIEvtcParser
             LuxonMonkSpirit = 25571,
             CaptainThess1 = 25554,
             CaptainThess2 = 25557,
+            // Eparch
+            IncarnationOfCruelty = 26270,
+            IncarnationOfJudgement = 26260,
+            AvatarOfSpite = 26268,
+            TheTormentedLonelyTower = 26193,
+            TheCravenLonelyTower = 26193,
+            KryptisRift = ArcDPSEnums.KryptisRift,
+            EparchLonelyTowerDummy = ArcDPSEnums.EparchLonelyTowerDummy,
             // Open world Soo-Won
             SooWonTail = 51756,
             VoidGiant2 = 24310,
@@ -1141,6 +1231,9 @@ namespace GW2EIEvtcParser
             AiKeeperOfThePeak2 = ArcDPSEnums.AiKeeperOfThePeak2,
             KanaxaiScytheOfHouseAurkusNM = 25572,
             KanaxaiScytheOfHouseAurkusCM = 25577,
+            CerusLonelyTower = 26257,
+            DeimosLonelyTower = 26226,
+            EparchLonelyTower = 26231,
             // Golems
             MassiveGolem10M = 16169,
             MassiveGolem4M = 16202,
@@ -1169,6 +1262,7 @@ namespace GW2EIEvtcParser
             ChestOfSouls = ArcDPSEnums.ChestOfSouls,
             SiegeChest = ArcDPSEnums.SiegeChest,
             CAChest = ArcDPSEnums.CAChest,
+            GrandStrikeChest = ArcDPSEnums.GrandStrikeChest,
             //
             None = int.MaxValue,
         };
@@ -1218,6 +1312,8 @@ namespace GW2EIEvtcParser
             IllusionaryMariner = 9052,
             IllusionaryWhaler = 9057,
             IllusionaryAvenger = 15188,
+            IllusionarySharpShooter = 26152,
+            IllusionaryLancer = 26271,
             // Mesmer Clones
             // - Single Weapon
             CloneSword = 8108,
@@ -1229,6 +1325,7 @@ namespace GW2EIEvtcParser
             CloneSpear = 6479,
             CloneDownstate = 10542,
             CloneDagger = 25569,
+            CloneRifle = 26153,
             CloneUnknown = 8107, // Possibly -> https://wiki.guildwars2.com/wiki/Clone_(Snowball_Mayhem)
             // - Sword + Offhand
             CloneSwordTorch = 15090,
@@ -1338,6 +1435,8 @@ namespace GW2EIEvtcParser
             JuvenileSiegeTurtle = 24796,
             JuvenilePhoenix = 25131,
             JuvenileAetherHunter = 25652,
+            JuvenileSkyChakStriker = 26147,
+            JuvenileSpinegazer = 26220,
             // Guardian Weapon Summons
             BowOfTruth = 6383,
             HammerOfWisdom = 5791,

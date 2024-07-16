@@ -66,8 +66,10 @@ namespace GW2EIBuilders.HtmlModels
         public List<string> LogErrors { get; set; }
         public string EncounterStart { get; set; }
         public string EncounterEnd { get; set; }
+        public string InstanceStart { get; set; }
+        public string InstanceIP { get; set; }
         public string ArcVersion { get; set; }
-        public long EvtcVersion { get; set; }
+        public long EvtcBuild { get; set; }
         public ulong Gw2Build { get; set; }
         public long TriggerID { get; set; }
         public long EncounterID { get; set; }
@@ -84,8 +86,13 @@ namespace GW2EIBuilders.HtmlModels
             log.UpdateProgressWithCancellationCheck("HTML: building Meta Data");
             EncounterStart = log.LogData.LogStartStd;
             EncounterEnd = log.LogData.LogEndStd;
+            if (log.LogData.LogInstanceStartStd != null)
+            {
+                InstanceStart = log.LogData.LogInstanceStartStd;
+                InstanceIP = log.LogData.LogInstanceIP;
+            }
             ArcVersion = log.LogData.ArcVersion;
-            EvtcVersion = log.LogData.EvtcVersion;
+            EvtcBuild = log.LogData.EvtcBuild;
             Gw2Build = log.LogData.GW2Build;
             TriggerID = log.FightData.TriggerID;
             EncounterID = log.FightData.Logic.EncounterID;
@@ -116,7 +123,7 @@ namespace GW2EIBuilders.HtmlModels
 
             EncounterDuration = log.FightData.DurationString;
             Success = log.FightData.Success;
-            Wvw = log.FightData.Logic.Mode == FightLogic.ParseMode.WvW;
+            Wvw = log.FightData.Logic.ParseMode == FightLogic.ParseModeEnum.WvW;
             Targetless = log.FightData.Logic.Targetless;
             FightName = log.FightData.FightName;
             FightIcon = log.FightData.Logic.Icon;
@@ -290,7 +297,7 @@ namespace GW2EIBuilders.HtmlModels
             }
         }
 
-        private void BuildOutgoingDamageModDictionaries(ParsedEvtcLog log, HashSet<OutgoingDamageModifier> usedDamageMods, 
+        private void BuildOutgoingDamageModDictionaries(ParsedEvtcLog log, HashSet<OutgoingDamageModifier> usedDamageMods,
             HashSet<string> allDamageMods, List<OutgoingDamageModifier> commonDamageModifiers, List<OutgoingDamageModifier> itemDamageModifiers)
         {
             foreach (AbstractSingleActor actor in log.Friendlies)
@@ -416,7 +423,7 @@ namespace GW2EIBuilders.HtmlModels
             if (cr)
             {
                 log.UpdateProgressWithCancellationCheck("HTML: building Combat Replay");
-                logData.CrData = new CombatReplayDto(log);
+                logData.CrData = new CombatReplayDto(log, usedSkills, usedBuffs);
             }
             log.UpdateProgressWithCancellationCheck("HTML: building Graph Data");
             logData.GraphData = new ChartDataDto(log);
@@ -461,7 +468,7 @@ namespace GW2EIBuilders.HtmlModels
             for (int i = 0; i < phases.Count; i++)
             {
                 PhaseData phase = phases[i];
-                var phaseDto = new PhaseDto(phase, phases, log, persBuffDict, 
+                var phaseDto = new PhaseDto(phase, phases, log, persBuffDict,
                     commonOutDamageModifiers, itemOutDamageModifiers, persOutDamageModDict,
                     commonIncDamageModifiers, itemIncDamageModifiers, persIncDamageModDict
                     );
@@ -482,7 +489,7 @@ namespace GW2EIBuilders.HtmlModels
             SkillDto.AssembleSkills(usedSkills.Values, logData.SkillMap, log);
             DamageModDto.AssembleDamageModifiers(usedDamageMods, logData.DamageModMap);
             DamageModDto.AssembleDamageModifiers(usedIncDamageMods, logData.DamageIncModMap);
-            BuffDto.AssembleBoons(usedBuffs.Values, logData.BuffMap, log);
+            BuffDto.AssembleBuffs(usedBuffs.Values, logData.BuffMap, log);
             MechanicDto.BuildMechanics(log.MechanicData.GetPresentMechanics(log, log.FightData.FightStart, log.FightData.FightEnd), logData.MechanicMap);
             return logData;
         }

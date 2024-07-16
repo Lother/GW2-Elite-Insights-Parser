@@ -1,5 +1,4 @@
-﻿using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.EIData.BuffSimulators;
+﻿using GW2EIEvtcParser.EIData.BuffSimulators;
 using static GW2EIEvtcParser.ArcDPSEnums;
 
 namespace GW2EIEvtcParser.ParsedData
@@ -9,7 +8,7 @@ namespace GW2EIEvtcParser.ParsedData
         public uint BuffInstance { get; protected set; }
 
         private readonly bool _byShouldntBeUnknown;
-        private bool _overstackOrNaturalEnd => (IFF == IFF.Unknown && CreditedBy == ParserHelper._unknownAgent && !_byShouldntBeUnknown);
+        internal bool OverstackOrNaturalEnd => (IFF == IFF.Unknown && CreditedBy == ParserHelper._unknownAgent && !_byShouldntBeUnknown);
 
         internal BuffRemoveSingleEvent(CombatItem evtcItem, AgentData agentData, SkillData skillData) : base(evtcItem, agentData, skillData)
         {
@@ -26,7 +25,7 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal override bool IsBuffSimulatorCompliant(bool useBuffInstanceSimulator)
         {
-            if (BuffID == SkillIDs.NoBuff)
+            if (!base.IsBuffSimulatorCompliant(useBuffInstanceSimulator))
             {
                 return false;
             }
@@ -35,10 +34,10 @@ namespace GW2EIEvtcParser.ParsedData
                 return true;
             }
             // overstack or natural end removals
-            return !_overstackOrNaturalEnd;
+            return !OverstackOrNaturalEnd;
         }
 
-        internal override void UpdateSimulator(AbstractBuffSimulator simulator)
+        internal override void UpdateSimulator(AbstractBuffSimulator simulator, bool forceStackType4ToBeActive)
         {
             simulator.Remove(CreditedBy, RemovedDuration, 1, Time, BuffRemove.Single, BuffInstance);
         }

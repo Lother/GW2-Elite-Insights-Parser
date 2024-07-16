@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.EIData.Buffs;
 using GW2EIEvtcParser.ParserHelpers;
 using GW2EIGW2API;
 using GW2EIGW2API.GW2API;
-using static System.Net.WebRequestMethods;
 using static GW2EIEvtcParser.ArcDPSEnums;
-using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
 
 namespace GW2EIEvtcParser.ParsedData
@@ -15,9 +12,9 @@ namespace GW2EIEvtcParser.ParsedData
     public class SkillItem
     {
 
-        internal static (long, long) GetArcDPSCustomIDs(int evtcVersion)
+        internal static (long, long) GetArcDPSCustomIDs(EvtcVersionEvent evtcVersion)
         {
-            if (evtcVersion >= ArcDPSBuilds.InternalSkillIDsChange)
+            if (evtcVersion.Build >= ArcDPSBuilds.InternalSkillIDsChange)
             {
                 return (ArcDPSDodge20220307, ArcDPSGenericBreakbar20220307);
             }
@@ -38,10 +35,36 @@ namespace GW2EIEvtcParser.ParsedData
             { ArcDPSGenericBreakbar20220307, "Generic Breakbar" },
             { WaterBlastCombo1, "Water Blast Combo" },
             { WaterBlastCombo2, "Water Blast Combo" },
-            { MendingMight, "Mending Might" },
             { WaterLeapCombo, "Water Leap Combo" },
+            { LightningLeapCombo, "Lightning Leap Combo" },
+            { MendingMight, "Mending Might" },
             { InvigoratingBond, "Invigorating Bond" },
-            { SigilOfWater, "Sigil of Water" },
+            { WaveOfHealing_MinorSigilOfWater, "Wave of Healing (Minor Sigil of Water)" },
+            { WaveOfHealing_MajorSigilOfWater, "Wave of Healing (Major Sigil of Water)" },
+            { WaveOfHealing_SuperiorSigilOfWater, "Wave of Healing (Superior Sigil of Water)" },
+            { WaveOfHealing_MinorSigilOfRenewal, "Wave of Healing (Minor Sigil of Renewal)" },
+            { WaveOfHealing_MajorSigilOfRenewal, "Wave of Healing (Major Sigil of Renewal)" },
+            { WaveOfHealing_SuperiorSigilOfRenewal, "Wave of Healing (Superior Sigil of Renewal)" },
+            { FrostBurst_MinorSigilOfHydromancy, "Frost Burst (Minor Sigil of Hydromancy)" },
+            { FrostBurst_MajorSigilOfHydromancy, "Frost Burst (Major Sigil of Hydromancy)" },
+            { FrostBurst_SuperiorSigilOfHydromancy, "Frost Burst (Superior Sigil of Hydromancy)" },
+            { RingOfEarth_MinorSigilOfGeomancy, "Ring of Earth (Minor Sigil of Geomancy)" },
+            { RingOfEarth_MajorSigilOfGeomancy, "Ring of Earth (Major Sigil of Geomancy)" },
+            { RingOfEarth_SuperiorSigilOfGeomancy, "Ring of Earth (Superior Sigil of Geomancy)" },
+            { LightningStrike_SigilOfAir, "Lightning Strike (Minor/Major/Superior Sigil of Air)" },
+            { FlameBlast_SigilOfFire, "Flame Blast (Minor/Major/Superior Sigil of Fire)" },
+            { Snowball_SigilOfMischief, "Snowball (Minor/Major/Superior Sigil of Mischief)" },
+            { SuperiorSigilOfSeverance, "Superior Sigil of Severance" },
+            { MinorSigilOfDoom, "Minor Sigil of Doom" },
+            { MajorSigilOfDoom, "Major Sigil of Doom" },
+            { SuperiorSigilOfDoom, "Superior Sigil of Doom" },
+            { MinorSigilOfBlood, "Minor Sigil of Blood" },
+            { MajorSigilOfBlood, "Major Sigil of Blood" },
+            { SuperiorSigilOfBlood, "Superior Sigil of Blood" },
+            { MajorSigilOfLeeching, "Major Sigil of Leeching" },
+            { SuperiorSigilOfLeeching, "Superior Sigil of Leeching" },
+            { SuperiorSigilOfVision, "Superior Sigil of Vision" },
+            { SuperiorSigilOfConcentration, "Superior Sigil of Concentration" },
             { RuneOfNightmare, "Rune of the Nightmare" },
             { FrozenBurstRuneOfIce, "Frozen Burst (Rune of the Ice)" },
             { HuntersCallRuneOfMadKing, "Hunter's Call (Rune of the Mad King)" },
@@ -71,8 +94,11 @@ namespace GW2EIEvtcParser.ParsedData
             { RelicOfPeithaTargetBuff, "Relic of Peitha" },
             { RelicOfPeithaBlade, "Relic of Peitha (Blade)" },
             { RelicOfFireworksBuffLoss, "Relic of Fireworks (Buff Loss)" },
+            { RelicOfTheFlockBarrier, "Relic of the Flock (Barrier)" },
+            { RelicOfMercyHealing, "Relic of Mercy" },
             { MabonsStrength, "Relic of Mabon" },
             { NouryssHungerDamageBuff, "Relic of Nourys" },
+            { RelicOfTheFoundingBarrier, "Relic of the Founding (Barrier)" },
             // Elementalist
             { DualFireAttunement, "Dual Fire Attunement" },
             { FireWaterAttunement, "Fire Water Attunement" },
@@ -100,6 +126,7 @@ namespace GW2EIEvtcParser.ParsedData
             { SoothingDetonation, "Soothing Detonation" },
             { HealingTurretHeal, "Healing Turret (Heal)" },
             { BladeBurstOrParticleAccelerator, "Blade Burst or Particle Accelerator" },
+            { DetonateThrowMineOrMineField, "Detonate (Throw Mine / Mine Field)" },
             // Guardian
             { SelflessDaring, "Selfless Daring" }, // The game maps this name incorrectly to "Selflessness Daring"
             { ProtectorsStrikeCounterHit, "Protector's Strike (Counter Hit)" },
@@ -110,6 +137,9 @@ namespace GW2EIEvtcParser.ParsedData
             { PortentOfFreedomOrUnhinderedDelivery, "Portent of Freedom or Unhindered Delivery" },
             { RushingJusticeStrike, "Rushing Justice (Hit)" },
             { ExecutionersCallingDualStrike, "Executioner's Calling (Dual Strike)" },
+            { FireJurisdictionLevel1, "Fire Jurisdiction (Level 1)" },
+            { FireJurisdictionLevel2, "Fire Jurisdiction (Level 2)" },
+            { FireJurisdictionLevel3, "Fire Jurisdiction (Level 3)" },
             // Mesmer
             { PowerReturn, "Power Return" },
             { PowerCleanse, "Power Cleanse" },
@@ -140,6 +170,7 @@ namespace GW2EIEvtcParser.ParsedData
             { OverbearingSmashLeap, "Overbearing Smash (Leap)" },
             { UnleashedOverbearingSmashLeap, "Unleashed Overbearing Smash (Leap)" },
             { RangerPetSpawned, "Ranger Pet Spawned" },
+            { WolfsOnslaughtFollowUp, "Wolf's Onslaught (Follow Up)" },
             // Revenant
 	        { EnergyExpulsion, "Energy Expulsion" },
             { RiftSlashRiftHit, "Rift Slash (Rift Hit)" },
@@ -158,6 +189,8 @@ namespace GW2EIEvtcParser.ParsedData
             { KallaSummonsSaluteAnimationSkill, "Salute" },
             { GenerousAbundanceCentaur, "Generous Abundance (Centaur)" },
             { GenerousAbundanceOther, "Generous Abundance (Other)" },
+            { BlitzMinesDrop, "Blitz Mines (Drop)" },
+            { BlitzMines, "Blitz Mines (Detonation)" },
             // Thief
 	        { EscapistsFortitude, "Escapist's Fortitude" }, // The game maps this to the wrong skill
             { SoulStoneVenomSkill, "Soul Stone Venom" },
@@ -174,6 +207,10 @@ namespace GW2EIEvtcParser.ParsedData
             { BoundHit, "Bound (Hit)" },
             // Warrior
             { RushDamage, "Rush (Hit)" },
+            { MightyThrowScatter, "Mighty Throw (Scattered Spear)" },
+            { HarriersTossAdrenalineLevel1, "Harrier's Toss (Adrenaline Level 1)" },
+            { HarriersTossAdrenalineLevel2, "Harrier's Toss (Adrenaline Level 2)" },
+            { HarriersTossAdrenalineLevel3, "Harrier's Toss (Adrenaline Level 3)" },
             // Special Forces Training Area
             { MushroomKingsBlessing, "Mushroom King's Blessing (PoV Only)" },
             // Gorseval
@@ -246,9 +283,42 @@ namespace GW2EIEvtcParser.ParsedData
             { FrighteningSpeedReturn, "Frightening Speed (Return)" },
             { DreadVisageKanaxaiSkill, "Dread Visage (Kanaxai)" },
             { DreadVisageKanaxaiSkillIsland, "Dread Visage (Kanaxai Island)" },
-            { DreadVisageAspectSkill, "Dead Visage (Aspect)" },
+            { DreadVisageAspectSkill, "Dread Visage (Aspect)" },
             { RendingStormSkill, "Rending Storm (Axe)" },
             { GatheringShadowsSkill, "Gathering Shadows (Breakbar)" },
+            // Cerus
+            // - Normal Mode
+            { CrushingRegretNM, "Crushing Regret (NM)" },
+            { WailOfDespairNM, "Wail of Despair (NM)" },
+            { EnviousGazeNM, "Envious Gaze (NM)" },
+            { MaliciousIntentNM, "Malicious Intent (NM)" },
+            { InsatiableHungerSkillNM, "Insatiable Hunger (NM)" },
+            { CryOfRageNM, "Cry of Rage (NM)" },
+            // - Empowered Normal Mode
+            { CrushingRegretEmpoweredNM, "Crushing Regret (Empowered NM)" },
+            { WailOfDespairEmpoweredNM, "Wail of Despair (Empowered NM)" },
+            { EnviousGazeEmpoweredNM, "Envious Gaze (Empowered NM)" },
+            { MaliciousIntentEmpoweredNM, "Malicious Intent (Empowered NM)" },
+            { InsatiableHungerEmpoweredSkillNM, "Insatiable Hunger (Empowered NM)" },
+            { CryOfRageEmpoweredNM, "Cry of Rage (Empowered NM)" },
+            // - Challenge Mode
+            { CrushingRegretCM, "Crushing Regret (CM)" },
+            { WailOfDespairCM, "Wail of Despair (CM)" },
+            { EnviousGazeCM, "Envious Gaze (CM)" },
+            { MaliciousIntentCM, "Malicious Intent (CM)" },
+            { InsatiableHungerSkillCM, "Insatiable Hunger (CM)" },
+            { CryOfRageCM, "Cry of Rage (CM)" },
+            // - Empowered Challenge Mode
+            { CrushingRegretEmpoweredCM, "Crushing Regret (Empowered CM)" },
+            { WailOfDespairEmpoweredCM, "Wail of Despair (Empowered CM)" },
+            { EnviousGazeEmpoweredCM, "Envious Gaze (Empowered CM)" },
+            { MaliciousIntentEmpoweredCM, "Malicious Intent (Empowered CM)" },
+            { InsatiableHungerEmpoweredSkillCM, "Insatiable Hunger (Empowered CM)" },
+            { CryOfRageEmpoweredCM, "Cry of Rage (Empowered CM)" },
+            // - Misc
+            { PetrifySkill, "Petrify" },
+            { EnragedSmashNM, "Enraged Smash (NM)" },
+            { EnragedSmashCM, "Enraged Smash (CM)" },
             // World vs World
             { WvWSpendingSupplies, "Spending Supply (Building / Repairing)" },
             { WvWPickingUpSupplies, "Picking Up Supplies" },
@@ -295,6 +365,7 @@ namespace GW2EIEvtcParser.ParsedData
             { ArcDPSDodge, "https://wiki.guildwars2.com/images/archive/b/b2/20150601155307%21Dodge.png" },
             { ArcDPSGenericBreakbar20220307, "https://wiki.guildwars2.com/images/a/ae/Unshakable.png" },
             { ArcDPSDodge20220307, "https://wiki.guildwars2.com/images/archive/b/b2/20150601155307%21Dodge.png" },
+            { Poisoned, BuffImages.Poison },
             #region ComboIcons
             // Combos
             { WaterBlastCombo1, "https://wiki.guildwars2.com/images/thumb/f/f3/Healing.png/30px-Healing.png" },
@@ -308,6 +379,7 @@ namespace GW2EIEvtcParser.ParsedData
             { PoisonBlastCombo2, "https://i.imgur.com/fmwZ1cP.png" },
             { LightningLeapCombo, "https://i.imgur.com/fmwZ1cP.png" },
             { LightningWhirlCombo, "https://i.imgur.com/fmwZ1cP.png" },
+            { DarkWhirlCombo, "https://i.imgur.com/fmwZ1cP.png" },
             { DarkBlastCombo, "https://i.imgur.com/fmwZ1cP.png" },
             { DarkBlastCombo2, "https://i.imgur.com/fmwZ1cP.png" },
             { FireWhirlCombo, "https://i.imgur.com/fmwZ1cP.png" },
@@ -317,14 +389,35 @@ namespace GW2EIEvtcParser.ParsedData
             { LightWhirlCombo, "https://i.imgur.com/fmwZ1cP.png" },
             #endregion ComboIcons
             #region ItemIcons
-            { LightningStrikeSigil, "https://wiki.guildwars2.com/images/c/c3/Superior_Sigil_of_Air.png" },
-            { FlameBlastSigil, "https://wiki.guildwars2.com/images/5/56/Superior_Sigil_of_Fire.png" },
-            { SigilOfEarth, "https://wiki.guildwars2.com/images/4/43/Superior_Sigil_of_Geomancy.png" },
-            { SigilOfHydromancy, "https://wiki.guildwars2.com/images/3/33/Superior_Sigil_of_Hydromancy.png" },
-            { SigilOfWater, "https://wiki.guildwars2.com/images/f/f9/Superior_Sigil_of_Water.png" },
-            { SigilOfBlood, "https://wiki.guildwars2.com/images/a/ab/Superior_Sigil_of_Blood.png" },
-            { WaveOfHealing, "https://wiki.guildwars2.com/images/f/f9/Superior_Sigil_of_Water.png" },
-            { WaveOfHealing2, "https://wiki.guildwars2.com/images/f/f9/Superior_Sigil_of_Water.png" },
+            { LightningStrike_SigilOfAir, "https://wiki.guildwars2.com/images/c/c3/Superior_Sigil_of_Air.png" },
+            { FlameBlast_SigilOfFire, "https://wiki.guildwars2.com/images/5/56/Superior_Sigil_of_Fire.png" },
+            { RingOfEarth_MinorSigilOfGeomancy, "https://wiki.guildwars2.com/images/2/22/Minor_Sigil_of_Geomancy.png" },
+            { RingOfEarth_MajorSigilOfGeomancy, "https://wiki.guildwars2.com/images/6/68/Major_Sigil_of_Geomancy.png" },
+            { RingOfEarth_SuperiorSigilOfGeomancy, "https://wiki.guildwars2.com/images/4/43/Superior_Sigil_of_Geomancy.png" },
+            { FrostBurst_MinorSigilOfHydromancy, "https://wiki.guildwars2.com/images/b/bc/Minor_Sigil_of_Hydromancy.png" },
+            { FrostBurst_MajorSigilOfHydromancy, "https://wiki.guildwars2.com/images/c/c0/Major_Sigil_of_Hydromancy.png" },
+            { FrostBurst_SuperiorSigilOfHydromancy, "https://wiki.guildwars2.com/images/3/33/Superior_Sigil_of_Hydromancy.png" },
+            { WaveOfHealing_MinorSigilOfWater, "https://wiki.guildwars2.com/images/8/84/Minor_Sigil_of_Water.png" },
+            { WaveOfHealing_MajorSigilOfWater, "https://wiki.guildwars2.com/images/6/69/Major_Sigil_of_Water.png" },
+            { WaveOfHealing_SuperiorSigilOfWater, "https://wiki.guildwars2.com/images/f/f9/Superior_Sigil_of_Water.png" },
+            { WaveOfHealing_MinorSigilOfRenewal, "https://wiki.guildwars2.com/images/a/a5/Minor_Sigil_of_Renewal.png" },
+            { WaveOfHealing_MajorSigilOfRenewal, "https://wiki.guildwars2.com/images/f/f6/Major_Sigil_of_Renewal.png" },
+            { WaveOfHealing_SuperiorSigilOfRenewal, "https://wiki.guildwars2.com/images/d/db/Superior_Sigil_of_Renewal.png" },
+            { MajorSigilOfRestoration, "https://wiki.guildwars2.com/images/c/cd/Major_Sigil_of_Restoration.png" },
+            { SuperiorSigilOfRestoration, "https://wiki.guildwars2.com/images/2/24/Superior_Sigil_of_Restoration.png" },
+            { SuperiorSigilOfSeverance, BuffImages.SuperiorSigilOfSeverance },
+            { MinorSigilOfDoom, "https://wiki.guildwars2.com/images/5/51/Minor_Sigil_of_Doom.png" },
+            { MajorSigilOfDoom, "https://wiki.guildwars2.com/images/7/78/Major_Sigil_of_Doom.png" },
+            { SuperiorSigilOfDoom, "https://wiki.guildwars2.com/images/6/67/Superior_Sigil_of_Doom.png" },
+            { MinorSigilOfBlood, "https://wiki.guildwars2.com/images/d/d4/Minor_Sigil_of_Blood.png" },
+            { MajorSigilOfBlood, "https://wiki.guildwars2.com/images/9/9b/Major_Sigil_of_Blood.png" },
+            { SuperiorSigilOfBlood, "https://wiki.guildwars2.com/images/a/ab/Superior_Sigil_of_Blood.png" },
+            { MajorSigilOfLeeching, "https://wiki.guildwars2.com/images/3/3f/Major_Sigil_of_Leeching.png" },
+            { SuperiorSigilOfLeeching, "https://wiki.guildwars2.com/images/0/05/Superior_Sigil_of_Leeching.png" },
+            { Snowball_SigilOfMischief, "https://wiki.guildwars2.com/images/b/b7/Superior_Sigil_of_Mischief.png" },
+            { SuperiorSigilOfVision, BuffImages.SuperiorSigilOfVision },
+            { SuperiorSigilOfConcentration, BuffImages.SuperiorSigilOfConcentration },
+            { SuperiorSigilOfDraining, BuffImages.SuperiorSigilOfConcentration },
             { RuneOfTormenting, "https://wiki.guildwars2.com/images/e/ec/Superior_Rune_of_Tormenting.png" },
             { RuneOfNightmare, "https://wiki.guildwars2.com/images/2/2e/Superior_Rune_of_the_Nightmare.png" },
             { SuperiorRuneOfTheDolyak, "https://wiki.guildwars2.com/images/2/28/Superior_Rune_of_the_Dolyak.png" },
@@ -366,7 +459,9 @@ namespace GW2EIEvtcParser.ParsedData
             // Relics
             { RelicOfTheAfflicted, "https://wiki.guildwars2.com/images/9/91/Relic_of_the_Afflicted.png" },
             { RelicOfTheCitadel, "https://wiki.guildwars2.com/images/3/36/Relic_of_the_Citadel.png" },
+            { RelicOfMercyHealing, "https://wiki.guildwars2.com/images/e/ed/Relic_of_Mercy.png" },
             { RelicOfTheFlock, "https://wiki.guildwars2.com/images/1/1b/Relic_of_the_Flock.png" },
+            { RelicOfTheFlockBarrier, "https://wiki.guildwars2.com/images/1/1b/Relic_of_the_Flock.png" },
             { RelicOfTheIce, "https://wiki.guildwars2.com/images/5/55/Relic_of_the_Ice.png" },
             { RelicOfTheKrait, "https://wiki.guildwars2.com/images/7/7e/Relic_of_the_Krait.png" },
             { RelicOfTheNightmare, "https://wiki.guildwars2.com/images/5/51/Relic_of_the_Nightmare.png" },
@@ -389,6 +484,8 @@ namespace GW2EIEvtcParser.ParsedData
             { RelicOfKarakosaHealing, "https://wiki.guildwars2.com/images/6/6e/Relic_of_Karakosa.png" },
             { RelicOfNayosHealing, "https://wiki.guildwars2.com/images/e/e4/Relic_of_Nayos.png" },
             { RelicOfTheDefenderHealing, BuffImages.RelicOfTheDefender },
+            { RelicOfTheFoundingBarrier, "https://wiki.guildwars2.com/images/8/81/Relic_of_the_Founding.png" },
+            { RelicOfTheTwinGenerals, "https://wiki.guildwars2.com/images/0/0e/Relic_of_the_Twin_Generals.png" },
 #endregion RelicIcons
             #region ElementalistIcons
             { DualFireAttunement, "https://wiki.guildwars2.com/images/b/b4/Fire_Attunement.png" },
@@ -454,11 +551,13 @@ namespace GW2EIEvtcParser.ParsedData
             { JadeEnergyShot2JadeMech, "https://wiki.guildwars2.com/images/c/c0/Anchor.png" },
             { RifleBurstGrenadeDamage, "https://wiki.guildwars2.com/images/e/ed/Grenade_Barrage.png" },
             { GyroExplosion, "https://wiki.guildwars2.com/images/4/4e/Function_Gyro_%28tool_belt_skill%29.png" },
+            { DetonateThrowMineOrMineField, "https://wiki.guildwars2.com/images/d/d1/Detonate_Mine_Field.png" },
 #endregion EngineerIcons
             #region GuardianIcons
             { ProtectorsStrikeCounterHit, "https://wiki.guildwars2.com/images/e/e0/Protector%27s_Strike.png" },
             { SwordOfJusticeDamage, "https://wiki.guildwars2.com/images/8/81/Sword_of_Justice.png" },
             { GlacialHeart, "https://wiki.guildwars2.com/images/4/4f/Glacial_Heart.png" },
+            { GlacialHeartHeal, "https://wiki.guildwars2.com/images/4/4f/Glacial_Heart.png" },
             { ShatteredAegis, "https://wiki.guildwars2.com/images/d/d0/Shattered_Aegis.png" },
             { SelflessDaring, "https://wiki.guildwars2.com/images/9/9c/Selfless_Daring.png" },
             { Chapter1SearingSpell, "https://wiki.guildwars2.com/images/d/d3/Chapter_1-_Searing_Spell.png" },
@@ -493,6 +592,9 @@ namespace GW2EIEvtcParser.ParsedData
             { ShieldOfTheAvengerShatter, "https://wiki.guildwars2.com/images/2/2c/Shield_of_the_Avenger.png" },
             { VirtueOfJusticePassiveBurn, BuffImages.VirtueOfJustice },
             { HuntersWardImpacts, "https://wiki.guildwars2.com/images/e/e6/Hunter%27s_Ward.png" },
+            { FireJurisdictionLevel1, "https://render.guildwars2.com/file/61186008B920AADD9A0D47E1A10C63AFF28030A9/3256356.png" },
+            { FireJurisdictionLevel2, "https://render.guildwars2.com/file/61186008B920AADD9A0D47E1A10C63AFF28030A9/3256356.png" },
+            { FireJurisdictionLevel3, "https://render.guildwars2.com/file/61186008B920AADD9A0D47E1A10C63AFF28030A9/3256356.png" },
 #endregion GuardianIcons
             #region MesmerIcons
             { HealingPrism, "https://wiki.guildwars2.com/images/f/f4/Healing_Prism.png" },
@@ -524,7 +626,7 @@ namespace GW2EIEvtcParser.ParsedData
             { SpatialSurge, "https://wiki.guildwars2.com/images/8/87/Spatial_Surge.png" },
             { EtherBolt, "https://wiki.guildwars2.com/images/4/4a/Ether_Bolt.png" },
             { PhantasmalWhalersVolley, "https://wiki.guildwars2.com/images/6/6e/Phantasmal_Whaler.png" },
-            { IllusionOfLife, BuffImages.IllusionOfLife },
+            { IllusionOfLifeBuff, BuffImages.IllusionOfLife },
             { MindBlast, "https://wiki.guildwars2.com/images/6/61/Mind_Blast.png" },
             { PowerBlock, "https://wiki.guildwars2.com/images/a/af/Power_Block.png" },
             { PhantasmalMageAttack, "https://wiki.guildwars2.com/images/7/72/Phantasmal_Mage.png" },
@@ -533,6 +635,7 @@ namespace GW2EIEvtcParser.ParsedData
             { EchoOfMemoryExtra, "https://wiki.guildwars2.com/images/9/95/Echo_of_Memory.png" },
             { SplitSurgeSecondaryBeams, "https://wiki.guildwars2.com/images/f/fd/Split_Surge.png" },
             { PersistenceOfMemory, "https://wiki.guildwars2.com/images/c/ce/Persistence_of_Memory.png" },
+            { FriendlyFireIllu, "https://wiki.guildwars2.com/images/c/c0/Friendly_Fire.png" },
             #endregion  MesmerIcons
             #region NecromancerIcons
             { LifeFromDeath, "https://wiki.guildwars2.com/images/5/5e/Life_from_Death.png" },
@@ -592,6 +695,7 @@ namespace GW2EIEvtcParser.ParsedData
             { CallLightning_StormSpiritNPC, "https://wiki.guildwars2.com/images/5/59/Call_Lightning_%28Ranger%29.png" },
             { NaturesRenewal_Player, "https://wiki.guildwars2.com/images/c/c1/Nature%27s_Renewal.png" },
             { NaturesRenewal_SpiritOfNatureRenewalNPC, "https://wiki.guildwars2.com/images/c/c1/Nature%27s_Renewal.png" },
+            { NaturesRenewalHealing, "https://wiki.guildwars2.com/images/c/c1/Nature%27s_Renewal.png" },
             { SignetOfRenewalBuff, "https://wiki.guildwars2.com/images/1/11/Signet_of_Renewal.png" },
             { EntangleDamage, "https://wiki.guildwars2.com/images/6/67/Entangle.png" },
             { SpiritOfNature, "https://wiki.guildwars2.com/images/a/a3/Spirit_of_Nature.png" },
@@ -619,6 +723,9 @@ namespace GW2EIEvtcParser.ParsedData
             { WingSwipeWyvern, "https://wiki.guildwars2.com/images/3/38/Wing_Swipe.png" },
             { WingBuffetWyvern, "https://wiki.guildwars2.com/images/5/5f/Wing_Buffet.png" },
             { TailLashWyvern, "https://wiki.guildwars2.com/images/d/d9/Tail_Lash_%28wyvern_skill%29.png" },
+            { TailLashDevourer, "https://wiki.guildwars2.com/images/f/f5/Tail_Lash.png" },
+            { TwinDartsDevourer, "https://wiki.guildwars2.com/images/f/fe/Twin_Darts.png" },
+            { RetreatDevourer, "https://wiki.guildwars2.com/images/2/21/Burrow.png" },
             { BlackHoleMinion, "https://wiki.guildwars2.com/images/9/9d/Black_Hole.png" },
             { JacarandasEmbraceMinion, "https://wiki.guildwars2.com/images/d/d2/Jacaranda%27s_Embrace.png" },
             { CallLightningJacaranda, "https://wiki.guildwars2.com/images/f/f0/Call_Lightning_%28soulbeast%29.png" },
@@ -636,7 +743,8 @@ namespace GW2EIEvtcParser.ParsedData
             { BiteDrake, "https://wiki.guildwars2.com/images/e/e7/Bite_%28drake%29.png" },
             { BiteBear, "https://wiki.guildwars2.com/images/a/a6/Bite_%28bear%29.png" },
             { BiteSmokescale, "https://wiki.guildwars2.com/images/c/c1/Bite_%28smokescale%29.png" },
-            { SmokeAssaultSmokescale, "https://wiki.guildwars2.com/images/9/92/Smoke_Assault.png" },
+            { SmokeAssaultSmokescaleSkill, "https://wiki.guildwars2.com/images/9/92/Smoke_Assault.png" },
+            { SmokeAssaultSmokescaleDamage, "https://wiki.guildwars2.com/images/9/92/Smoke_Assault.png" },
             { MaulPorcine, "https://wiki.guildwars2.com/images/1/1f/Maul_%28porcine%29.png" },
             { JabPorcine, "https://wiki.guildwars2.com/images/d/d5/Jab_%28porcine%29.png" },
             { BrutalChargePorcine, "https://wiki.guildwars2.com/images/a/a5/Brutal_Charge_%28porcine%29.png" },
@@ -665,6 +773,8 @@ namespace GW2EIEvtcParser.ParsedData
             { TakedownSmokescale, "https://wiki.guildwars2.com/images/e/e6/Takedown.png" },
             { PhasePounceWhiteTiger, "https://wiki.guildwars2.com/images/2/20/Phase_Pounce.png" },
             { PhotosynthesizeJacaranda, "https://wiki.guildwars2.com/images/2/2f/Photosynthesize.png" },
+            { EvilEye, "https://wiki.guildwars2.com/images/2/27/Evil_Eye.png" },
+            { TormentingVisionSpinegazer, "https://wiki.guildwars2.com/images/0/0b/Tormenting_Visions.png" },
             #endregion RangerIcons
             #region RevenantIcons
             { RiftSlashRiftHit, "https://wiki.guildwars2.com/images/a/a8/Rift_Slash.png" },
@@ -679,11 +789,17 @@ namespace GW2EIEvtcParser.ParsedData
             { VentarisWill, "https://wiki.guildwars2.com/images/b/b6/Ventari%27s_Will.png" },
             { DarkrazorsDaringHit, "https://wiki.guildwars2.com/images/7/77/Darkrazor%27s_Daring.png" },
             { DarkrazorsDaringSkillMinion, "https://wiki.guildwars2.com/images/7/77/Darkrazor%27s_Daring.png" },
+            { DarkrazorsDaringSkillMinionReworked, "https://wiki.guildwars2.com/images/7/77/Darkrazor%27s_Daring.png" },
             { IcerazorsIreHit, "https://wiki.guildwars2.com/images/2/2d/Icerazor%27s_Ire.png" },
             { IcerazorsIreSkillMinion, "https://wiki.guildwars2.com/images/2/2d/Icerazor%27s_Ire.png" },
+            { IcerazorsIreSkillMinionReworked, "https://wiki.guildwars2.com/images/2/2d/Icerazor%27s_Ire.png" },
             { BreakrazorsBastionMinion, BuffImages.BreakrazorsBastion },
+            { BreakrazorsBastionSkillMinionReworked, BuffImages.BreakrazorsBastion },
             { RazorclawsRageSkillMinion, BuffImages.RazorclawsRage },
+            { RazorclawsRageHitReworked, BuffImages.RazorclawsRage },
+            { RazorclawsRageSkillMinionReworked, BuffImages.RazorclawsRage },
             { SoulcleavesSummitSkillMinion, BuffImages.SoulcleavesSummit },
+            { SoulcleavesSummitHitReworked, BuffImages.SoulcleavesSummit },
             { KallaSummonsSaluteAnimationSkill, "https://wiki.guildwars2.com/images/1/1a/Royal_Decree.png" },
             { KallaSummonsDespawnSkill, BuffImages.Downed },
             { PhantomsOnslaughtDamage, "https://wiki.guildwars2.com/images/b/b2/Phantom%27s_Onslaught.png" },
@@ -792,8 +908,11 @@ namespace GW2EIEvtcParser.ParsedData
             { VolleyWvW, "https://wiki.guildwars2.com/images/5/5d/Volley.png" },
             { BleedingShotWvW, "https://wiki.guildwars2.com/images/9/97/Fierce_Shot.png" },
             { BolaTossWvW, "https://wiki.guildwars2.com/images/7/7e/Bola_Shot.png" },
-            { MagebaneTether, BuffImages.MagebaneTether },
+            { MagebaneTetherBuff, BuffImages.MagebaneTether },
+            { MagebaneTetherSkill, BuffImages.MagebaneTether },
             { EnchantmentCollapse, "https://wiki.guildwars2.com/images/7/7f/Enchantment_Collapse.png" },
+            { LineBreakerHeal, "https://wiki.guildwars2.com/images/0/0e/Line_Breaker.png" },
+            { VigorousShouts, "https://wiki.guildwars2.com/images/d/de/Vigorous_Shouts.png" },
             #endregion WarriorIcons
             #region EncounterIcons
             // Silent Surf Fractal
@@ -886,14 +1005,18 @@ namespace GW2EIEvtcParser.ParsedData
             { BombShell, "https://wiki.guildwars2.com/images/b/b0/Bomb_Shell.png" },
             { GatlingFists1, "https://wiki.guildwars2.com/images/8/89/Gatling_Fists.png" },
             { GatlingFists2, "https://wiki.guildwars2.com/images/8/89/Gatling_Fists.png" },
+            { BoilingOil, "https://wiki.guildwars2.com/images/6/6d/Pour_Oil.png" },
             // - Cannon
+            { FireCannon, "https://wiki.guildwars2.com/images/5/5e/Fire_%28Cannon%29.png" },
             { FireCannonStrips1, "https://wiki.guildwars2.com/images/5/5e/Fire_%28Cannon%29.png" },
             { FireCannonStrips2, "https://wiki.guildwars2.com/images/5/5e/Fire_%28Cannon%29.png" },
             { FireCannonRadius, "https://wiki.guildwars2.com/images/5/5e/Fire_%28Cannon%29.png" },
+            { Grapeshot, "https://wiki.guildwars2.com/images/4/46/Fire_Grapeshot.png" },
             { GrapeshotDamage, "https://wiki.guildwars2.com/images/4/46/Fire_Grapeshot.png" },
             { GrapeshotDamageDoubleBleeds1, "https://wiki.guildwars2.com/images/4/46/Fire_Grapeshot.png" },
             { GrapeshotDamageDoubleBleeds2, "https://wiki.guildwars2.com/images/4/46/Fire_Grapeshot.png" },
-            { IceShot, "https://wiki.guildwars2.com/images/9/9f/Ice_Shot.png" },
+            { IceShot1, "https://wiki.guildwars2.com/images/9/9f/Ice_Shot.png" },
+            { IceShot2, "https://wiki.guildwars2.com/images/9/9f/Ice_Shot.png" },
             { IceShotDamage, "https://wiki.guildwars2.com/images/9/9f/Ice_Shot.png" },
             { IceShotRadiusDamage, "https://wiki.guildwars2.com/images/9/9f/Ice_Shot.png" },
             // - Mortar
@@ -1048,7 +1171,8 @@ namespace GW2EIEvtcParser.ParsedData
             { KickDustCentaurBannerSkill, BuffImages.KickDustCentaurBanner },
             #endregion WvWIcons
             #region FinisherIcons         
-            { Finisher, "https://wiki.guildwars2.com/images/0/00/Basic_Finisher.png" },
+            { Finisher1, "https://wiki.guildwars2.com/images/0/00/Basic_Finisher.png" },
+            { Finisher2, "https://wiki.guildwars2.com/images/0/00/Basic_Finisher.png" },
             { RabbitRankFinisher, "https://wiki.guildwars2.com/images/d/d5/Rabbit_Rank_Finisher.png" },
             { DeerRankFinisher, "https://wiki.guildwars2.com/images/5/58/Deer_Rank_Finisher.png" },
             { DolyakRankFinisher, "https://wiki.guildwars2.com/images/b/bd/Dolyak_Rank_Finisher.png" },
@@ -1093,7 +1217,8 @@ namespace GW2EIEvtcParser.ParsedData
             { SandsharkFinisher, "https://wiki.guildwars2.com/images/2/29/Sandshark_Finisher.png" },
             { ScarecrowFinisher, "https://wiki.guildwars2.com/images/3/39/Scarecrow_Finisher.png" },
             { SnowGlobeFinisher, "https://wiki.guildwars2.com/images/4/47/Snow_Globe_Finisher.png" },
-            { SnowmanFinisher, "https://wiki.guildwars2.com/images/8/8c/Snowman_Finisher.png" },
+            { SnowmanFinisher1, "https://wiki.guildwars2.com/images/8/8c/Snowman_Finisher.png" },
+            { SnowmanFinisher2, "https://wiki.guildwars2.com/images/8/8c/Snowman_Finisher.png" },
             { SuperExplosiveFinisher, "https://wiki.guildwars2.com/images/8/8c/Super_Explosive_Finisher.png" },
             { TwistedWatchworkFinisher, "https://wiki.guildwars2.com/images/0/02/Twisted_Watchwork_Finisher.png" },
             { WhumpTheGiantFinisher, "https://wiki.guildwars2.com/images/a/ab/Whump_the_Giant_Finisher.png" },
@@ -1115,8 +1240,8 @@ namespace GW2EIEvtcParser.ParsedData
 
         private static readonly Dictionary<long, ulong> _nonCritable = new Dictionary<long, ulong>
         {
-            { LightningStrikeSigil, GW2Builds.StartOfLife },
-            { FlameBlastSigil, GW2Builds.StartOfLife },
+            { LightningStrike_SigilOfAir, GW2Builds.StartOfLife },
+            { FlameBlast_SigilOfFire, GW2Builds.StartOfLife },
             { FireAttunementSkill, GW2Builds.December2018Balance },
             { Mug, GW2Builds.StartOfLife },
             { PulmonaryImpactSkill, GW2Builds.HoTRelease },
@@ -1219,7 +1344,7 @@ namespace GW2EIEvtcParser.ParsedData
             return true;
         }
 
-        internal int FindFirstWeaponSet(List<int> swaps)
+        internal int FindFirstWeaponSet(IReadOnlyList<(int to, int from)> swaps)
         {
             int swapped = WeaponSetIDs.NoSet;
             // we started on a proper weapon set
@@ -1232,7 +1357,7 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal bool EstimateWeapons(WeaponSets weaponSets, int swapped, bool validForCurrentSwap)
         {
-            bool keep = swapped == WeaponSetIDs.FirstLandSet || swapped == WeaponSetIDs.SecondLandSet || swapped == WeaponSetIDs.FirstWaterSet || swapped == WeaponSetIDs.SecondWaterSet;
+            bool keep = WeaponSetIDs.IsWeaponSet(swapped);
             if (_weaponDescriptor == null || !keep || !validForCurrentSwap)
             {
                 return false;

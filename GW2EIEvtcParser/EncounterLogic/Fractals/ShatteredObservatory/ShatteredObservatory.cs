@@ -1,15 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.ParsedData;
-using static GW2EIEvtcParser.SkillIDs;
-using static GW2EIEvtcParser.ParserHelper;
-using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
 using GW2EIEvtcParser.Extensions;
+using GW2EIEvtcParser.ParsedData;
 using static GW2EIEvtcParser.ArcDPSEnums;
+using static GW2EIEvtcParser.EncounterLogic.EncounterCategory;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -32,7 +29,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             return participatingPlayerAgents;
         }
 
-        internal override void EIEvtcParse(ulong gw2Build, int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
+        internal override void EIEvtcParse(ulong gw2Build, EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
             // Set manual FractalScale for old logs without the event
             AddFractalScaleEvent(gw2Build, combatData, new List<(ulong, byte)>
@@ -80,18 +77,16 @@ namespace GW2EIEvtcParser.EncounterLogic
             {
                 foreach (EffectEvent effect in domeExplosions)
                 {
-                    int start = (int)effect.Time - 500;
-                    int end = (int)effect.Time;
-                    EnvironmentDecorations.Add(new CircleDecoration(220, (start, end), Colors.LightBlue, 0.4, new PositionConnector(effect.Position)).UsingGrowingEnd(end));
+                    (long start, long end) lifespan = (effect.Time - 500, effect.Time);
+                    EnvironmentDecorations.Add(new CircleDecoration(220, lifespan, Colors.LightBlue, 0.4, new PositionConnector(effect.Position)).UsingGrowingEnd(lifespan.end));
                 }
             }
             if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.CorporealReassignmentExplosion1, out IReadOnlyList<EffectEvent> explosions))
             {
                 foreach (EffectEvent effect in explosions)
                 {
-                    int start = (int)effect.Time;
-                    int end = start + 500;
-                    EnvironmentDecorations.Add(new CircleDecoration(2000, (start, end), Colors.Red, 0.2, new PositionConnector(effect.Position)).UsingGrowingEnd(end));
+                    (long start, long end) lifespan = (effect.Time, effect.Time + 500);
+                    EnvironmentDecorations.Add(new CircleDecoration(2000, lifespan, Colors.Red, 0.2, new PositionConnector(effect.Position)).UsingGrowingEnd(lifespan.end));
                 }
             }
         }

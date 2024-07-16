@@ -1,10 +1,9 @@
-using System;
-using GW2EIEvtcParser.ParsedData;
+﻿using System;
 using static GW2EIEvtcParser.ParserHelper;
 
 namespace GW2EIEvtcParser.EIData
 {
-    internal class SkillModeDescriptor 
+    internal class SkillModeDescriptor
     {
         [Flags]
         public enum SkillModeCategory : uint
@@ -32,6 +31,9 @@ namespace GW2EIEvtcParser.EIData
 
             /// <summary>Active portal</summary>
             Portal = 1 << 6,
+
+            /// <summary>Crowd Control</summary>
+            CC = 1 << 7,
         }
 
         public SkillConnector Owner;
@@ -52,7 +54,7 @@ namespace GW2EIEvtcParser.EIData
             if (owner == null)
             {
                 throw new InvalidOperationException("SkillModeDescriptor must have an owner");
-            } 
+            }
             Owner = new SkillConnector(owner.AgentItem.GetFinalMaster());
             Category = category;
             Category |= SkillModeCategory.ShowOnSelect;
@@ -60,7 +62,7 @@ namespace GW2EIEvtcParser.EIData
             SkillID = skillID;
         }
 
-        
+
         /// <summary>
         /// No Spec version of SkillDescriptor
         /// </summary>

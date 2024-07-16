@@ -1,17 +1,16 @@
-﻿using System.Collections.Generic;
-using GW2EIEvtcParser.EIData.Buffs;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
-using System.Linq;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.ArcDPSEnums;
 using static GW2EIEvtcParser.EIData.Buff;
-using static GW2EIEvtcParser.EIData.DamageModifier;
+using static GW2EIEvtcParser.EIData.DamageModifiersUtils;
+using static GW2EIEvtcParser.EIData.ProfHelper;
+using static GW2EIEvtcParser.EIData.SkillModeDescriptor;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
-using System;
-using GW2EIEvtcParser.ParserHelpers;
-using static GW2EIEvtcParser.EIData.SkillModeDescriptor;
-using static GW2EIEvtcParser.EIData.DamageModifiersUtils;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -21,14 +20,14 @@ namespace GW2EIEvtcParser.EIData
         {
             new BuffGainCastFinder(LegendaryAssassinStanceSkill, LegendaryAssassinStanceBuff),
             new BuffGainCastFinder(LegendaryDemonStanceSkill, LegendaryDemonStanceBuff),
-            new BuffGainCastFinder(LegendaryDwarfStanceSkill, LegendaryDwarfStanceBuff), 
-            new BuffGainCastFinder(LegendaryCentaurStanceSkill, LegendaryCentaurStanceBuff), 
+            new BuffGainCastFinder(LegendaryDwarfStanceSkill, LegendaryDwarfStanceBuff),
+            new BuffGainCastFinder(LegendaryCentaurStanceSkill, LegendaryCentaurStanceBuff),
             new BuffGainCastFinder(ImpossibleOddsSkill, ImpossibleOddsBuff)
-                .UsingICD(500), 
+                .UsingICD(500),
             new BuffLossCastFinder(RelinquishPower, ImpossibleOddsBuff)
                 .UsingICD(500),
             new BuffGainCastFinder(VengefulHammersSkill, VengefulHammersBuff),
-            new BuffLossCastFinder(ReleaseHammers, VengefulHammersBuff), 
+            new BuffLossCastFinder(ReleaseHammers, VengefulHammersBuff),
             new BuffLossCastFinder(ResistTheDarkness, EmbraceTheDarkness),
             new DamageCastFinder(InvokingTorment, InvokingTorment)
                 .WithBuilds(GW2Builds.February2020Balance)
@@ -42,28 +41,39 @@ namespace GW2EIEvtcParser.EIData
             new EXTHealingCastFinder(CallOfTheCentaur, CallOfTheCentaur),
             new EffectCastFinder(ProjectTranquility, EffectGUIDs.RevenantTabletAutoHeal)
                 .UsingChecker((evt, combatData, agentData, skillData) => evt.Src.IsSpecies(MinionID.VentariTablet)),
-            new EffectCastFinderByDstFromMinion(VentarisWill, EffectGUIDs.RevenantTabletVentarisWill)
+            new EffectCastFinderByDst(VentarisWill, EffectGUIDs.RevenantTabletVentarisWill)
+                .WithMinions(true)
                 .UsingChecker((evt, combatData, agentData, skillData) => evt.Dst.IsSpecies(MinionID.VentariTablet)),
-            new EffectCastFinderByDstFromMinion(NaturalHarmony, EffectGUIDs.RevenantNaturalHarmony)
+            new EffectCastFinderByDst(NaturalHarmony, EffectGUIDs.RevenantNaturalHarmony)
+                .WithMinions(true)
                 .UsingChecker((evt, combatData, agentData, skillData) => evt.Dst.IsSpecies(MinionID.VentariTablet))
                 .WithBuilds(GW2Builds.StartOfLife, GW2Builds.June2022Balance),
-            new EffectCastFinderFromMinion(NaturalHarmony, EffectGUIDs.RevenantNaturalHarmony)
+            new EffectCastFinder(NaturalHarmony, EffectGUIDs.RevenantNaturalHarmony)
+                .WithMinions(true)
                 .UsingChecker((evt, combatData, agentData, skillData) => evt.Src.IsSpecies(MinionID.VentariTablet))
                 .WithBuilds( GW2Builds.June2022Balance),
-            new EffectCastFinderFromMinion(PurifyingEssence, EffectGUIDs.RevenantPurifyingEssence)
+            new EffectCastFinder(PurifyingEssence, EffectGUIDs.RevenantPurifyingEssence)
+                .WithMinions(true)
                 .UsingChecker((evt, combatData, agentData, skillData) => evt.Src.IsSpecies(MinionID.VentariTablet))
                 .WithBuilds(GW2Builds.StartOfLife, GW2Builds.June2022Balance),
             new EffectCastFinder(PurifyingEssence, EffectGUIDs.RevenantPurifyingEssence)
                 .UsingSrcBaseSpecChecker(Spec.Revenant)
                 .WithBuilds(GW2Builds.June2022Balance),
-            new EffectCastFinderFromMinion(EnergyExpulsion, EffectGUIDs.RevenantEnergyExpulsion)
+            new EffectCastFinder(EnergyExpulsion, EffectGUIDs.RevenantEnergyExpulsion)
+                .WithMinions(true)
                 .UsingChecker((evt, combatData, agentData, skillData) => evt.Src.IsSpecies(MinionID.VentariTablet))
                 .WithBuilds(GW2Builds.StartOfLife, GW2Builds.June2022Balance),
             new EffectCastFinder(EnergyExpulsion, EffectGUIDs.RevenantEnergyExpulsion)
                 .UsingSrcBaseSpecChecker(Spec.Revenant)
                 .WithBuilds(GW2Builds.June2022Balance),
             new EffectCastFinder(ProtectiveSolaceSkill, EffectGUIDs.RevenantProtectiveSolace)
-                .UsingChecker((evt, combatData, agentData, skillData) => evt.Src.BaseSpec == Spec.Revenant && evt.IsAroundDst && evt.Dst.IsSpecies(MinionID.VentariTablet)),
+                .UsingSrcBaseSpecChecker(Spec.Revenant)
+                .UsingChecker((evt, combatData, agentData, skillData) => evt.IsAroundDst && evt.Dst.IsSpecies(MinionID.VentariTablet)),
+            new EffectCastFinder(BlitzMinesDrop, EffectGUIDs.RevenantSpearBlitzMines1)
+                .UsingSrcBaseSpecChecker(Spec.Revenant),
+            new EffectCastFinder(BlitzMines, EffectGUIDs.RevenantSpearBlitzMinesDetonation1)
+                .UsingSecondaryEffectChecker(EffectGUIDs.RevenantSpearBlitzMinesDetonation2)
+                .UsingSrcBaseSpecChecker(Spec.Revenant),
         };
 
 
@@ -169,10 +179,14 @@ namespace GW2EIEvtcParser.EIData
             new Buff("Assassin's Presence", AssassinsPresence, Source.Revenant, BuffClassification.Offensive, BuffImages.AssassinsPresence).WithBuilds(GW2Builds.StartOfLife, GW2Builds.June2022Balance),
             new Buff("Expose Defenses", ExposeDefenses, Source.Revenant, BuffClassification.Other, BuffImages.MutilateDefenses),
             new Buff("Invoking Harmony", InvokingHarmony, Source.Revenant, BuffClassification.Other, BuffImages.InvokingHarmony),
-            new Buff("Unyielding Spirit", UnyieldingSpirit, Source.Revenant, BuffClassification.Other, BuffImages.UnyieldingSpirit).WithBuilds(GW2Builds.April2019Balance, GW2Builds.EndOfLife),
+            new Buff("Unyielding Spirit", UnyieldingSpirit, Source.Revenant, BuffClassification.Other, BuffImages.UnyieldingSpirit).WithBuilds(GW2Builds.April2019Balance),
             new Buff("Selfless Amplification", SelflessAmplification, Source.Revenant, BuffClassification.Other, BuffImages.SelflessAmplification),
-            new Buff("Battle Scars", BattleScars, Source.Revenant, BuffStackType.StackingConditionalLoss, 25, BuffClassification.Other, BuffImages.ThrillOfCombat).WithBuilds(GW2Builds.February2020Balance, GW2Builds.EndOfLife),
+            new Buff("Battle Scars", BattleScars, Source.Revenant, BuffStackType.StackingConditionalLoss, 25, BuffClassification.Other, BuffImages.ThrillOfCombat).WithBuilds(GW2Builds.February2020Balance),
             new Buff("Steadfast Rejuvenation", SteadfastRejuvenation, Source.Revenant, BuffStackType.Stacking, 10, BuffClassification.Other, BuffImages.SteadfastRejuvenation),
+            // Scepter
+            new Buff("Blossoming Aura", BlossomingAuraBuff, Source.Revenant, BuffClassification.Other, BuffImages.BlossomingAura),
+            // Spear
+            new Buff("Crushing Abyss", CrushingAbyss, Source.Revenant, BuffStackType.Stacking, 5, BuffClassification.Other, BuffImages.MonsterSkill),
         };
 
         private static readonly HashSet<long> _legendSwaps = new HashSet<long>
@@ -206,7 +220,7 @@ namespace GW2EIEvtcParser.EIData
             var allTablets = new HashSet<AgentItem>();
             if (combatData.TryGetEffectEventsByGUID(EffectGUIDs.RevenantTabletAutoHeal, out IReadOnlyList<EffectEvent> tabletHealEffectEvents))
             {
-                allTablets.UnionWith(tabletHealEffectEvents.Select(x => x.Src));        
+                allTablets.UnionWith(tabletHealEffectEvents.Select(x => x.Src));
             }
             if (combatData.TryGetEffectEventsByGUID(EffectGUIDs.RevenantTabletVentarisWill, out IReadOnlyList<EffectEvent> ventarisWillEffectEvents))
             {
@@ -222,7 +236,7 @@ namespace GW2EIEvtcParser.EIData
                 tablet.OverrideID(MinionID.VentariTablet);
                 tablet.OverrideName("Ventari's Tablet");
             }
-            if (allTablets.Any())
+            if (allTablets.Count != 0)
             {
                 agentData.Refresh();
             }
@@ -236,7 +250,7 @@ namespace GW2EIEvtcParser.EIData
             var inspiringReinforcementSkill = new SkillModeDescriptor(player, Spec.Revenant, InspiringReinforcement, SkillModeCategory.ImportantBuffs);
             if (log.CombatData.TryGetEffectEventsBySrcWithGUID(player.AgentItem, EffectGUIDs.RevenantInspiringReinforcementPart, out IReadOnlyList<EffectEvent> inspiringReinforcementParts))
             {
-                
+
                 foreach (EffectEvent effect in inspiringReinforcementParts)
                 {
                     (long, long) lifespan = effect.ComputeLifespan(log, 5000);
@@ -261,17 +275,71 @@ namespace GW2EIEvtcParser.EIData
                         .UsingSkillMode(inspiringReinforcementSkill));
                 }
             }
+
+            // Protective Solace
             if (log.CombatData.TryGetEffectEventsBySrcWithGUID(player.AgentItem, EffectGUIDs.RevenantProtectiveSolace, out IReadOnlyList<EffectEvent> protectiveSolaceEffectEvents))
             {
                 var skill = new SkillModeDescriptor(player, Spec.Revenant, ProtectiveSolaceSkill, SkillModeCategory.ProjectileManagement);
                 foreach (EffectEvent effect in protectiveSolaceEffectEvents.Where(x => x.IsAroundDst))
                 {
-                    (long, long) lifespan = effect.ComputeDynamicLifespan(log, 0, effect.Dst, ProtectiveSolaceTabletBuff); // manually disabled or when no more ressources
+                    (long, long) lifespan = effect.ComputeDynamicLifespan(log, 0, effect.Dst, ProtectiveSolaceTabletBuff); // manually disabled or when no more resources
                     var connector = new AgentConnector(effect.Dst);
                     replay.Decorations.Add(new CircleDecoration(240, lifespan, color, 0.2, connector)
                         .UsingSkillMode(skill));
                     replay.Decorations.Add(new IconDecoration(ParserIcons.EffectProtectiveSolace, CombatReplaySkillDefaultSizeInPixel, CombatReplaySkillDefaultSizeInWorld, 0.5f, lifespan, connector)
                         .UsingSkillMode(skill));
+                }
+            }
+
+            // Eternity's Requiem
+            if (log.CombatData.TryGetEffectEventsBySrcWithGUID(player.AgentItem, EffectGUIDs.RevenantEternitysRequiemOnPlayer, out IReadOnlyList<EffectEvent> eternitysRequiem))
+            {
+                var skill = new SkillModeDescriptor(player, Spec.Revenant, EternitysRequiem);
+                if (log.CombatData.TryGetEffectEventsBySrcWithGUID(player.AgentItem, EffectGUIDs.RevenantEternitysRequiemHit, out IReadOnlyList<EffectEvent> eternitysRequiemHits))
+                {
+                    foreach (EffectEvent effect in eternitysRequiem)
+                    {
+                        var positions = new List<Point3D>();
+                        foreach (EffectEvent hitEffect in eternitysRequiemHits.Where(x => x.Time >= effect.Time && x.Time <= effect.Time + 2800 && x.Dst == null))
+                        {
+                            positions.Add(hitEffect.Position);
+                            (long, long) lifespanHit = hitEffect.ComputeLifespan(log, 1000);
+                            var connector = new PositionConnector(hitEffect.Position);
+                            replay.Decorations.Add(new CircleDecoration(120, lifespanHit, color, 0.5, connector).UsingFilled(false).UsingSkillMode(skill));
+                        }
+                        (long, long) lifespan = (effect.Time, effect.Time + 2800);
+                        var centralPosition = Point3D.FindCentralPoint(positions);
+                        var centralConnector = new PositionConnector(centralPosition);
+                        replay.Decorations.Add(new IconDecoration(ParserIcons.EffectEternitysRequiem, CombatReplaySkillDefaultSizeInPixel, CombatReplaySkillDefaultSizeInWorld, 0.5f, lifespan, centralConnector).UsingSkillMode(skill));
+                        // TODO: Find a way to tell the user that the circle is approximative.
+                        //replay.Decorations.Add(new CircleDecoration(360, lifespan, color, 0.5, centralConnector).UsingFilled(false).UsingSkillMode(skill));
+                    }
+                }
+            }
+
+            // Coalescence of Ruin
+            if (log.CombatData.TryGetEffectEventsBySrcWithGUIDs(player.AgentItem,
+                new string[] { EffectGUIDs.RevenantCoalescenceOfRuin, EffectGUIDs.RevenantCoalescenceOfRuinLast }, out IReadOnlyList<EffectEvent> coalescenceOfRuin))
+            {
+                var skill = new SkillModeDescriptor(player, Spec.Revenant, CoalescenceOfRuin);
+                foreach (EffectEvent effect in coalescenceOfRuin)
+                {
+                    (long, long) lifespan = effect.ComputeLifespan(log, 2000);
+                    var connector = new PositionConnector(effect.Position);
+                    var rotation = new AngleConnector(effect.Rotation.Z);
+                    replay.Decorations.Add(new RectangleDecoration(180, 400, lifespan, color, 0.5, connector).UsingFilled(false).UsingRotationConnector(rotation).UsingSkillMode(skill));
+                    replay.Decorations.Add(new IconDecoration(ParserIcons.EffectCoalescenceOfRuin, CombatReplaySkillDefaultSizeInPixel, CombatReplaySkillDefaultSizeInWorld, 0.5f, lifespan, connector).UsingSkillMode(skill));
+                }
+            }
+
+            // Drop the Hammer
+            if (log.CombatData.TryGetEffectEventsBySrcWithGUID(player.AgentItem, EffectGUIDs.RevenantDropTheHammer, out IReadOnlyList<EffectEvent> dropTheHammer))
+            {
+                var skill = new SkillModeDescriptor(player, Spec.Revenant, DropTheHammer, SkillModeCategory.CC);
+                foreach (EffectEvent effect in dropTheHammer)
+                {
+                    (long, long) lifespan = effect.ComputeLifespan(log, 1220);
+                    AddCircleSkillDecoration(replay, effect, color, skill, lifespan, 240, ParserIcons.EffectDropTheHammer);
                 }
             }
         }

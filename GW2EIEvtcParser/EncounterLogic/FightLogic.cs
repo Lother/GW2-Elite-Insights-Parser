@@ -1,26 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
+using GW2EIEvtcParser.ParserHelpers;
 using static GW2EIEvtcParser.ArcDPSEnums;
-using static GW2EIEvtcParser.ParserHelper;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EIData.GenericDecoration;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
-using System.IO;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.ParserHelper;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
     public abstract class FightLogic
     {
 
-        public enum ParseMode { FullInstance, Instanced10, Instanced5, Benchmark, WvW, sPvP, OpenWorld, Unknown };
+        public enum ParseModeEnum { FullInstance, Instanced10, Instanced5, Benchmark, WvW, sPvP, OpenWorld, Unknown };
+        public enum SkillModeEnum { PvE, WvW, sPvP };
 
         [Flags]
-        protected enum FallBackMethod { 
+        protected enum FallBackMethod
+        {
             None = 0,
             Death = 1 << 0,
             CombatExit = 1 << 1,
@@ -30,7 +34,8 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         private CombatReplayMap _map;
         protected List<Mechanic> MechanicList { get; }//Resurrects (start), Resurrect
-        public ParseMode Mode { get; protected set; } = ParseMode.Unknown;
+        public ParseModeEnum ParseMode { get; protected set; } = ParseModeEnum.Unknown;
+        public SkillModeEnum SkillMode { get; protected set; } = SkillModeEnum.PvE;
         public string Extension { get; protected set; }
         public string Icon { get; protected set; }
         private readonly int _basicMechanicsCount;
@@ -47,7 +52,9 @@ namespace GW2EIEvtcParser.EncounterLogic
         protected List<AbstractSingleActor> _targets { get; private set; } = new List<AbstractSingleActor>();
         protected List<AbstractSingleActor> _hostiles { get; private set; } = new List<AbstractSingleActor>();
 
-        protected List<GenericDecoration> EnvironmentDecorations { get; private set; } = null;
+        internal Dictionary<string, GenericDecorationMetadata> DecorationCache { get; } = new Dictionary<string, GenericDecorationMetadata>();
+
+        internal CombatReplayDecorationContainer EnvironmentDecorations { get; private set; } = null;
 
         protected ArcDPSEnums.ChestID ChestID { get; set; } = ChestID.None;
 
@@ -106,10 +113,12 @@ namespace GW2EIEvtcParser.EncounterLogic
                     InstanceBuffs.Add((fractalInstability, 1));
                 }
             }
-            int emboldenedStacks = (int)log.PlayerList.Select(x => {
+            long end = log.FightData.Success ? log.FightData.FightEnd : (log.FightData.FightEnd + log.FightData.FightStart) / 2;
+            int emboldenedStacks = (int)log.PlayerList.Select(x =>
+            {
                 if (x.GetBuffGraphs(log).TryGetValue(SkillIDs.Emboldened, out BuffsGraphModel graph))
                 {
-                    return graph.BuffChart.Where(y => y.IntersectSegment(log.FightData.FightStart, log.FightData.FightEnd)).Max(y => y.Value);
+                    return graph.BuffChart.Where(y => y.IntersectSegment(log.FightData.FightStart, end)).Max(y => y.Value);
                 }
                 else
                 {
@@ -196,7 +205,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             Dictionary<int, int> targetSortIDs = GetTargetsSortIDs();
             _targets = _targets.OrderBy(x =>
             {
-            if (targetSortIDs.TryGetValue(x.ID, out int sortKey))
+                if (targetSortIDs.TryGetValue(x.ID, out int sortKey))
                 {
                     return sortKey;
                 }
@@ -204,7 +213,8 @@ namespace GW2EIEvtcParser.EncounterLogic
             }).ToList();
             //
             var trashIDs = new HashSet<TrashID>(GetTrashMobsIDs());
-            if (trashIDs.Any(x => targetIDs.Contains((int)x))) {
+            if (trashIDs.Any(x => targetIDs.Contains((int)x)))
+            {
                 throw new InvalidDataException("ID collision between trash and targets");
             }
             var aList = agentData.GetAgentByType(AgentItem.AgentType.NPC).Where(x => trashIDs.Contains(GetTrashID(x.ID))).ToList();
@@ -236,6 +246,28 @@ namespace GW2EIEvtcParser.EncounterLogic
             FinalizeComputeFightTargets();
         }
 
+        internal virtual void UpdatePlayersSpecAndGroup(IReadOnlyList<Player> players, CombatData combatData, FightData fightData)
+        {
+            foreach (Player p in players)
+            {
+                long threshold = fightData.FightStart + 5000;
+                EnterCombatEvent enterCombat = null;
+                if (p.FirstAware > threshold)
+                {
+                    enterCombat = combatData.GetEnterCombatEvents(p.AgentItem).FirstOrDefault();
+                } 
+                else
+                {
+                    enterCombat = combatData.GetEnterCombatEvents(p.AgentItem).Where(x => x.Time <= threshold).LastOrDefault();
+                }
+                if (enterCombat != null && enterCombat.Spec != ParserHelper.Spec.Unknown)
+                {
+                    p.AgentItem.OverrideSpec(enterCombat.Spec);
+                    p.OverrideGroup(enterCombat.Subgroup);
+                }
+            }
+        }
+
         protected void FinalizeComputeFightTargets()
         {
             //
@@ -250,7 +282,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new List<InstantCastFinder>();
         }
-        
+
         internal void InvalidateEncounterID()
         {
             EncounterID = EncounterIDs.EncounterMasks.Unsupported;
@@ -290,18 +322,14 @@ namespace GW2EIEvtcParser.EncounterLogic
         internal virtual List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(GenericTriggerID));
-            if (mainTarget == null)
-            {
-                throw new MissingKeyActorsException("Main target of the fight not found");
-            }
+            AbstractSingleActor mainTarget = Targets.FirstOrDefault(x => x.IsSpecies(GenericTriggerID)) ?? throw new MissingKeyActorsException("Main target of the fight not found");
             phases[0].AddTarget(mainTarget);
             return phases;
         }
 
-        internal virtual List<ErrorEvent> GetCustomWarningMessages(FightData fightData, int arcdpsVersion)
+        internal virtual List<ErrorEvent> GetCustomWarningMessages(FightData fightData, EvtcVersionEvent evtcVersion)
         {
-            if (arcdpsVersion >= ArcDPSBuilds.DirectX11Update)
+            if (evtcVersion.Build >= ArcDPSBuilds.DirectX11Update)
             {
                 return new List<ErrorEvent>
                 {
@@ -315,7 +343,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             foreach (AbstractSingleActor target in Targets)
             {
-                if (ids.Contains(target.ID) && phase.InInterval(Math.Max(target.FirstAware + ParserHelper.ServerDelayConstant, 0)))
+                if (ids.Contains(target.ID) && phase.IntersectsWindow(target.FirstAware, target.LastAware))
                 {
                     phase.AddTarget(target);
                 }
@@ -326,7 +354,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             foreach (AbstractSingleActor target in Targets)
             {
-                if (ids.Contains(target.ID) && phase.InInterval(Math.Max(target.FirstAware + ParserHelper.ServerDelayConstant, 0)))
+                if (ids.Contains(target.ID) && phase.IntersectsWindow(target.FirstAware, target.LastAware))
                 {
                     phase.AddSecondaryTarget(target);
                 }
@@ -364,18 +392,34 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal virtual void ComputeEnvironmentCombatReplayDecorations(ParsedEvtcLog log)
         {
-
+            var squadMarkers = new List<ArcDPSEnums.SquadMarkerIndex>() {
+                SquadMarkerIndex.Arrow,
+                SquadMarkerIndex.Circle,
+                SquadMarkerIndex.Heart,
+                SquadMarkerIndex.Square,
+                SquadMarkerIndex.Star,
+                SquadMarkerIndex.Swirl,
+                SquadMarkerIndex.Triangle,
+                SquadMarkerIndex.X,
+            };
+            foreach (SquadMarkerIndex squadMarker in squadMarkers)
+            {
+                IReadOnlyList<SquadMarkerEvent> squadMarkerEvents = log.CombatData.GetSquadMarkerEvents(squadMarker);
+                foreach (SquadMarkerEvent squadMarkerEvent in squadMarkerEvents)
+                {
+                    EnvironmentDecorations.Add(new IconDecoration(ParserIcons.SquadMarkerIndexToIcon[squadMarker], 16, 90, 0.8f, (squadMarkerEvent.Time, squadMarkerEvent.EndTime), new PositionConnector(squadMarkerEvent.Position)).UsingSquadMarker(true));
+                }
+            }
         }
 
-        internal IReadOnlyList<GenericDecoration> GetEnvironmentCombatReplayDecorations(ParsedEvtcLog log)
+        internal IReadOnlyList<GenericDecorationRenderingDescription> GetCombatReplayDecorationRenderableDescriptions(CombatReplayMap map, ParsedEvtcLog log, Dictionary<long, SkillItem> usedSkills, Dictionary<long, Buff> usedBuffs)
         {
             if (EnvironmentDecorations == null)
             {
-                EnvironmentDecorations = new List<GenericDecoration>();
+                EnvironmentDecorations = new CombatReplayDecorationContainer(DecorationCache);
                 ComputeEnvironmentCombatReplayDecorations(log);
-                EnvironmentDecorations.RemoveAll(x => x.Lifespan.end <= x.Lifespan.start);
             }
-            return EnvironmentDecorations;
+            return EnvironmentDecorations.GetCombatReplayRenderableDescriptions(map, log, usedSkills, usedBuffs);
         }
 
         internal virtual FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
@@ -422,10 +466,10 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
         }
 
-        internal virtual long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal virtual long GetFightOffset(EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             long startToUse = GetGenericFightOffset(fightData);
-            CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == StateChange.LogStartNPCUpdate);
+            CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == StateChange.LogNPCUpdate);
             if (logStartNPCUpdate != null)
             {
                 startToUse = GetEnterCombatTime(fightData, agentData, combatData, logStartNPCUpdate.Time, GenericTriggerID, logStartNPCUpdate.DstAgent);
@@ -438,7 +482,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             return this;
         }
 
-        internal virtual void EIEvtcParse(ulong gw2Build, int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
+        internal virtual void EIEvtcParse(ulong gw2Build, EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
             ComputeFightTargets(agentData, combatData, extensions);
         }

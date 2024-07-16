@@ -9,14 +9,14 @@ namespace GW2EIEvtcParser.ParsedData
     {
 
         private static int AgentCount = 0;
-        public enum AgentType { NPC, Gadget, Player, NonSquadPlayer}
+        public enum AgentType { NPC, Gadget, Player, NonSquadPlayer }
 
         public bool IsPlayer => Type == AgentType.Player || Type == AgentType.NonSquadPlayer;
         public bool IsNPC => Type == AgentType.NPC || Type == AgentType.Gadget;
 
         // Fields
         public ulong Agent { get; }
-        public int ID { get; protected set; }
+        public int ID { get; protected set; } = ArcDPSEnums.NonIdentifiedSpecies;
         public int UniqueID { get; }
         public AgentItem Master { get; protected set; }
         public ushort InstID { get; protected set; }
@@ -24,14 +24,16 @@ namespace GW2EIEvtcParser.ParsedData
         public long FirstAware { get; protected set; }
         public long LastAware { get; protected set; } = long.MaxValue;
         public string Name { get; protected set; } = "UNKNOWN";
-        public ParserHelper.Spec Spec { get; } = ParserHelper.Spec.Unknown;
-        public ParserHelper.Spec BaseSpec { get; } = ParserHelper.Spec.Unknown;
+        public ParserHelper.Spec Spec { get; private set; } = ParserHelper.Spec.Unknown;
+        public ParserHelper.Spec BaseSpec { get; private set; } = ParserHelper.Spec.Unknown;
         public ushort Toughness { get; protected set; }
         public ushort Healing { get; }
         public ushort Condition { get; }
         public ushort Concentration { get; }
         public uint HitboxWidth { get; }
         public uint HitboxHeight { get; }
+
+        private bool Unamed { get; }
 
         public bool IsFake { get; }
         public bool IsNotInSquadFriendlyPlayer { get; private set; }
@@ -70,6 +72,7 @@ namespace GW2EIEvtcParser.ParsedData
             {
 
             }
+            Unamed = Name.Contains("ch"+ID+"-");
         }
 
         internal AgentItem(ulong agent, string name, ParserHelper.Spec spec, int id, ushort instid, ushort toughness, ushort healing, ushort condition, ushort concentration, uint hbWidth, uint hbHeight, long firstAware, long lastAware, bool isFake) : this(agent, name, spec, id, AgentType.NPC, toughness, healing, condition, concentration, hbWidth, hbHeight)
@@ -98,11 +101,18 @@ namespace GW2EIEvtcParser.ParsedData
             InstID = other.InstID;
             Master = other.Master;
             IsFake = other.IsFake;
+            Unamed = other.Unamed;
         }
 
         internal AgentItem()
         {
             UniqueID = ++AgentCount;
+        }
+
+        internal void OverrideSpec(ParserHelper.Spec spec)
+        {
+            Spec = spec;
+            BaseSpec = ParserHelper.SpecToBaseSpec(spec);
         }
 
         internal void OverrideIsNotInSquadFriendlyPlayer(bool status)
@@ -163,7 +173,7 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal void SetMaster(AgentItem master)
         {
-            if (IsPlayer)
+            if (IsPlayer || master == this)
             {
                 return;
             }
@@ -185,8 +195,8 @@ namespace GW2EIEvtcParser.ParsedData
 
         private static void AddValueToStatusList(List<Segment> dead, List<Segment> down, List<Segment> dc, AbstractStatusEvent cur, long nextTime, long minTime, int index)
         {
-            long cTime = cur.Time; 
-            
+            long cTime = cur.Time;
+
             if (cur is DownEvent)
             {
                 down.Add(new Segment(cTime, nextTime, 1));
@@ -207,11 +217,6 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal void GetAgentStatus(List<Segment> dead, List<Segment> down, List<Segment> dc, CombatData combatData, FightData fightData)
         {
-            // State changes are not reliable
-            if (Type == AgentType.NonSquadPlayer)
-            {
-                return;
-            }
             var status = new List<AbstractStatusEvent>();
             status.AddRange(combatData.GetDownEvents(this));
             status.AddRange(combatData.GetAliveEvents(this));
@@ -219,7 +224,12 @@ namespace GW2EIEvtcParser.ParsedData
             status.AddRange(combatData.GetSpawnEvents(this));
             status.AddRange(combatData.GetDespawnEvents(this));
             dc.Add(new Segment(long.MinValue, FirstAware, 1));
-            if (!status.Any())
+            // State changes are not reliable on non squad actors, so we check if arc provided us with some, we skip events created by EI.
+            if (Type == AgentType.NonSquadPlayer && !status.Any(x => !x.IsCustom))
+            {
+                return;
+            }
+            if (status.Count == 0)
             {
                 dc.Add(new Segment(LastAware, long.MaxValue, 1));
                 return;
@@ -239,7 +249,7 @@ namespace GW2EIEvtcParser.ParsedData
                 if (cur is DeadEvent)
                 {
                     dead.Add(new Segment(LastAware, long.MaxValue, 1));
-                } 
+                }
                 else
                 {
                     dc.Add(new Segment(LastAware, long.MaxValue, 1));
@@ -249,14 +259,14 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal void GetAgentBreakbarStatus(List<Segment> nones, List<Segment> actives, List<Segment> immunes, List<Segment> recovering, CombatData combatData, FightData fightData)
         {
-            // State changes are not reliable
-            if (Type == AgentType.NonSquadPlayer)
+            var status = new List<BreakbarStateEvent>();
+            status.AddRange(combatData.GetBreakbarStateEvents(this));
+            // State changes are not reliable on non squad actors, so we check if arc provided us with some, we skip events created by EI.
+            if (Type == AgentType.NonSquadPlayer && !status.Any(x => !x.IsCustom))
             {
                 return;
             }
-            var status = new List<BreakbarStateEvent>();
-            status.AddRange(combatData.GetBreakbarStateEvents(this));
-            if (!status.Any())
+            if (status.Count == 0)
             {
                 nones.Add(new Segment(FirstAware, LastAware, 1));
                 return;
@@ -308,7 +318,7 @@ namespace GW2EIEvtcParser.ParsedData
                             break;
                     }
                 }
-                
+
             }
         }
 
@@ -376,6 +386,19 @@ namespace GW2EIEvtcParser.ParsedData
         {
             AbstractSingleActor actor = log.FindActor(this);
             return actor.GetBuffStatus(log, by, buffId, start, end);
+        }
+
+
+        /// <summary>
+        /// Checks if the agent will go into downstate before the next time they go above 90% health, or the fight ends.
+        /// </summary>
+        /// <param name="log">The log.</param>
+        /// <param name="time">Current log time</param>
+        /// <returns><see langword="true"/> if the agent will down before the next time they go above 90% health, otherwise <see langword="false"/>.</returns>
+        public bool IsDownedBeforeNext90(ParsedEvtcLog log, long time)
+        {
+            AbstractSingleActor actor = log.FindActor(this);
+            return actor.IsDownBefore90(log, time);
         }
 
         /// <summary>
@@ -481,6 +504,20 @@ namespace GW2EIEvtcParser.ParsedData
         {
             AbstractSingleActor actor = log.FindActor(this);
             return actor.GetCurrentBreakbarState(log, time);
+        }
+
+        public bool IsUnamedSpecies()
+        {
+            if (IsPlayer)
+            {
+                return false;
+            }
+            return IsNonIdentifiedSpecies() || Unamed;
+        }
+
+        public bool IsNonIdentifiedSpecies()
+        {
+            return IsSpecies(ArcDPSEnums.NonIdentifiedSpecies);
         }
 
         public bool IsSpecies(int id)

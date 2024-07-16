@@ -51,31 +51,42 @@ namespace GW2EIEvtcParser.EIData
             return _gainComputerSource == null || _gainComputerSource.ComputeGain(1.0, _trackerSource.GetStack(bgmsSource, time)) > 0.0;
         }
 
-        internal override bool Keep(FightLogic.ParseMode mode, EvtcParserSettings parserSettings)
+        internal override bool Keep(FightLogic.ParseModeEnum parseMode, FightLogic.SkillModeEnum skillMode, EvtcParserSettings parserSettings)
         {
             // Remove target  based damage mods from PvP contexts
-            if (mode == FightLogic.ParseMode.WvW || mode == FightLogic.ParseMode.sPvP)
+            if (parseMode == FightLogic.ParseModeEnum.WvW || parseMode == FightLogic.ParseModeEnum.sPvP)
             {
                 return false;
             }
-            return base.Keep(mode, parserSettings);
+            return base.Keep(parseMode, skillMode, parserSettings);
         }
+
         internal override List<DamageModifierEvent> ComputeDamageModifier(AbstractSingleActor actor, ParsedEvtcLog log, DamageModifier damageModifier)
         {
             IReadOnlyDictionary<long, BuffsGraphModel> bgmsSource = actor.GetBuffGraphs(log);
             if (_trackerSource != null)
             {
-                if (!_trackerSource.Has(bgmsSource) && _gainComputerSource != ByAbsence)
+                if (Skip(_trackerSource, bgmsSource, _gainComputerSource))
                 {
                     return new List<DamageModifierEvent>();
                 }
             }
             var res = new List<DamageModifierEvent>();
             IReadOnlyList<AbstractHealthDamageEvent> typeHits = damageModifier.GetHitDamageEvents(actor, log, null, log.FightData.FightStart, log.FightData.FightEnd);
+            var ignoredTargets = new HashSet<AbstractSingleActor>();
             foreach (AbstractHealthDamageEvent evt in typeHits)
             {
                 AbstractSingleActor target = log.FindActor(damageModifier.GetFoe(evt));
+                if (ignoredTargets.Contains(target))
+                {
+                    continue;
+                }
                 IReadOnlyDictionary<long, BuffsGraphModel> bgms = target.GetBuffGraphs(log);
+                if (Skip(Tracker, bgms, GainComputer))
+                {
+                    ignoredTargets.Add(target);
+                    continue;
+                }
                 if (CheckActor(bgmsSource, evt.Time) && ComputeGain(bgms, evt, log, out double gain) && CheckCondition(evt, log))
                 {
                     res.Add(new DamageModifierEvent(evt, damageModifier, gain * evt.HealthDamage));

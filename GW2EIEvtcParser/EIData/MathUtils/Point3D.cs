@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData
 {
@@ -90,6 +89,12 @@ namespace GW2EIEvtcParser.EIData
             return distance;
         }
 
+        public float Length2D()
+        {
+            float length = (float)Math.Sqrt(X * X + Y * Y);
+            return length;
+        }
+
         public float Length()
         {
             float length = (float)Math.Sqrt(X * X + Y * Y + Z * Z);
@@ -103,7 +108,7 @@ namespace GW2EIEvtcParser.EIData
             Z = 0;
         }
 
-        public Point3D(float x, float y, float z) : this(x,y)
+        public Point3D(float x, float y, float z) : this(x, y)
         {
             Z = z;
         }
@@ -164,5 +169,18 @@ namespace GW2EIEvtcParser.EIData
             return points.Count == 3 && IsInTriangle2D(p, points[0], points[1], points[2]);
         }
 
+
+        /// <summary>
+        /// Calculates the central 3D point based on the points provided.
+        /// </summary>
+        /// <param name="points">List of points to use to find the center.</param>
+        /// <returns><see cref="Point3D"/> with the center values.</returns>
+        public static Point3D FindCentralPoint(IReadOnlyList<Point3D> points)
+        {
+            float sumX = points.Sum(p => p.X);
+            float sumY = points.Sum(p => p.Y);
+            float sumZ = points.Sum(p => p.Z);
+            return new Point3D(sumX / points.Count, sumY / points.Count, sumZ / points.Count);
+        }
     }
 }

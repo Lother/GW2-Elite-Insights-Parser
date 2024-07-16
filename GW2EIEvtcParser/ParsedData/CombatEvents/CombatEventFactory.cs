@@ -9,7 +9,7 @@ namespace GW2EIEvtcParser.ParsedData
     internal static class CombatEventFactory
     {
 
-        public static void AddStateChangeEvent(CombatItem stateChangeEvent, AgentData agentData, SkillData skillData, MetaEventsContainer metaDataEvents, StatusEventsContainer statusEvents, List<RewardEvent> rewardEvents, List<WeaponSwapEvent> wepSwaps, List<AbstractBuffEvent> buffEvents, int evtcVersion)
+        public static void AddStateChangeEvent(CombatItem stateChangeEvent, AgentData agentData, SkillData skillData, MetaEventsContainer metaDataEvents, StatusEventsContainer statusEvents, List<RewardEvent> rewardEvents, List<WeaponSwapEvent> wepSwaps, List<AbstractBuffEvent> buffEvents, EvtcVersionEvent evtcVersion)
         {
             switch (stateChangeEvent.IsStateChange)
             {
@@ -44,7 +44,7 @@ namespace GW2EIEvtcParser.ParsedData
                 case StateChange.HealthUpdate:
                     var healthEvt = new HealthUpdateEvent(stateChangeEvent, agentData);
                     Add(statusEvents.HealthUpdateEvents, healthEvt.Src, healthEvt);
-                    break;                
+                    break;
                 case StateChange.BarrierUpdate:
                     var barrierEvt = new BarrierUpdateEvent(stateChangeEvent, agentData);
                     Add(statusEvents.BarrierUpdateEvents, barrierEvt.Src, barrierEvt);
@@ -52,17 +52,17 @@ namespace GW2EIEvtcParser.ParsedData
                 case StateChange.InstanceStart:
                     metaDataEvents.InstanceStartEvent = new InstanceStartEvent(stateChangeEvent);
                     break;
-                case StateChange.LogStart:
+                case StateChange.SquadCombatStart:
                     if (stateChangeEvent.Value == 0 || stateChangeEvent.BuffDmg == 0)
                     {
                         return;
                     }
                     metaDataEvents.LogStartEvent = new LogStartEvent(stateChangeEvent);
                     break;
-                case StateChange.LogStartNPCUpdate:
-                    metaDataEvents.LogStartNPCUpdateEvents.Add(new LogStartNPCUpdateEvent(stateChangeEvent, agentData));
+                case StateChange.LogNPCUpdate:
+                    metaDataEvents.LogNPCUpdateEvents.Add(new LogNPCUpdateEvent(stateChangeEvent, agentData));
                     break;
-                case StateChange.LogEnd:
+                case StateChange.SquadCombatEnd:
                     if (stateChangeEvent.Value == 0 || stateChangeEvent.BuffDmg == 0)
                     {
                         return;
@@ -88,7 +88,7 @@ namespace GW2EIEvtcParser.ParsedData
                     {
                         return;
                     }
-                    metaDataEvents.BuildEvent = new BuildEvent(stateChangeEvent);
+                    metaDataEvents.GW2BuildEvent = new GW2BuildEvent(stateChangeEvent);
                     break;
                 case StateChange.ShardId:
                     metaDataEvents.ShardEvents.Add(new ShardEvent(stateChangeEvent));
@@ -99,7 +99,7 @@ namespace GW2EIEvtcParser.ParsedData
 #endif
                     break;
                 case StateChange.TeamChange:
-                    var tcEvt = new TeamChangeEvent(stateChangeEvent, agentData);
+                    var tcEvt = new TeamChangeEvent(stateChangeEvent, agentData, evtcVersion);
                     Add(statusEvents.TeamChangeEvents, tcEvt.Src, tcEvt);
                     break;
                 case StateChange.AttackTarget:
@@ -161,12 +161,77 @@ namespace GW2EIEvtcParser.ParsedData
                     var bPEvt = new BreakbarPercentEvent(stateChangeEvent, agentData);
                     Add(statusEvents.BreakbarPercentEvents, bPEvt.Src, bPEvt);
                     break;
-                case StateChange.Error:
+                case StateChange.Integrity:
                     metaDataEvents.ErrorEvents.Add(new ErrorEvent(stateChangeEvent));
                     break;
-                case StateChange.Tag:
-                    var tagEvent = new TagEvent(stateChangeEvent, agentData);
-                    Add(statusEvents.TagEvents, tagEvent.Src, tagEvent);
+                case StateChange.Marker:
+                    var markerEvent = new MarkerEvent(stateChangeEvent, agentData);
+                    if (evtcVersion.Build >= ArcDPSBuilds.NewMarkerEventBehavior)
+                    {
+                        // End event
+                        if (markerEvent.IsEnd)
+                        {
+                            // An end event ends all previous markers
+                            if (statusEvents.MarkerEvents.TryGetValue(markerEvent.Src, out List<MarkerEvent> markers))
+                            {
+                                for (int i = markers.Count - 1; i >= 0; i--)
+                                {
+                                    MarkerEvent preMarker = markers[i];
+                                    if (!preMarker.EndNotSet)
+                                    {
+                                        break;
+                                    }
+                                    preMarker.SetEndTime(markerEvent.Time);
+                                }
+                            }
+                            break;
+                        }
+                        else if (statusEvents.MarkerEvents.TryGetValue(markerEvent.Src, out List<MarkerEvent> markers))
+                        {
+                            for (int i = markers.Count - 1; i >= 0; i--)
+                            {
+                                MarkerEvent preMarker = markers[i];
+                                // We can't have the same markers active at the same time on one Src
+                                if (preMarker.MarkerID == markerEvent.MarkerID)
+                                {
+                                    if (preMarker.Time <= markerEvent.Time && preMarker.EndTime > markerEvent.Time)
+                                    {
+                                        preMarker.SetEndTime(markerEvent.Time);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // End event
+                        if (markerEvent.IsEnd)
+                        {
+                            // Find last marker on agent and set an end time on it
+                            if (statusEvents.MarkerEvents.TryGetValue(markerEvent.Src, out List<MarkerEvent> markers))
+                            {
+                                markers.LastOrDefault()?.SetEndTime(markerEvent.Time);
+                            }
+                            break;
+                        }
+                        else if (statusEvents.MarkerEvents.TryGetValue(markerEvent.Src, out List<MarkerEvent> markers))
+                        {
+                            MarkerEvent lastMarker = markers.LastOrDefault();
+                            if (lastMarker != null)
+                            {
+                                // Ignore current if last marker on agent is the same and end not set
+                                if (lastMarker.MarkerID == markerEvent.MarkerID && lastMarker.EndNotSet)
+                                {
+                                    break;
+                                }
+                                // Otherwise update end time and put current in the event pool
+                                lastMarker.SetEndTime(markerEvent.Time);
+                            }
+                        }
+                    }
+                    Add(statusEvents.MarkerEvents, markerEvent.Src, markerEvent);
+                    Add(statusEvents.MarkerEventsByID, markerEvent.MarkerID, markerEvent);
                     break;
                 case StateChange.Velocity:
                     var velEvt = new VelocityEvent(stateChangeEvent, agentData);
@@ -181,7 +246,7 @@ namespace GW2EIEvtcParser.ParsedData
                     Add(statusEvents.MovementEvents, posEvt.Src, posEvt);
                     break;
                 case StateChange.WeaponSwap:
-                    wepSwaps.Add(new WeaponSwapEvent(stateChangeEvent, agentData, skillData));
+                    wepSwaps.Add(new WeaponSwapEvent(stateChangeEvent, agentData, skillData, evtcVersion));
                     break;
                 case StateChange.StackActive:
                     buffEvents.Add(new BuffStackActiveEvent(stateChangeEvent, agentData, skillData));
@@ -203,7 +268,7 @@ namespace GW2EIEvtcParser.ParsedData
                 case StateChange.Effect_45:
                 case StateChange.Effect_51:
                     EffectEvent effectEvt = null;
-                    switch(stateChangeEvent.IsStateChange)
+                    switch (stateChangeEvent.IsStateChange)
                     {
                         case StateChange.Effect_45:
                             // End event, not supported for 45
@@ -218,7 +283,7 @@ namespace GW2EIEvtcParser.ParsedData
                             {
                                 var endEvent = new EffectEndEventCBTS51(stateChangeEvent, agentData, statusEvents.EffectEventsByTrackingID);
                                 return;
-                            } 
+                            }
                             else
                             {
                                 effectEvt = new EffectEventCBTS51(stateChangeEvent, agentData, statusEvents.EffectEventsByTrackingID);
@@ -242,7 +307,7 @@ namespace GW2EIEvtcParser.ParsedData
                     }
                     break;
                 case StateChange.EffectIDToGUID:
-                    if (evtcVersion >= ArcDPSBuilds.FunctionalIDToGUIDEvents)
+                    if (evtcVersion.Build >= ArcDPSBuilds.FunctionalIDToGUIDEvents)
                     {
                         switch (GetContentLocal((byte)stateChangeEvent.OverstackValue))
                         {
@@ -271,12 +336,51 @@ namespace GW2EIEvtcParser.ParsedData
                     }
                     metaDataEvents.FractalScaleEvent = new FractalScaleEvent(stateChangeEvent);
                     break;
+                case StateChange.SquadMarker:
+                    var squadMarkerEvent = new SquadMarkerEvent(stateChangeEvent, agentData);
+                    if (squadMarkerEvent.IsEnd)
+                    {
+                        // Find last marker of given index and set an end event on it
+                        if (statusEvents.SquadMarkerEventsByIndex.TryGetValue(squadMarkerEvent.MarkerIndex, out List<SquadMarkerEvent> squadMarkers))
+                        {
+                            squadMarkers.LastOrDefault()?.SetEndTime(squadMarkerEvent.Time);
+                        }
+                        break;
+                    }
+                    else if (statusEvents.SquadMarkerEventsByIndex.TryGetValue(squadMarkerEvent.MarkerIndex, out List<SquadMarkerEvent> squadMarkers))
+                    {
+                        SquadMarkerEvent lastSquadMarker = squadMarkers.LastOrDefault();
+                        if (lastSquadMarker != null)
+                        {
+                            // End previous if position has changed
+                            if (lastSquadMarker.Position.DistanceToPoint(squadMarkerEvent.Position) > 1e-6)
+                            {
+                                lastSquadMarker.SetEndTime(squadMarkerEvent.Time);
+                            }
+                            else
+                            // Ignore current if last marker does not have an end set
+                            if (lastSquadMarker.EndNotSet)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    Add(statusEvents.SquadMarkerEventsByIndex, squadMarkerEvent.MarkerIndex, squadMarkerEvent);
+                    break;
+                case StateChange.Glider:
+                    var gliderEvent = new GliderEvent(stateChangeEvent, agentData);
+                    Add(statusEvents.GliderEventsBySrc, gliderEvent.Src, gliderEvent);
+                    break;
+                case StateChange.StunBreak:
+                    var stunbreakEvent = new StunBreakEvent(stateChangeEvent, agentData);
+                    Add(statusEvents.StunBreakEventsBySrc, stunbreakEvent.Src, stunbreakEvent);
+                    break;
                 default:
                     break;
             }
         }
 
-        public static void AddBuffApplyEvent(CombatItem buffEvent, List<AbstractBuffEvent> buffEvents, AgentData agentData, SkillData skillData, int evtcVersion)
+        public static void AddBuffApplyEvent(CombatItem buffEvent, List<AbstractBuffEvent> buffEvents, AgentData agentData, SkillData skillData, EvtcVersionEvent evtcVersion)
         {
             if (buffEvent.IsOffcycle > 0)
             {
@@ -365,13 +469,16 @@ namespace GW2EIEvtcParser.ParsedData
             return res;
         }
 
-        public static void AddDirectDamageEvent(CombatItem damageEvent, List<AbstractHealthDamageEvent> hpDamage, List<AbstractBreakbarDamageEvent> brkBarDamage, AgentData agentData, SkillData skillData)
+        public static void AddDirectDamageEvent(CombatItem damageEvent, List<AbstractHealthDamageEvent> hpDamage, List<AbstractBreakbarDamageEvent> brkBarDamage, List<CrowdControlEvent> crowdControlEvents, AgentData agentData, SkillData skillData)
         {
             ArcDPSEnums.PhysicalResult result = GetPhysicalResult(damageEvent.Result);
             switch (result)
             {
                 case PhysicalResult.BreakbarDamage:
                     brkBarDamage.Add(new DirectBreakbarDamageEvent(damageEvent, agentData, skillData));
+                    break;
+                case PhysicalResult.CrowdControl:
+                    crowdControlEvents.Add(new CrowdControlEvent(damageEvent, agentData, skillData));
                     break;
                 case PhysicalResult.Activation:
                 case PhysicalResult.Unknown:

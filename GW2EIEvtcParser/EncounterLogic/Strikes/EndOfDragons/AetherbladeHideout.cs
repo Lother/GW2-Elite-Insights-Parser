@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Exceptions;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
 using GW2EIEvtcParser.ParserHelpers;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
 using static GW2EIEvtcParser.ParserHelper;
 using static GW2EIEvtcParser.SkillIDs;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
@@ -143,12 +140,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 AbstractSingleActor echoOfScarlet = GetEchoOfScarletBriar(fightData);
                 if (echoOfScarlet != null)
                 {
-                    AbstractSingleActor maiTrin = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.MaiTrinStrike));
-                    if (maiTrin == null)
-                    {
-                        throw new MissingKeyActorsException("Mai Trin not found");
-                    }
-                    BuffApplyEvent buffApply = combatData.GetBuffData(Determined895).OfType<BuffApplyEvent>().Where(x => x.To == maiTrin.AgentItem).LastOrDefault();
+                    AbstractSingleActor maiTrin = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.MaiTrinStrike)) ?? throw new MissingKeyActorsException("Mai Trin not found");
+                    BuffApplyEvent buffApply = combatData.GetBuffDataByIDByDst(Determined895, maiTrin.AgentItem).OfType<BuffApplyEvent>().LastOrDefault();
                     if (buffApply != null && buffApply.Time > echoOfScarlet.FirstAware)
                     {
                         fightData.SetSuccess(true, buffApply.Time);
@@ -159,17 +152,13 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         private IEnumerable<AbstractSingleActor> GetHPScarletPhantoms(PhaseData phase)
         {
-            return Targets.Where(x => (x.IsSpecies(ArcDPSEnums.TrashID.ScarletPhantomHP) || x.IsSpecies(ArcDPSEnums.TrashID.ScarletPhantomHPCM)) && (phase.InInterval(x.FirstAware) || phase.InInterval(x.LastAware)));
+            return Targets.Where(x => (x.IsSpecies(ArcDPSEnums.TrashID.ScarletPhantomHP) || x.IsSpecies(ArcDPSEnums.TrashID.ScarletPhantomHPCM)) && phase.IntersectsWindow(x.FirstAware, x.LastAware));
         }
 
         internal override List<PhaseData> GetPhases(ParsedEvtcLog log, bool requirePhases)
         {
             List<PhaseData> phases = GetInitialPhase(log);
-            AbstractSingleActor maiTrin = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.MaiTrinStrike));
-            if (maiTrin == null)
-            {
-                throw new MissingKeyActorsException("Mai Trin not found");
-            }
+            AbstractSingleActor maiTrin = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.MaiTrinStrike)) ?? throw new MissingKeyActorsException("Mai Trin not found");
             phases[0].AddTarget(maiTrin);
             AbstractSingleActor echoOfScarlet = GetEchoOfScarletBriar(log.FightData);
             if (echoOfScarlet != null)
@@ -185,7 +174,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 HealthUpdateEvent lastHPUpdate = log.CombatData.GetHealthUpdateEvents(maiTrin.AgentItem).LastOrDefault();
                 long maiTrinEnd = lastHPUpdate.Time;
                 long maiTrinStart = 0;
-                BuffRemoveAllEvent buffRemove = log.CombatData.GetBuffData(Determined895).OfType<BuffRemoveAllEvent>().Where(x => x.To == maiTrin.AgentItem && x.Time > maiTrinStart).FirstOrDefault();
+                BuffRemoveAllEvent buffRemove = log.CombatData.GetBuffDataByIDByDst(Determined895, maiTrin.AgentItem).OfType<BuffRemoveAllEvent>().Where(x => x.Time > maiTrinStart).FirstOrDefault();
                 if (buffRemove != null)
                 {
                     maiTrinStart = buffRemove.Time;
@@ -201,7 +190,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         subPhase.Name = "Mai Trin Phase " + ((i / 2) + 1);
                         subPhase.AddTarget(maiTrin);
-                    } 
+                    }
                     else
                     {
                         subPhase.Name = "Mai Trin Split Phase " + ((i / 2) + 1);
@@ -236,10 +225,10 @@ namespace GW2EIEvtcParser.EncounterLogic
             return phases;
         }
 
-        internal override void EIEvtcParse(ulong gw2Build, int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
+        internal override void EIEvtcParse(ulong gw2Build, EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
             // Ferrous Bombs
-            var bombs = combatData.Where(x => x.DstAgent == 89640 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget).ToList();
+            var bombs = combatData.Where(x => MaxHealthUpdateEvent.GetMaxHealth(x) == 89640 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget).ToList();
             foreach (AgentItem bomb in bombs)
             {
                 bomb.OverrideType(AgentItem.AgentType.NPC);
@@ -266,9 +255,9 @@ namespace GW2EIEvtcParser.EncounterLogic
             foreach (AbstractSingleActor echoOfScarlet in echoesOfScarlet)
             {
                 var hpUpdates = combatData.Where(x => x.SrcMatchesAgent(echoOfScarlet.AgentItem) && x.IsStateChange == ArcDPSEnums.StateChange.HealthUpdate).ToList();
-                if (hpUpdates.Count > 1 && hpUpdates.LastOrDefault().DstAgent == 10000)
+                if (hpUpdates.Count > 1 && HealthUpdateEvent.GetHealthPercent(hpUpdates.LastOrDefault()) == 100)
                 {
-                    hpUpdates.LastOrDefault().OverrideSrcAgent(_unknownAgent.Agent);
+                    hpUpdates.Last().OverrideDstAgent(hpUpdates[hpUpdates.Count - 2].DstAgent);
                 }
             }
             int curPhantom = 1;
@@ -292,18 +281,14 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override FightData.EncounterMode GetEncounterMode(CombatData combatData, AgentData agentData, FightData fightData)
         {
-            AbstractSingleActor maiTrin = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.MaiTrinStrike));
-            if (maiTrin == null)
-            {
-                throw new MissingKeyActorsException("Mai Trin not found");
-            }
+            AbstractSingleActor maiTrin = Targets.FirstOrDefault(x => x.IsSpecies(ArcDPSEnums.TargetID.MaiTrinStrike)) ?? throw new MissingKeyActorsException("Mai Trin not found");
             return maiTrin.GetHealth(combatData) > 8e6 ? FightData.EncounterMode.CM : FightData.EncounterMode.Normal;
         }
 
         protected override void SetInstanceBuffs(ParsedEvtcLog log)
         {
             base.SetInstanceBuffs(log);
-            
+
             if (log.FightData.Success)
             {
                 if (log.CombatData.GetBuffData(AchievementEligibilityTriangulation).Any())
@@ -345,7 +330,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             // The combinations are 2 players buffs for each bomb invulnerability buff, so 2 x 4 total.
             foreach (Segment invuln in bombInvulnSegments)
             {
-                foreach (Segment s in  beamsSegments)
+                foreach (Segment s in beamsSegments)
                 {
                     if (s.Start < invuln.Start && invuln.Start < s.End)
                     {

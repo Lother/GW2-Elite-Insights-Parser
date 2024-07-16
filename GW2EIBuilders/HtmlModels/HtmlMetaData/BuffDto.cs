@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using GW2EIEvtcParser;
 using GW2EIEvtcParser.EIData;
-using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIBuilders.HtmlModels.HTMLMetaData
@@ -50,7 +49,7 @@ namespace GW2EIBuilders.HtmlModels.HTMLMetaData
             }
         }
 
-        public static void AssembleBoons(ICollection<Buff> buffs, Dictionary<string, BuffDto> dict, ParsedEvtcLog log)
+        public static void AssembleBuffs(ICollection<Buff> buffs, Dictionary<string, BuffDto> dict, ParsedEvtcLog log)
         {
             foreach (Buff buff in buffs)
             {

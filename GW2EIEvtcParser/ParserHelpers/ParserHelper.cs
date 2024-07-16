@@ -14,7 +14,7 @@ namespace GW2EIEvtcParser
 
         internal static readonly AgentItem _unknownAgent = new AgentItem();
 
-        public const int CombatReplayPollingRate = 150;
+        public const int CombatReplayPollingRate = 300;
         internal const uint CombatReplaySkillDefaultSizeInPixel = 22;
         internal const uint CombatReplaySkillDefaultSizeInWorld = 90;
         internal const uint CombatReplayOverheadDefaultSizeInPixel = 20;
@@ -36,9 +36,9 @@ namespace GW2EIEvtcParser
 
         internal const long InchDistanceThreshold = 10;
 
-        internal const long MinimumInCombatDuration = 2200;
+        public const long MinimumInCombatDuration = 2200;
 
-        internal const int PhaseTimeLimit = 2000;
+        internal const int PhaseTimeLimit = 1000;
 
 
         public enum Source
@@ -265,6 +265,21 @@ namespace GW2EIEvtcParser
         }
 
 
+        public static string ToDurationString(long duration)
+        {
+            var durationTimeSpan = TimeSpan.FromMilliseconds(Math.Abs(duration));
+            string durationString = durationTimeSpan.ToString("mm") + "m " + durationTimeSpan.ToString("ss") + "s " + durationTimeSpan.Milliseconds + "ms";
+            if (durationTimeSpan.Hours > 0)
+            {
+                durationString = durationTimeSpan.ToString("hh") + "h " + durationString;
+            }
+            if (duration < 0)
+            {
+                durationString = "-" + durationString;
+            }
+            return durationString;
+        }
+
 
         internal delegate bool ExtraRedirection(CombatItem evt, AgentItem from, AgentItem to);
         /// <summary>
@@ -330,7 +345,7 @@ namespace GW2EIEvtcParser
                 (x) => (x.IsStateChange == StateChange.EnterCombat || x.IsStateChange == StateChange.ExitCombat),
                 (x) => (x.IsStateChange == StateChange.Spawn || x.IsStateChange == StateChange.Despawn || x.IsStateChange == StateChange.ChangeDead || x.IsStateChange == StateChange.ChangeDown || x.IsStateChange == StateChange.ChangeUp),
             };
-            if (!copyPositionalDataFromAttackTarget || !attackTargetAgents.Any())
+            if (!copyPositionalDataFromAttackTarget || attackTargetAgents.Count == 0)
             {
                 stateChangeCopyFromAgentConditions.Add((x) => x.IsStateChange == StateChange.Position);
                 stateChangeCopyFromAgentConditions.Add((x) => x.IsStateChange == StateChange.Rotation);
@@ -345,7 +360,7 @@ namespace GW2EIEvtcParser
                 }
             }
             // Copy positional data from attack targets
-            if (copyPositionalDataFromAttackTarget && attackTargetAgents.Any())
+            if (copyPositionalDataFromAttackTarget && attackTargetAgents.Count != 0)
             {
                 Func<CombatItem, bool> canCopyFromAttackTarget = (evt) => attackTargetAgents.Any(x => evt.SrcMatchesAgent(x));
                 var stateChangeCopyFromAttackTargetConditions = new List<Func<CombatItem, bool>>()
@@ -628,19 +643,20 @@ namespace GW2EIEvtcParser
             { BuffAttribute.FishingPower, "Fishing Power" },
             { BuffAttribute.Armor, "Armor" },
             { BuffAttribute.Agony, "Agony" },
-            { BuffAttribute.StatInc, "Stat Increase" },
-            { BuffAttribute.FlatInc, "Flat Increase" },
-            { BuffAttribute.PhysInc, "Outgoing Strike Damage" },
-            { BuffAttribute.CondInc, "Outgoing Condition Damage" },
-            { BuffAttribute.SiphonInc, "Outgoing Life Leech Damage" },
-            { BuffAttribute.SiphonRec, "Incoming Life Leech Damage" },
-            { BuffAttribute.CondRec, "Incoming Condition Damage" },
-            { BuffAttribute.CondRec2, "Incoming Condition Damage (Mult)" },
-            { BuffAttribute.PhysRec, "Incoming Strike Damage" },
-            { BuffAttribute.PhysRec2, "Incoming Strike Damage (Mult)" },
+            { BuffAttribute.StatOutgoing, "Stat Increase" },
+            { BuffAttribute.FlatOutgoing, "Flat Increase" },
+            { BuffAttribute.PhysOutgoing, "Outgoing Strike Damage" },
+            { BuffAttribute.CondOutgoing, "Outgoing Condition Damage" },
+            { BuffAttribute.SiphonOutgoing, "Outgoing Life Leech Damage" },
+            { BuffAttribute.SiphonIncomingAdditive1, "Incoming Life Leech Damage" },
+            { BuffAttribute.SiphonIncomingAdditive2, "Incoming Life Leech Damage" },
+            { BuffAttribute.CondIncomingAdditive, "Incoming Condition Damage" },
+            { BuffAttribute.CondIncomingMultiplicative, "Incoming Condition Damage (Mult)" },
+            { BuffAttribute.PhysIncomingAdditive, "Incoming Strike Damage" },
+            { BuffAttribute.PhysIncomingMultiplicative, "Incoming Strike Damage (Mult)" },
             { BuffAttribute.AttackSpeed, "Attack Speed" },
-            { BuffAttribute.ConditionDurationInc, "Outgoing Condition Duration" },
-            { BuffAttribute.BoonDurationInc, "Outgoing Boon Duration" },
+            { BuffAttribute.ConditionDurationOutgoing, "Outgoing Condition Duration" },
+            { BuffAttribute.BoonDurationOutgoing, "Outgoing Boon Duration" },
             { BuffAttribute.DamageFormulaSquaredLevel, "Damage Formula" },
             { BuffAttribute.DamageFormula, "Damage Formula" },
             { BuffAttribute.GlancingBlow, "Glancing Blow" },
@@ -650,10 +666,11 @@ namespace GW2EIEvtcParser
             { BuffAttribute.SkillActivationDamageFormula, "Damage Formula on Skill Activation" },
             { BuffAttribute.MovementActivationDamageFormula, "Damage Formula based on Movement" },
             { BuffAttribute.EnduranceRegeneration, "Endurance Regeneration" },
-            { BuffAttribute.HealingEffectivenessRec, "Incoming Healing Effectiveness" },
-            { BuffAttribute.HealingEffectivenessRec2, "Incoming Healing Effectiveness" },
-            { BuffAttribute.HealingEffectivenessConvInc, "Outgoing Healing Effectiveness" },
-            { BuffAttribute.HealingEffectivenessFlatInc, "Outgoing Healing Effectiveness" },
+            { BuffAttribute.HealingEffectivenessIncomingNonStacking, "Incoming Healing Effectiveness" },
+            { BuffAttribute.HealingEffectivenessIncomingAdditive, "Incoming Healing Effectiveness" },
+            { BuffAttribute.HealingEffectivenessIncomingMultiplicative, "Incoming Healing Effectiveness (Mult)" },
+            { BuffAttribute.HealingEffectivenessConvOutgoing, "Outgoing Healing Effectiveness" },
+            { BuffAttribute.HealingEffectivenessOutgoingAdditive, "Outgoing Healing Effectiveness" },
             { BuffAttribute.HealingOutputFormula, "Healing Formula" },
             { BuffAttribute.ExperienceFromKills, "Experience From Kills" },
             { BuffAttribute.ExperienceFromAll, "Experience From All" },
@@ -671,27 +688,29 @@ namespace GW2EIEvtcParser
 
         public static IReadOnlyDictionary<BuffAttribute, string> BuffAttributesPercent { get; private set; } = new Dictionary<BuffAttribute, string>()
         {
-            { BuffAttribute.FlatInc, "%" },
-            { BuffAttribute.PhysInc, "%" },
-            { BuffAttribute.CondInc, "%" },
-            { BuffAttribute.CondRec, "%" },
-            { BuffAttribute.CondRec2, "%" },
-            { BuffAttribute.PhysRec, "%" },
-            { BuffAttribute.PhysRec2, "%" },
+            { BuffAttribute.FlatOutgoing, "%" },
+            { BuffAttribute.PhysOutgoing, "%" },
+            { BuffAttribute.CondOutgoing, "%" },
+            { BuffAttribute.CondIncomingAdditive, "%" },
+            { BuffAttribute.CondIncomingMultiplicative, "%" },
+            { BuffAttribute.PhysIncomingAdditive, "%" },
+            { BuffAttribute.PhysIncomingMultiplicative, "%" },
             { BuffAttribute.AttackSpeed, "%" },
-            { BuffAttribute.ConditionDurationInc, "%" },
-            { BuffAttribute.BoonDurationInc, "%" },
+            { BuffAttribute.ConditionDurationOutgoing, "%" },
+            { BuffAttribute.BoonDurationOutgoing, "%" },
             { BuffAttribute.GlancingBlow, "%" },
             { BuffAttribute.CriticalChance, "%" },
             { BuffAttribute.StrikeDamageToHP, "%" },
             { BuffAttribute.ConditionDamageToHP, "%" },
             { BuffAttribute.EnduranceRegeneration, "%" },
-            { BuffAttribute.HealingEffectivenessRec, "%" },
-            { BuffAttribute.HealingEffectivenessRec2, "%" },
-            { BuffAttribute.SiphonInc, "%" },
-            { BuffAttribute.SiphonRec, "%" },
-            { BuffAttribute.HealingEffectivenessConvInc , "%" },
-            { BuffAttribute.HealingEffectivenessFlatInc , "%" },
+            { BuffAttribute.HealingEffectivenessIncomingNonStacking, "%" },
+            { BuffAttribute.HealingEffectivenessIncomingAdditive, "%" },
+            { BuffAttribute.HealingEffectivenessIncomingMultiplicative, "%" },
+            { BuffAttribute.SiphonOutgoing, "%" },
+            { BuffAttribute.SiphonIncomingAdditive1, "%" },
+            { BuffAttribute.SiphonIncomingAdditive2, "%" },
+            { BuffAttribute.HealingEffectivenessConvOutgoing , "%" },
+            { BuffAttribute.HealingEffectivenessOutgoingAdditive , "%" },
             { BuffAttribute.ExperienceFromKills, "%" },
             { BuffAttribute.ExperienceFromAll, "%" },
             { BuffAttribute.GoldFind, "%" },

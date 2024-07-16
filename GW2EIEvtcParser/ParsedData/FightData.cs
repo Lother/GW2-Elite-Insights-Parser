@@ -27,27 +27,37 @@ namespace GW2EIEvtcParser.ParsedData
         {
             get
             {
-                var duration = TimeSpan.FromMilliseconds(FightDuration);
-                string durationString = duration.ToString("mm") + "m " + duration.ToString("ss") + "s " + duration.Milliseconds + "ms";
-                if (duration.Hours > 0)
-                {
-                    durationString = duration.ToString("hh") + "h " + durationString;
-                }
-                return durationString;
+                return ParserHelper.ToDurationString(FightDuration);
             }
         }
         public bool Success { get; private set; }
 
-        internal enum EncounterMode { NotSet, CM, Normal, CMNoName, Story }
+        internal enum EncounterMode
+        {
+            NotSet,
+            Story,
+            Normal,
+            LegendaryCM,
+            CM,
+            CMNoName
+        }
         private EncounterMode _encounterMode = EncounterMode.NotSet;
         public bool IsCM => _encounterMode == EncounterMode.CMNoName || _encounterMode == EncounterMode.CM;
-        internal enum EncounterStartStatus { NotSet, Normal, Late, NoPreEvent }
+        public bool IsLegendaryCM => _encounterMode == EncounterMode.LegendaryCM;
+
+        internal enum EncounterStartStatus
+        {
+            NotSet,
+            Normal,
+            Late,
+            NoPreEvent
+        }
         private EncounterStartStatus _encounterStartStatus = EncounterStartStatus.NotSet;
         public bool IsLateStart => _encounterStartStatus == EncounterStartStatus.Late || MissingPreEvent;
         public bool MissingPreEvent => _encounterStartStatus == EncounterStartStatus.NoPreEvent;
 
         // Constructors
-        internal FightData(int id, AgentData agentData, List<CombatItem> combatData, EvtcParserSettings parserSettings, long start, long end, int evtcVersion)
+        internal FightData(int id, AgentData agentData, List<CombatItem> combatData, EvtcParserSettings parserSettings, long start, long end, EvtcVersionEvent evtcVersion)
         {
             LogStart = start;
             LogEnd = end;
@@ -80,10 +90,10 @@ namespace GW2EIEvtcParser.ParsedData
                     break;
                 case ArcDPSEnums.TargetID.McLeodTheSilent:
                     // No proper escort support by arc dps before that build, redirect to unknown
-                    if (evtcVersion >= ArcDPSEnums.ArcDPSBuilds.NewLogStart)
+                    if (evtcVersion.Build >= ArcDPSEnums.ArcDPSBuilds.NewLogStart)
                     {
                         Logic = new Escort(id);
-                    }  
+                    }
                     else
                     {
                         Logic = new UnknownFightLogic(id);
@@ -245,6 +255,13 @@ namespace GW2EIEvtcParser.ParsedData
                 case ArcDPSEnums.TargetID.KanaxaiScytheOfHouseAurkusCM:
                     Logic = new Kanaxai(id);
                     break;
+                case ArcDPSEnums.TargetID.CerusLonelyTower:
+                case ArcDPSEnums.TargetID.DeimosLonelyTower:
+                    Logic = new CerusAndDeimos(id);
+                    break;
+                case ArcDPSEnums.TargetID.EparchLonelyTower:
+                    Logic = new Eparch(id);
+                    break;
                 //
                 case ArcDPSEnums.TargetID.WorldVersusWorld:
                     if (agentData.GetNPCsByID(ArcDPSEnums.TargetID.Desmina).Any())
@@ -291,7 +308,7 @@ namespace GW2EIEvtcParser.ParsedData
                             if (agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidAmalgamate).Any())
                             {
                                 Logic = new HarvestTemple((int)ArcDPSEnums.TargetID.GadgetTheDragonVoid1);
-                            } 
+                            }
                             else
                             {
                                 Logic = new UnknownFightLogic(id);
@@ -310,27 +327,24 @@ namespace GW2EIEvtcParser.ParsedData
 
         internal void CompleteFightName(CombatData combatData, AgentData agentData)
         {
-            FightName = Logic.GetLogicName(combatData, agentData) 
-                + (_encounterMode == EncounterMode.CM ? " CM" : "") 
+            FightName = Logic.GetLogicName(combatData, agentData)
+                + (_encounterMode == EncounterMode.CM ? " CM" : "")
+                + (_encounterMode == EncounterMode.LegendaryCM ? " LCM" : "")
                 + (_encounterMode == EncounterMode.Story ? " Story" : "")
-                + (IsLateStart && !MissingPreEvent ? " (Late Start)" : "") 
+                + (IsLateStart && !MissingPreEvent ? " (Late Start)" : "")
                 + (MissingPreEvent ? " (No Pre-Event)" : "");
-        }
-
-        public IReadOnlyList<GenericDecoration> GetEnvironmentCombatReplayDecorations(ParsedEvtcLog log)
-        {
-            return Logic.GetEnvironmentCombatReplayDecorations(log);
         }
 
         public IReadOnlyList<PhaseData> GetPhases(ParsedEvtcLog log)
         {
 
-            if (!_phases.Any())
+            if (_phases.Count == 0)
             {
                 _phases = Logic.GetPhases(log, log.ParserSettings.ParsePhases);
                 _phases.AddRange(Logic.GetBreakbarPhases(log, log.ParserSettings.ParsePhases));
                 _phases.RemoveAll(x => x.AllTargets.Count == 0);
-                if (_phases.Any(phase => phase.AllTargets.Any(target => !Logic.Targets.Contains(target)))) {
+                if (_phases.Any(phase => phase.AllTargets.Any(target => !Logic.Targets.Contains(target))))
+                {
                     throw new InvalidOperationException("Phases can only have targets");
                 }
                 if (_phases.Exists(x => x.BreakbarPhase && x.Targets.Count != 1))

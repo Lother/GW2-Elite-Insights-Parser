@@ -4,18 +4,19 @@ using System.Linq;
 using GW2EIEvtcParser.EIData;
 using GW2EIEvtcParser.Extensions;
 using GW2EIEvtcParser.ParsedData;
-using static GW2EIEvtcParser.ParserHelper;
-using static GW2EIEvtcParser.SkillIDs;
-using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicPhaseUtils;
 using static GW2EIEvtcParser.EncounterLogic.EncounterLogicTimeUtils;
-using static GW2EIEvtcParser.EncounterLogic.EncounterImages;
+using static GW2EIEvtcParser.EncounterLogic.EncounterLogicUtils;
+using static GW2EIEvtcParser.ParserHelper;
+using static GW2EIEvtcParser.SkillIDs;
 
 namespace GW2EIEvtcParser.EncounterLogic
 {
     internal class HarvestTemple : EndOfDragonsStrike
     {
 
+        private static readonly Point3D GrandStrikeChestPosition = new Point3D(605.31f, -20400.5f, -15420.1f);
         private IReadOnlyList<AbstractSingleActor> FirstAwareSortedTargets { get; set; }
         public HarvestTemple(int triggerID) : base(triggerID)
         {
@@ -32,7 +33,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 new PlayerDstHitMechanic(new [] { Shockwave, TsunamiSlam1, TsunamiSlam2 }, "Shockwaves", new MechanicPlotlySetting(Symbols.CircleOpenDot, Colors.Yellow), "NopeRopes.Achiv", "Achievement Elibigility: Jumping the Nope Ropes", "Achiv Jumping Nope Ropes", 150).UsingAchievementEligibility(true),
                 new PlayerDstHitMechanic(new long [] { VoidExplosion, VoidExplosion2, VoidExplosion3 }, "Void Explosion", new MechanicPlotlySetting(Symbols.StarSquareOpenDot, Colors.Yellow), "VoidExp.H", "Hit by Void Explosion (Last Laugh)", "Void Explosion", 0),
                 new PlayerDstHitMechanic(MagicDischarge, "Magic Discharge", new MechanicPlotlySetting(Symbols.Octagon, Colors.Grey), "MagicDisc.H", "Hit by Magic Discharge (Orb Explosion Wave)", "Magic Discharge", 0),
-                new EnemySrcEffectMechanic(EffectGUIDs.HarvestTempleGreen, "Success Green", new MechanicPlotlySetting(Symbols.Circle, Colors.DarkGreen), "S.Green", "Green Successful", "Success Green", 0),
+                new EnemySrcEffectMechanic(EffectGUIDs.HarvestTempleSuccessGreen, "Success Green", new MechanicPlotlySetting(Symbols.Circle, Colors.DarkGreen), "S.Green", "Green Successful", "Success Green", 0),
                 new EnemySrcEffectMechanic(EffectGUIDs.HarvestTempleFailedGreen, "Failed Green", new MechanicPlotlySetting(Symbols.Circle, Colors.DarkRed), "F.Green", "Green Failed", "Failed Green", 0),
                 // Purification 1
                 new PlayerDstHitMechanic(LightningOfJormag, "Lightning of Jormag", new MechanicPlotlySetting(Symbols.StarTriangleDown, Colors.Ice), "Light.H", "Hit by Lightning of Jormag", "Lightning of Jormag", 0),
@@ -59,7 +60,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 // Mordremoth
                 new PlayerDstHitMechanic(Shockwave, "Shock Wave", new MechanicPlotlySetting(Symbols.TriangleRight, Colors.Green), "ShckWv.H", "Hit by Mordremoth Shockwave", "Mordremoth Shockwave", 150),
                 new PlayerDstHitMechanic(Kick, "Kick", new MechanicPlotlySetting(Symbols.TriangleDown, Colors.Green), "Kick.H", "Kicked by Void Skullpiercer", "Skullpiercer Kick", 150).UsingChecker((ahde, log) => !ahde.To.HasBuff(log, Stability, ahde.Time - ServerDelayConstant)),
-                new PlayerDstHitMechanic(PoisonRoar, "Poison Roar", new MechanicPlotlySetting(Symbols.TriangleUp, Colors.Green), "M.Poison.H", "Hit by Mordremoth Poison", "Mordremoth Poison", 150),// Giants
+                new PlayerDstHitMechanic(PoisonRoar, "Poison Roar", new MechanicPlotlySetting(Symbols.TriangleUp, Colors.Green), "M.Poison.H", "Hit by Mordremoth Poison", "Mordremoth Poison", 150),
+                // Giants
                 new PlayerDstHitMechanic(DeathScream, "Death Scream", new MechanicPlotlySetting(Symbols.SquareOpen, Colors.Grey), "Scream.G.CC", "CC'd by Giant's Death Scream", "Death Scream", 0).UsingChecker((ahde, log) => !ahde.To.HasBuff(log, Stability, ahde.Time - ServerDelayConstant)),
                 new PlayerDstHitMechanic(RottingBile, "Rotting Bile", new MechanicPlotlySetting(Symbols.Square, Colors.GreenishYellow), "RotBile.H", "Hit by Giant's Rotting Bile", "Rotting Bile", 0),
                 new PlayerDstHitMechanic(Stomp, "Stomp", new MechanicPlotlySetting(Symbols.StarSquare, Colors.Teal), "Stomp.CC", "CC'd by Giant's Stomp", "Stomp", 0).UsingChecker((ahde, log) => !ahde.To.HasBuff(log, Stability, ahde.Time - ServerDelayConstant)),
@@ -94,6 +96,7 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
             );
             Icon = EncounterIconHarvestTemple;
+            ChestID = ArcDPSEnums.ChestID.GrandStrikeChest;
             Extension = "harvsttmpl";
             EncounterCategoryInformation.InSubCategoryOrder = 3;
             EncounterID |= 0x000004;
@@ -102,7 +105,7 @@ namespace GW2EIEvtcParser.EncounterLogic
         {
             return new CombatReplayMap(CombatReplayHarvestTemple,
                             (1024, 1024),
-                            (-812, -21820, 2037, -18971)/*,
+                            (-844, -21845, 2055, -18946)/*,
                             (-15360, -36864, 15360, 39936),
                             (3456, 11012, 4736, 14212)*/);
         }
@@ -238,10 +241,10 @@ namespace GW2EIEvtcParser.EncounterLogic
             return FightData.EncounterStartStatus.Normal;
         }
 
-        internal override long GetFightOffset(int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
+        internal override long GetFightOffset(EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData)
         {
             long startToUse = GetGenericFightOffset(fightData);
-            CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogStartNPCUpdate);
+            CombatItem logStartNPCUpdate = combatData.FirstOrDefault(x => x.IsStateChange == ArcDPSEnums.StateChange.LogNPCUpdate);
             if (logStartNPCUpdate != null)
             {
                 AgentItem firstAmalgamate = agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidAmalgamate).MinBy(x => x.FirstAware);
@@ -321,6 +324,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                 ArcDPSEnums.TrashID.DragonEnergyOrb,
                 ArcDPSEnums.TrashID.GravityBall,
                 ArcDPSEnums.TrashID.JormagMovingFrostBeam,
+                ArcDPSEnums.TrashID.JormagMovingFrostBeamNorth,
+                ArcDPSEnums.TrashID.JormagMovingFrostBeamCenter,
             };
         }
 
@@ -348,15 +353,22 @@ namespace GW2EIEvtcParser.EncounterLogic
                     if (lastDamageTaken != null)
                     {
                         bool isSuccess = false;
-                        var determinedApplies = combatData.GetBuffData(Determined895).OfType<BuffApplyEvent>().Where(x => x.To.IsPlayer && x.Time >= targetOffs[1].Time - 150).ToList();
-                        IReadOnlyList<AnimatedCastEvent> liftOffs = combatData.GetAnimatedCastData(HarvestTempleLiftOff);
-                        foreach (AnimatedCastEvent liffOff in liftOffs)
+                        if (agentData.GetGadgetsByID(ChestID).Any())
                         {
                             isSuccess = true;
-                            if (determinedApplies.Count(x => x.To == liffOff.Caster && Math.Abs(x.Time - liffOff.Time) < ServerDelayConstant) != 1)
+                        }
+                        else
+                        {
+                            var determinedApplies = combatData.GetBuffData(Determined895).OfType<BuffApplyEvent>().Where(x => x.To.IsPlayer && Math.Abs(x.AppliedDuration - 10000) < ServerDelayConstant).ToList();
+                            IReadOnlyList<AnimatedCastEvent> liftOffs = combatData.GetAnimatedCastData(HarvestTempleLiftOff);
+                            foreach (AnimatedCastEvent liffOff in liftOffs)
                             {
-                                isSuccess = false;
-                                break;
+                                isSuccess = true;
+                                if (determinedApplies.Count(x => x.To == liffOff.Caster && liffOff.Time - x.Time + ServerDelayConstant > 0) != 1)
+                                {
+                                    isSuccess = false;
+                                    break;
+                                }
                             }
                         }
                         if (isSuccess)
@@ -368,26 +380,30 @@ namespace GW2EIEvtcParser.EncounterLogic
             }
         }
 
-        internal override void EIEvtcParse(ulong gw2Build, int evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
+        internal override void EIEvtcParse(ulong gw2Build, EvtcVersionEvent evtcVersion, FightData fightData, AgentData agentData, List<CombatItem> combatData, IReadOnlyDictionary<uint, AbstractExtensionHandler> extensions)
         {
+            FindChestGadget(ChestID, agentData, combatData, GrandStrikeChestPosition, (agentItem) => agentItem.HitboxHeight == 0 || (agentItem.HitboxHeight == 500 && agentItem.HitboxWidth == 2));
             bool needRefreshAgentPool = false;
+            var maxHPEvents = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => new MaxHealthUpdateEvent(x, agentData)).GroupBy(x => x.MaxHealth).ToDictionary(x => x.Key, x => x.ToList());
             //
-            var dragonOrbMaxHPs = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate && x.DstAgent == 491550).ToList();
-            foreach (CombatItem dragonOrbMaxHP in dragonOrbMaxHPs)
+            if (maxHPEvents.TryGetValue(491550, out List<MaxHealthUpdateEvent> dragonOrbMaxHPs))
             {
-                AgentItem dragonOrb = agentData.GetAgent(dragonOrbMaxHP.SrcAgent, dragonOrbMaxHP.Time);
-                if (dragonOrb != _unknownAgent)
+                foreach (MaxHealthUpdateEvent dragonOrbMaxHP in dragonOrbMaxHPs)
                 {
-                    dragonOrb.OverrideName("Dragon Orb");
-                    dragonOrb.OverrideID(ArcDPSEnums.TrashID.DragonEnergyOrb);
+                    AgentItem dragonOrb = dragonOrbMaxHP.Src;
+                    if (dragonOrb != _unknownAgent && combatData.Count(x => x.IsStateChange == ArcDPSEnums.StateChange.Velocity && x.SrcMatchesAgent(dragonOrb)) > 5)
+                    {
+                        dragonOrb.OverrideName("Dragon Orb");
+                        dragonOrb.OverrideID(ArcDPSEnums.TrashID.DragonEnergyOrb);
+                    }
+                }
+                if (dragonOrbMaxHPs.Count != 0)
+                {
+                    needRefreshAgentPool = true;
                 }
             }
-            if (dragonOrbMaxHPs.Any())
-            {
-                needRefreshAgentPool = true;
-            }
             //
-            var attackTargetEvents = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.AttackTarget).ToList();
+            var attackTargetEvents = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.AttackTarget).Select(x => new AttackTargetEvent(x, agentData)).ToList();
             var idsToUse = new List<ArcDPSEnums.TargetID> {
                 ArcDPSEnums.TargetID.TheDragonVoidJormag,
                 ArcDPSEnums.TargetID.TheDragonVoidPrimordus,
@@ -396,34 +412,34 @@ namespace GW2EIEvtcParser.EncounterLogic
                 ArcDPSEnums.TargetID.TheDragonVoidZhaitan,
                 ArcDPSEnums.TargetID.TheDragonVoidSooWon,
             };
-            var targetableEvents = combatData.Where(y => y.IsStateChange == ArcDPSEnums.StateChange.Targetable).GroupBy(x => agentData.GetAgent(x.SrcAgent, x.Time)).ToDictionary(x => x.Key, x => x.Where(y => y.Time > 2000).ToList());
-            attackTargetEvents = attackTargetEvents.OrderBy(x =>
+            var targetableEvents = combatData.Where(y => y.IsStateChange == ArcDPSEnums.StateChange.Targetable).Select(x => new TargetableEvent(x, agentData)).Where(x => x.Src.Type == AgentItem.AgentType.Gadget).GroupBy(x => x.Src).ToDictionary(x => x.Key, x => x.ToList());
+            attackTargetEvents.RemoveAll(x =>
             {
-                AgentItem atAgent = agentData.GetAgent(x.SrcAgent, x.Time);
-                if (targetableEvents.TryGetValue(atAgent, out List<CombatItem> targetables))
+                AgentItem atAgent = x.AttackTarget;
+                if (targetableEvents.TryGetValue(atAgent, out List<TargetableEvent> targetables))
                 {
-                    return targetables.Any() ? targetables.Min(y => y.Time) : long.MaxValue;
+                    return !targetables.Any(y => y.Targetable);
                 }
-                return long.MaxValue;
-            }).ToList();
+                return true;
+            });
             int index = 0;
             var processedAttackTargets = new HashSet<AgentItem>();
-            foreach (CombatItem at in attackTargetEvents)
+            foreach (AttackTargetEvent attackTargetEvent in attackTargetEvents)
             {
-                AgentItem atAgent = agentData.GetAgent(at.SrcAgent, at.Time);
+                AgentItem atAgent = attackTargetEvent.AttackTarget;
                 // We take attack events, filter out the first one, present at spawn, that is always a non targetable event
                 // There are only two relevant attack targets, one represents the first five and the last one Soo Won
-                if (processedAttackTargets.Contains(atAgent) || !targetableEvents.TryGetValue(atAgent, out List<CombatItem> targetables) || !targetables.Any())
+                if (processedAttackTargets.Contains(atAgent) || !targetableEvents.TryGetValue(atAgent, out List<TargetableEvent> targetables))
                 {
                     continue;
                 }
-                AgentItem dragonVoid = agentData.GetAgent(at.DstAgent, at.Time);
+                AgentItem dragonVoid = attackTargetEvent.Src;
                 var copyEventsFrom = new List<AgentItem>() { dragonVoid };
                 processedAttackTargets.Add(atAgent);
-                var targetOns = targetables.Where(x => x.DstAgent == 1).ToList();
-                var targetOffs = targetables.Where(x => x.DstAgent == 0).ToList();
+                var targetOns = targetables.Where(x => x.Targetable).ToList();
+                var targetOffs = targetables.Where(x => !x.Targetable).ToList();
                 //
-                foreach (CombatItem targetOn in targetOns)
+                foreach (TargetableEvent targetOn in targetOns)
                 {
                     // If Soo Won has been already created, we break
                     if (index >= idsToUse.Count)
@@ -433,28 +449,29 @@ namespace GW2EIEvtcParser.EncounterLogic
                     ArcDPSEnums.TargetID id = idsToUse[index++];
                     long start = targetOn.Time;
                     long end = dragonVoid.LastAware;
-                    CombatItem targetOff = targetOffs.FirstOrDefault(x => x.Time > start);
+                    TargetableEvent targetOff = targetOffs.FirstOrDefault(x => x.Time > start);
                     // Don't split Soo won into two
                     if (targetOff != null && id != ArcDPSEnums.TargetID.TheDragonVoidSooWon)
                     {
                         end = targetOff.Time;
                     }
-                    ulong lastHPUpdate = ulong.MaxValue;
+                    double lastHPUpdate = 1e6;
                     AgentItem extra = agentData.AddCustomNPCAgent(start, end, dragonVoid.Name, dragonVoid.Spec, id, false, dragonVoid.Toughness, dragonVoid.Healing, dragonVoid.Condition, dragonVoid.Concentration, atAgent.HitboxWidth, atAgent.HitboxHeight);
                     RedirectEventsAndCopyPreviousStates(combatData, extensions, agentData, dragonVoid, copyEventsFrom, extra, true,
                         (evt, from, to) =>
                         {
                             if (evt.IsStateChange == ArcDPSEnums.StateChange.HealthUpdate)
                             {
+                                double healthPercent = HealthUpdateEvent.GetHealthPercent(evt);
                                 // Avoid making the gadget go back to 100% hp on "death"
                                 // Regenerating back to full HP
                                 // use mid life check to allow hp going back up to 100% around first aware
-                                if (evt.DstAgent > lastHPUpdate && evt.DstAgent > 9900 && evt.Time > (to.LastAware + to.FirstAware) / 2)
+                                if (healthPercent > lastHPUpdate && healthPercent > 99 && evt.Time > (to.LastAware + to.FirstAware) / 2)
                                 {
                                     return false;
                                 }
                                 // Remember last hp
-                                lastHPUpdate = evt.DstAgent;
+                                lastHPUpdate = HealthUpdateEvent.GetHealthPercent(evt);
                             }
                             return true;
                         }
@@ -479,29 +496,30 @@ namespace GW2EIEvtcParser.EncounterLogic
                 needRefreshAgentPool = true;
             }
             // Gravity Ball - Timecaster gadget
-            AgentItem timecaster = agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidTimeCaster).FirstOrDefault();
-            if (timecaster != null)
+            if (agentData.TryGetFirstAgentItem(ArcDPSEnums.TrashID.VoidTimeCaster, out AgentItem timecaster))
             {
-                var gravityBalls = combatData.Where(x => x.DstAgent == 14940 && x.IsStateChange == ArcDPSEnums.StateChange.MaxHealthUpdate).Select(x => agentData.GetAgent(x.SrcAgent, x.Time)).Where(x => x.Type == AgentItem.AgentType.Gadget && x.HitboxHeight == 300 && x.HitboxWidth == 100 && x.Master == null && x.FirstAware > timecaster.FirstAware && x.FirstAware < timecaster.LastAware + 2000).ToList();
-                var candidateVelocities = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.Velocity && gravityBalls.Any(y => x.SrcMatchesAgent(y))).ToList();
-                int referenceLength = 200;
-                gravityBalls = gravityBalls.Where(x => candidateVelocities.Any(y => Math.Abs(AbstractMovementEvent.GetPoint3D(y.DstAgent, y.Value).Length() - referenceLength) < 10)).ToList();
-                foreach (AgentItem ball in gravityBalls)
+                if (maxHPEvents.TryGetValue(14940, out List<MaxHealthUpdateEvent> potentialGravityBallHPs))
                 {
-                    ball.OverrideType(AgentItem.AgentType.NPC);
-                    ball.OverrideID(ArcDPSEnums.TrashID.GravityBall);
-                    ball.SetMaster(timecaster);
-                    needRefreshAgentPool = true;
+                    var gravityBalls = potentialGravityBallHPs.Where(x => x.Src.Type == AgentItem.AgentType.Gadget && x.Src.HitboxHeight == 300 && x.Src.HitboxWidth == 100 && x.Src.Master == null && x.Src.FirstAware > timecaster.FirstAware && x.Src.FirstAware < timecaster.LastAware + 2000).Select(x => x.Src).ToList();
+                    var candidateVelocities = combatData.Where(x => x.IsStateChange == ArcDPSEnums.StateChange.Velocity && gravityBalls.Any(y => x.SrcMatchesAgent(y))).ToList();
+                    int referenceLength = 200;
+                    gravityBalls = gravityBalls.Where(x => candidateVelocities.Any(y => Math.Abs(AbstractMovementEvent.GetPoint3D(y).Length2D() - referenceLength) < 10)).ToList();
+                    foreach (AgentItem ball in gravityBalls)
+                    {
+                        ball.OverrideType(AgentItem.AgentType.NPC);
+                        ball.OverrideID(ArcDPSEnums.TrashID.GravityBall);
+                        ball.SetMaster(timecaster);
+                        needRefreshAgentPool = true;
+                    }
                 }
             }
             {
-                AgentItem jormagAgent = agentData.GetNPCsByID(ArcDPSEnums.TargetID.TheDragonVoidJormag).FirstOrDefault();
-                if (jormagAgent != null)
+                if (agentData.TryGetFirstAgentItem(ArcDPSEnums.TargetID.TheDragonVoidJormag, out AgentItem jormagAgent))
                 {
-                    var frostBeams = combatData.Where(evt => evt.SrcIsAgent() && agentData.GetAgent(evt.SrcAgent, evt.Time).IsSpecies(ArcDPSEnums.NonIdentifiedSpecies))
+                    var frostBeams = combatData.Where(evt => evt.SrcIsAgent() && agentData.GetAgent(evt.SrcAgent, evt.Time).IsNonIdentifiedSpecies())
                         .Select(evt => agentData.GetAgent(evt.SrcAgent, evt.Time))
                         .Distinct()
-                        .Where(agent => agent.IsNPC && agent.FirstAware >= jormagAgent.FirstAware && agent.LastAware <= jormagAgent.LastAware && combatData.Count(evt => evt.SrcMatchesAgent(agent) && evt.IsStateChange == ArcDPSEnums.StateChange.Velocity && AbstractMovementEvent.GetPoint3D(evt.DstAgent, evt.Value).Length() > 0) > 2)
+                        .Where(agent => agent.IsNPC && agent.FirstAware >= jormagAgent.FirstAware && agent.LastAware <= jormagAgent.LastAware && combatData.Count(evt => evt.SrcMatchesAgent(agent) && evt.IsStateChange == ArcDPSEnums.StateChange.Velocity && AbstractMovementEvent.GetPoint3D(evt).Length2D() > 0) > 2)
                         .ToList();
                     foreach (AgentItem frostBeam in frostBeams)
                     {
@@ -510,6 +528,9 @@ namespace GW2EIEvtcParser.EncounterLogic
                         frostBeam.SetMaster(jormagAgent);
                         needRefreshAgentPool = true;
                     }
+                    var knownFrostBeams = agentData.GetNPCsByID(ArcDPSEnums.TrashID.JormagMovingFrostBeamNorth).ToList();
+                    knownFrostBeams.AddRange(agentData.GetNPCsByID(ArcDPSEnums.TrashID.JormagMovingFrostBeamCenter));
+                    knownFrostBeams.ForEach(x => x.SetMaster(jormagAgent));
                 }
             }
             if (needRefreshAgentPool)
@@ -663,13 +684,19 @@ namespace GW2EIEvtcParser.EncounterLogic
 
         internal override void ComputeEnvironmentCombatReplayDecorations(ParsedEvtcLog log)
         {
+            base.ComputeEnvironmentCombatReplayDecorations(log);
+
             if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleGreen, out IReadOnlyList<EffectEvent> greenEffects))
             {
-                AddShareTheVoidDecoration(greenEffects, true);
+                AddBaseShareTheVoidDecoration(greenEffects);
+            }
+            if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleSuccessGreen, out IReadOnlyList<EffectEvent> successGreenEffects))
+            {
+                AddResultShareTheVoidDecoration(successGreenEffects, true);
             }
             if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleFailedGreen, out IReadOnlyList<EffectEvent> failedGreenEffects))
             {
-                AddShareTheVoidDecoration(failedGreenEffects, false);
+                AddResultShareTheVoidDecoration(failedGreenEffects, false);
             }
             if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleRedPuddleCM, out IReadOnlyList<EffectEvent> redPuddleEffectsCM))
             {
@@ -678,6 +705,17 @@ namespace GW2EIEvtcParser.EncounterLogic
             if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleRedPuddleNM, out IReadOnlyList<EffectEvent> redPuddleEffectsNM))
             {
                 AddPlacedVoidPoolDecoration(redPuddleEffectsNM, 300, 25000);
+            }
+            // Stormseer Ice Spike
+            if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleVoidStormseerIceSpikeIndicator, out IReadOnlyList<EffectEvent> iceSpikes))
+            {
+                foreach (EffectEvent effect in iceSpikes)
+                {
+                    (long start, long end) lifespan = effect.ComputeLifespan(log, 1750);
+                    var circle = new CircleDecoration(150, lifespan, Colors.LightBlue, 0.1, new PositionConnector(effect.Position));
+                    EnvironmentDecorations.Add(circle);
+                    EnvironmentDecorations.Add(circle.Copy().UsingGrowingEnd(lifespan.end));
+                }
             }
         }
 
@@ -692,7 +730,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     // Purification Zones
                     if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePurificationZones, out IReadOnlyList<EffectEvent> purificationZoneEffects))
                     {
-                        var voidShells = log.CombatData.GetBuffData(VoidShell).Where(x => x.To == target.AgentItem).ToList();
+                        var voidShells = log.CombatData.GetBuffDataByIDByDst(VoidShell, target.AgentItem).ToList();
                         var voidShellRemovals = voidShells.Where(x => x is BuffRemoveSingleEvent || x is BuffRemoveAllEvent).ToList();
                         int voidShellAppliesCount = voidShells.Where(x => x is BuffApplyEvent).Count();
                         int voidShellRemovalOffset = 0;
@@ -725,10 +763,9 @@ namespace GW2EIEvtcParser.EncounterLogic
                         foreach (EffectEvent lightningEffect in lightningOfJormagEffects.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
                         {
                             int duration = 3000;
-                            int start = (int)lightningEffect.Time - duration;
-                            int end = (int)lightningEffect.Time;
-                            var circle = new CircleDecoration(180, (start, end), Colors.LightBlue, 0.2, new PositionConnector(lightningEffect.Position));
-                            replay.AddDecorationWithGrowing(circle, end);
+                            (long start, long end) lifespan = (lightningEffect.Time - duration, lightningEffect.Time);
+                            var circle = new CircleDecoration(200, lifespan, Colors.LightBlue, 0.2, new PositionConnector(lightningEffect.Position));
+                            replay.AddDecorationWithGrowing(circle, lifespan.end);
                         }
                     }
                     // Primordus - Flames of Primordus
@@ -736,24 +773,24 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         foreach (EffectEvent fireBallEffect in flamesOfPrimordus.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
                         {
-                            int startLoad = (int)fireBallEffect.Time - 2000;
-                            int endLoad = (int)fireBallEffect.Time;
-                            var circle = new CircleDecoration(180, (startLoad, endLoad), Colors.Red, 0.2, new PositionConnector(fireBallEffect.Position));
-                            replay.AddDecorationWithGrowing(circle, endLoad);
-                            replay.Decorations.Add(new CircleDecoration(180, (endLoad, endLoad + 2000), Colors.Red, 0.4, new PositionConnector(fireBallEffect.Position)));
+                            (long start, long end) lifespanIndicator = (fireBallEffect.Time - 2000, fireBallEffect.Time);
+                            (long start, long end) lifespanFlame = fireBallEffect.ComputeLifespan(log, 2300);
+                            var circle = new CircleDecoration(200, lifespanIndicator, Colors.LightOrange, 0.2, new PositionConnector(fireBallEffect.Position));
+                            replay.AddProjectile(target.GetCurrentPosition(log, lifespanIndicator.start), fireBallEffect.Position, lifespanIndicator, Colors.Yellow, 0.2);
+                            replay.AddDecorationWithGrowing(circle, lifespanIndicator.end);
+                            replay.Decorations.Add(new CircleDecoration(200, lifespanFlame, Colors.Red, 0.2, new PositionConnector(fireBallEffect.Position)));
                         }
                     }
                     // Kralkatorrik - Stormfall (Cracks)
                     if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePurificationStormfall, out IReadOnlyList<EffectEvent> stormfallEffects))
                     {
-                        foreach (EffectEvent voidZoneEffect in stormfallEffects.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
+                        foreach (EffectEvent stormfallEffect in stormfallEffects.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
                         {
-                            int start = (int)voidZoneEffect.Time;
-                            int end = start + 5000;
-                            var connector = new PositionConnector(voidZoneEffect.Position);
-                            var rotationConnector = new AngleConnector(voidZoneEffect.Rotation.Z);
-                            var rectangle = (RectangleDecoration)new RectangleDecoration(90, 230, (start, end), Colors.DarkMagenta, 0.2, connector).UsingRotationConnector(rotationConnector);
-                            replay.AddDecorationWithGrowing(rectangle, end);
+                            (long start, long end) lifespan = stormfallEffect.ComputeLifespan(log, 4560);
+                            var connector = new PositionConnector(stormfallEffect.Position);
+                            var rotationConnector = new AngleConnector(stormfallEffect.Rotation.Z);
+                            var rectangle = (RectangleDecoration)new RectangleDecoration(90, 230, lifespan, Colors.DarkMagenta, 0.2, connector).UsingRotationConnector(rotationConnector);
+                            replay.AddDecorationWithGrowing(rectangle, lifespan.end);
                         }
                     }
                     // Mordremoth - Swarm of Mordremoth (Bees)
@@ -769,20 +806,32 @@ namespace GW2EIEvtcParser.EncounterLogic
                             var initialPosition = new ParametricPoint3D(beeLaunchEffect.Position, end);
                             int velocity = 210;
                             int lifespan = 15000;
-                            var finalPosition = new ParametricPoint3D(initialPosition + (velocity * lifespan / 1000.0f) * new Point3D((float)Math.Cos(beeLaunchEffect.Orientation.Z - Math.PI / 2), (float)Math.Sin(beeLaunchEffect.Orientation.Z - Math.PI/2)), end + lifespan);
-                            replay.Decorations.Add(new CircleDecoration(280, (end, end + lifespan), Colors.Red, 0.4, new InterpolationConnector(new List<ParametricPoint3D>() { initialPosition, finalPosition})));
+                            var finalPosition = new ParametricPoint3D(initialPosition + (velocity * lifespan / 1000.0f) * new Point3D((float)Math.Cos(beeLaunchEffect.Orientation.Z - Math.PI / 2), (float)Math.Sin(beeLaunchEffect.Orientation.Z - Math.PI / 2)), end + lifespan);
+                            replay.Decorations.Add(new CircleDecoration(280, (end, end + lifespan), Colors.Red, 0.4, new InterpolationConnector(new List<ParametricPoint3D>() { initialPosition, finalPosition })));
                         }
                     }
                     // Zhaitan - Pool of Undeath
-                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePurificationPoisonTrail, out IReadOnlyList<EffectEvent> poisonTrailEffects))
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePurificationPoolOfUndeath, out IReadOnlyList<EffectEvent> poolOfUndeathEffects))
                     {
-                        foreach (EffectEvent poisonTrailEffect in poisonTrailEffects.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
+                        foreach (EffectEvent poolOfUndeathEffect in poolOfUndeathEffects.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
                         {
-                            int startLoad = (int)poisonTrailEffect.Time - 1000;
-                            int start = (int)poisonTrailEffect.Time;
-                            int end = start + 15000;
-                            replay.Decorations.Add(new CircleDecoration(220, (startLoad, start), "rgba(0, 150, 0, 0.2)", new PositionConnector(poisonTrailEffect.Position)).UsingGrowingEnd(start));
-                            replay.Decorations.Add(new CircleDecoration(220, (start, end), "rgba(0, 150, 0, 0.4)", new PositionConnector(poisonTrailEffect.Position)));
+                            // The effect is larger than the damage area and the duration is shower than the logged one.
+                            // The damage radius is roughly 180 to 200
+                            int damageDuration = 18000;
+                            uint radiusDamage = 190;
+                            uint radiusEffect = 220;
+                            (long start, long end) lifespanSpawning = (poolOfUndeathEffect.Time - 1000, poolOfUndeathEffect.Time);
+                            (long start, long end) lifespanDamage = (poolOfUndeathEffect.Time, poolOfUndeathEffect.Time + damageDuration);
+                            (long start, long end) lifespanDespawning = (poolOfUndeathEffect.Time + damageDuration, poolOfUndeathEffect.Time + damageDuration + 1000);
+                            var position = new PositionConnector(poolOfUndeathEffect.Position);
+                            var spawning = new CircleDecoration(radiusEffect, lifespanSpawning, Colors.GreyishGreen, 0.2, position);
+                            var damage = new CircleDecoration(radiusDamage, lifespanDamage, Colors.GreyishGreen, 0.4, position);
+                            var damageExtra = new DoughnutDecoration(radiusDamage, radiusEffect, lifespanDamage, Colors.GreyishGreen, 0.2, position);
+                            var despawn = new CircleDecoration(radiusEffect, lifespanDespawning, Colors.GreyishGreen, 0.2, position);
+                            replay.AddDecorationWithGrowing(spawning, lifespanSpawning.end);
+                            replay.AddDecorationWithBorder(damage, Colors.Red, 0.4);
+                            replay.Decorations.Add(damageExtra);
+                            replay.AddDecorationWithGrowing(despawn, lifespanDespawning.end, true);
                         }
                     }
                     // Magic Discharge - Orb Explosion
@@ -791,34 +840,22 @@ namespace GW2EIEvtcParser.EncounterLogic
                         foreach (EffectEvent orbEffect in orbEffects.Where(x => x.Time >= target.FirstAware && x.Time <= target.LastAware))
                         {
                             int duration = 3000;
-                            int start = (int)orbEffect.Time;
-                            int end = start + duration;
+                            (long start, long end) lifespan = (orbEffect.Time, orbEffect.Time + duration);
                             // Radius is an estimate - orb exploding on edge doesn't quite cover the entirety of the arena
                             uint radius = 2700;
-                            var circle = new CircleDecoration(radius, (start, end), Colors.White, 0.05, new PositionConnector(orbEffect.Position));
-                            replay.AddDecorationWithGrowing(circle, end);
+                            var circle = (CircleDecoration)new CircleDecoration(radius, lifespan, Colors.White, 0.2, new PositionConnector(orbEffect.Position)).UsingFilled(false);
+                            replay.AddDecorationWithGrowing(circle, lifespan.end);
                         }
                     }
                     // Breakbar Active
                     BreakbarStateEvent breakbar = log.CombatData.GetBreakbarStateEvents(target.AgentItem).FirstOrDefault(x => x.State == ArcDPSEnums.BreakbarState.Active);
                     if (breakbar != null)
                     {
-                        int start = (int)breakbar.Time;
-                        int end = (int)target.LastAware;
-                        replay.Decorations.Add(new CircleDecoration(120, (start, end), Colors.LightBlue, 0.3, new AgentConnector(target)));
+                        (long start, long end) lifespan = (breakbar.Time, target.LastAware);
+                        replay.Decorations.Add(new CircleDecoration(120, lifespan, Colors.LightBlue, 0.3, new AgentConnector(target)));
                     }
                     break;
                 case (int)ArcDPSEnums.TargetID.TheDragonVoidJormag:
-                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleJormagIceShards, out IReadOnlyList<EffectEvent> iceShardEffects))
-                    {
-                        foreach (EffectEvent iceShardEffect in iceShardEffects)
-                        {
-                            int duration = 2500;
-                            int start = (int)iceShardEffect.Time;
-                            int end = start + duration;
-                            replay.AddDecorationWithGrowing(new CircleDecoration(160, (start, end), "rgba(0, 50, 180, 0.2)", new PositionConnector(iceShardEffect.Position)), end);
-                        }
-                    }
                     if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleJormagFrostMeteorIceField, out IReadOnlyList<EffectEvent> meteorEffects))
                     {
                         foreach (EffectEvent effect in meteorEffects)
@@ -829,18 +866,37 @@ namespace GW2EIEvtcParser.EncounterLogic
                             int start = (int)effect.Time;
                             int fieldEnd = (int)Math.Min(start + lingerDuration, target.LastAware);
                             // meteor impact
-                            replay.AddDecorationWithGrowing(new CircleDecoration(600, (start - indicatorDuration, start), Colors.Orange, 0.2, new PositionConnector(effect.Position)), start);
+                            replay.AddDecorationWithGrowing(new CircleDecoration(600, (start - indicatorDuration, start), Colors.LightOrange, 0.2, new PositionConnector(effect.Position)), start);
                             // ice field
-                            replay.AddDecorationWithGrowing(new CircleDecoration(1200, (start, fieldEnd), "rgba(69, 182, 254, 0.1)", new PositionConnector(effect.Position)), start + spreadDuration);
+                            replay.AddDecorationWithGrowing(new CircleDecoration(1200, (start, fieldEnd), Colors.SkyBlue, 0.1, new PositionConnector(effect.Position)), start + spreadDuration);
+                        }
+                    }
+                    // Grasp of Jormag - Indicators
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleJormagGraspOfJormagIndicator, out IReadOnlyList<EffectEvent> graspOfJormag))
+                    {
+                        foreach (EffectEvent effect in graspOfJormag)
+                        {
+                            (long start, long end) lifespan = effect.ComputeLifespan(log, 2000);
+                            replay.Decorations.Add(new CircleDecoration(160, lifespan, Colors.LightOrange, 0.1, new PositionConnector(effect.Position)));
                         }
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.JormagMovingFrostBeam:
+                case (int)ArcDPSEnums.TrashID.JormagMovingFrostBeamNorth:
+                case (int)ArcDPSEnums.TrashID.JormagMovingFrostBeamCenter:
                     VelocityEvent frostBeamMoveStartVelocity = log.CombatData.GetMovementData(target.AgentItem).OfType<VelocityEvent>().FirstOrDefault(x => x.GetPoint3D().Length() > 0);
                     // Beams are immobile at spawn for around 3 seconds
                     if (frostBeamMoveStartVelocity != null)
                     {
-                        replay.Trim(frostBeamMoveStartVelocity.Time, target.LastAware);
+                        (long start, long end) lifespanBeam = (frostBeamMoveStartVelocity.Time, target.LastAware);
+                        replay.Trim(lifespanBeam.start, lifespanBeam.end);
+                        var beamAoE = new CircleDecoration(300, lifespanBeam, Colors.LightBlue, 0.1, new AgentConnector(target));
+                        replay.AddDecorationWithBorder(beamAoE, Colors.Red, 0.5);
+                    } 
+                    else
+                    {
+                        // Completely hide it
+                        replay.Trim(0, 0);
                     }
                     break;
                 case (int)ArcDPSEnums.TrashID.DragonEnergyOrb:
@@ -848,26 +904,58 @@ namespace GW2EIEvtcParser.EncounterLogic
                     replay.Decorations.Add(new CircleDecoration(160, (dragonOrbStart, dragonOrbEnd), "rgba(200, 50, 0, 0.5)", new AgentConnector(target)).UsingFilled(false));
                     break;
                 case (int)ArcDPSEnums.TargetID.TheDragonVoidPrimordus:
-                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePrimordusSmallJaw, out IReadOnlyList<EffectEvent> smallJawEffects))
+                    // Lava Slam - Chin Indicator
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePrimordusLavaSlamIndicator, out IReadOnlyList<EffectEvent> lavaSlams))
                     {
-                        // The effect is slightly shifted on X
-                        var jawPosition = new Point3D(610, -21400.3f, -15417.3f);
-                        foreach (EffectEvent smallJawEffect in smallJawEffects)
+                        foreach (EffectEvent effect in lavaSlams)
                         {
+                            // The indicator gets cancelled when phasing to Kralkatorrik.
                             int duration = 3500;
-                            int start = (int)smallJawEffect.Time - duration;
-                            int end = (int)smallJawEffect.Time;
-                            replay.AddDecorationWithGrowing(new CircleDecoration(560, (start, end), Colors.Orange, 0.2, new PositionConnector(jawPosition)), end);
+                            long growingEnd = effect.Time + duration;
+                            (long start, long end) lifespan = (effect.Time - duration, effect.Time);
+                            lifespan.end = Math.Min(lifespan.end, target.LastAware);
+                            replay.AddDecorationWithGrowing(new CircleDecoration(580, lifespan, Colors.Orange, 0.2, new PositionConnector(effect.Position)), growingEnd);
                         }
                     }
-                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePrimordusBigJaw, out IReadOnlyList<EffectEvent> bigJawEffects))
+
+                    // We use the damage field for 2 reasons:
+                    // 1: When the instance is bugged from a previous wipe, the orange warning indicator is not present but the red damage field is always visible.
+                    // 2: The red damage field is not in the same position of the orange warning indicator, rending the indicator inaccurate.
+
+                    var jawsOfDestructionPosition = new Point3D(591.0542f, -21528.8555f, -15418.3f);
+                    var jawsOfDestructionConnector = new PositionConnector(jawsOfDestructionPosition);
+                    int jawsOfDestructionIndicatorDuration = 6950;
+
+                    // Jaws of Primordus - Orange Indicator
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePrimordusJawsOfDestructionIndicator, out IReadOnlyList<EffectEvent> jawsOfDestructionIndicators))
                     {
-                        foreach (EffectEvent bigJawEffect in bigJawEffects)
+                        foreach (EffectEvent effect in jawsOfDestructionIndicators)
                         {
-                            int start = (int)bigJawEffect.Time;
-                            int end = start + 7500;
-                            replay.AddDecorationWithGrowing(new CircleDecoration( 1700, (start, end), Colors.Orange, 0.2, new AgentConnector(target)), end);
-                            replay.Decorations.Add(new CircleDecoration(1700, (end, end + 4000), Colors.Red, 0.4, new AgentConnector(target)));
+                            // The indicator doesn't get cancelled when phasing to Kralkatorrik but also doesn't do anything, we remove it when phasing.
+                            long growingEnd = effect.Time + jawsOfDestructionIndicatorDuration;
+                            (long start, long end) lifespanIndicator = (effect.Time, Math.Min(growingEnd, target.LastAware));
+                            var indicator = new CircleDecoration(1450, lifespanIndicator, Colors.Orange, 0.2, jawsOfDestructionConnector);
+                            replay.AddDecorationWithGrowing(indicator, growingEnd);
+                        }
+                    }
+
+                    // Jaws of Primordus - Red Field
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTemplePrimordusJawsOfDestructionDamage, out IReadOnlyList<EffectEvent> jawsOfDestructionDamageAoEs))
+                    {
+                        foreach (EffectEvent effect in jawsOfDestructionDamageAoEs)
+                        {
+                            // Adding the indicator in case it's bugged and it's invisible in game.
+                            if (jawsOfDestructionIndicators == null || jawsOfDestructionIndicators.FirstOrDefault(x => x.Time > effect.Time - 10000 && x.Time < effect.Time) == null)
+                            {
+                                (long start, long end) lifespanIndicator = (effect.Time - jawsOfDestructionIndicatorDuration, effect.Time);
+                                var indicator = new CircleDecoration(1450, lifespanIndicator, Colors.Orange, 0.2, jawsOfDestructionConnector);
+                                replay.AddDecorationWithGrowing(indicator, lifespanIndicator.end);
+                            }
+                            // The damage field gets cancelled when phasing to Kralkatorrik.
+                            (long start, long end) lifespanDamage = effect.ComputeLifespan(log, 5000);
+                            lifespanDamage.end = Math.Min(lifespanDamage.end, target.LastAware);
+                            var damage = new CircleDecoration(1450, lifespanDamage, Colors.Red, 0.4, jawsOfDestructionConnector);
+                            replay.Decorations.Add(damage);
                         }
                     }
                     break;
@@ -877,20 +965,19 @@ namespace GW2EIEvtcParser.EncounterLogic
                         foreach (EffectEvent effect in kralkBeamEffects)
                         {
                             int indicatorDuration = 2000;
-                            int aoeDuration = 5000;
-                            int indicatorStart = (int)effect.Time;
-                            int aoeStart = indicatorStart + indicatorDuration;
-                            int aoeEnd = Math.Min(aoeStart + aoeDuration, (int)target.LastAware);
-                            replay.AddDecorationWithGrowing(new RectangleDecoration(700, 2900, (indicatorStart, aoeEnd), Colors.Orange, 0.2, new PositionConnector(effect.Position)), aoeStart);
+                            long growingEnd = effect.Time + indicatorDuration;
+                            (long start, long end) lifespan = (effect.Time, Math.Min(growingEnd, target.LastAware));
+                            replay.AddDecorationWithGrowing(new RectangleDecoration(700, 2900, lifespan, Colors.Orange, 0.2, new PositionConnector(effect.Position)), growingEnd);
                         }
                     }
                     if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleKralkatorrikBeamAoe, out IReadOnlyList<EffectEvent> kralkBeamAoeEffects))
                     {
                         foreach (EffectEvent effect in kralkBeamAoeEffects)
                         {
-                            int start = (int)effect.Time;
-                            int end = Math.Min((int)effect.Time + 5000, (int)target.LastAware);
-                            replay.Decorations.Add(new CircleDecoration(350, (start, end), Colors.Black, 0.4, new PositionConnector(effect.Position)));
+                            // Effect duration logged is too long
+                            int duration = 6300;
+                            (long start, long end) lifespan = (effect.Time, Math.Min(effect.Time + duration, target.LastAware));
+                            replay.Decorations.Add(new CircleDecoration(350, lifespan, Colors.Black, 0.4, new PositionConnector(effect.Position)));
                         }
                     }
                     // Crystal Barrage
@@ -956,9 +1043,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         foreach (EffectEvent effect in mordremothPoisonEffects)
                         {
-                            int end = (int)effect.Time;
-                            int start = end - 2000;
-                            replay.AddDecorationWithGrowing(new CircleDecoration( 200, (start, end), "rgba(49, 71, 0, 0.2)", new PositionConnector(effect.Position)), end);
+                            (long start, long end) lifespan = (effect.Time - 2000, effect.Time);
+                            replay.AddDecorationWithGrowing(new CircleDecoration(200, lifespan, Colors.MilitaryGreen, 0.2, new PositionConnector(effect.Position)), lifespan.end);
                         }
                     }
                     // Shockwaves
@@ -966,30 +1052,34 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         foreach (EffectEvent effect in shockwaves)
                         {
+                            uint radius = 2000; // Assumed radius
                             (long start, long end) lifespan = (effect.Time, effect.Time + 1600); // Assumed duration, effect has 0
-                            var positionConnector = new PositionConnector(effect.Position);
-                            var shockwave = (CircleDecoration)new CircleDecoration(2000, lifespan, Colors.Black, 0.6, positionConnector).UsingFilled(false).UsingGrowingEnd(lifespan.end);
-                            replay.Decorations.Add(shockwave);
+                            GeographicalConnector connector = new PositionConnector(effect.Position);
+                            replay.AddShockwave(connector, lifespan, Colors.Black, 0.6, radius);
                         }
                     }
                     break;
                 case (int)ArcDPSEnums.TargetID.TheDragonVoidZhaitan:
-                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleZhaitanPutridDelugeImpact, out IReadOnlyList<EffectEvent> zhaitanPoisonImpactEffects))
+                    // Putrid Deluge
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleZhaitanPutridDelugeImpact, out IReadOnlyList<EffectEvent> putridDelugeImpacts))
                     {
-                        foreach (EffectEvent effect in zhaitanPoisonImpactEffects)
+                        foreach (EffectEvent effect in putridDelugeImpacts)
                         {
-                            int end = (int)effect.Time;
-                            int start = end - 2000;
-                            replay.AddDecorationWithGrowing(new CircleDecoration(200, (start, end), "rgba(49, 71, 0, 0.2)", new PositionConnector(effect.Position)), end);
+                            (long start, long end) lifespan = (effect.Time - 2000, effect.Time);
+                            replay.AddDecorationWithGrowing(new CircleDecoration(200, lifespan, Colors.LightMilitaryGreen, 0.2, new PositionConnector(effect.Position)), lifespan.end);
                         }
                     }
-                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleZhaitanPutridDelugeAoE, out IReadOnlyList<EffectEvent> zhaitanPoisonAoeEffects))
+                    if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleZhaitanPutridDelugeAoE, out IReadOnlyList<EffectEvent> putridDelugeAoEs))
                     {
-                        foreach (EffectEvent effect in zhaitanPoisonAoeEffects)
+                        foreach (EffectEvent effect in putridDelugeAoEs)
                         {
-                            int start = (int)effect.Time;
-                            int end = (int)Math.Min(target.LastAware, start + 10000);
-                            replay.AddDecorationWithBorder(new CircleDecoration(200, (start, end), "rgba(49, 71, 0, 0.2)", new PositionConnector(effect.Position)), "rgba(200, 0, 0, 0.5)");
+                            int fieldDuration = 10000;
+                            (long start, long end) lifespan = (effect.Time, effect.Time + fieldDuration);
+                            if (lifespan.start < target.LastAware)
+                            {
+                                lifespan.end = Math.Min(target.LastAware, lifespan.end);
+                            }
+                            replay.AddDecorationWithBorder(new CircleDecoration(200, lifespan, Colors.LightMilitaryGreen, 0.2, new PositionConnector(effect.Position)), Colors.Red, 0.4);
                         }
                     }
                     // Tail Slam
@@ -1021,10 +1111,9 @@ namespace GW2EIEvtcParser.EncounterLogic
                         var rotationConnector = new AngleConnector(99.6f);
                         foreach (EffectEvent effect in sooWonClawEffects)
                         {
-                            int start = (int)effect.Time;
-                            int end = start + 2300;
+                            (long start, long end) lifespan = effect.ComputeLifespan(log, 2300);
                             var connector = new PositionConnector(effect.Position);
-                            replay.AddDecorationWithGrowing((PieDecoration)new PieDecoration(1060, 145, (start, end), Colors.Red, 0.4, connector).UsingRotationConnector(rotationConnector), end);
+                            replay.AddDecorationWithGrowing((PieDecoration)new PieDecoration(1060, 145, lifespan, Colors.Red, 0.4, connector).UsingRotationConnector(rotationConnector), lifespan.end);
                         }
                     }
 
@@ -1033,10 +1122,16 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleTormentOfTheVoidClawIndicator, out IReadOnlyList<EffectEvent> clawVoidOrbsAoEs))
                         {
-                            // The aoe indicator can be used by other attacks before soo won - filtering out the effects which happen before a claw swipe
-                            var filteredBouncingOrbsAoEs = clawVoidOrbsAoEs.Where(x => x.Time > clawVoidOrbs.FirstOrDefault().Time).ToList();
-                            List<(EffectEvent, EffectEvent, float)> orbToAoeMatches = MatchEffectToEffect(clawVoidOrbs, filteredBouncingOrbsAoEs);
-                            List<(EffectEvent, EffectEvent, float)> aoeToAoeMatches = MatchEffectToEffect(filteredBouncingOrbsAoEs, filteredBouncingOrbsAoEs);
+                            var aoeToAoeMatches = new List<(EffectEvent, EffectEvent, float)>();
+                            var orbToAoeMatches = new List<(EffectEvent, EffectEvent, float)>();
+
+                            if (clawVoidOrbs.Count > 0 && clawVoidOrbsAoEs.Count > 0)
+                            {
+                                // The aoe indicator can be used by other attacks before soo won - filtering out the effects which happen before a claw swipe
+                                var filteredBouncingOrbsAoEs = clawVoidOrbsAoEs.Where(x => x.Time > clawVoidOrbs.FirstOrDefault().Time).ToList();
+                                orbToAoeMatches = MatchEffectToEffect(clawVoidOrbs, filteredBouncingOrbsAoEs);
+                                aoeToAoeMatches = MatchEffectToEffect(filteredBouncingOrbsAoEs, filteredBouncingOrbsAoEs);
+                            }
 
                             // Hard coded the orb positions and the durations for older logs
                             var positions = new List<ParametricPoint3D>()
@@ -1124,6 +1219,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                             }
                         }
                     }
+
                     // Tail Slam
                     if (log.CombatData.TryGetEffectEventsByGUID(EffectGUIDs.HarvestTempleTailSlamIndicator, out IReadOnlyList<EffectEvent> tailSlamEffects))
                     {
@@ -1183,9 +1279,10 @@ namespace GW2EIEvtcParser.EncounterLogic
                         foreach (EffectEvent effect in tsunamiEffects)
                         {
                             // Expanding wave - radius and duration are estimates, can't seem to line up the decoration with actual hits
-                            int waveStart = (int)effect.Time;
-                            int waveEnd = waveStart + 4500;
-                            replay.Decorations.Add(new CircleDecoration(2000, (waveStart, waveEnd), Colors.Blue, 0.5, new PositionConnector(effect.Position)).UsingFilled(false).UsingGrowingEnd(waveEnd));
+                            uint radius = 2000; // Assumed radius
+                            (long, long) lifespan = (effect.Time, effect.Time + 4500); // Assumed duration
+                            GeographicalConnector connector = new PositionConnector(effect.Position);
+                            replay.AddShockwave(connector, lifespan, Colors.Blue, 0.5, radius);
                         }
                     }
                     break;
@@ -1200,7 +1297,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         int castTime = 1900;
                         int endTime = (int)c.Time + castTime;
-                        replay.AddDecorationWithGrowing(new DoughnutDecoration(240, 480, (c.Time, endTime), Colors.Orange, 0.2, new AgentConnector(target)), endTime);
+                        replay.AddDecorationWithGrowing(new DoughnutDecoration(260, 480, (c.Time, endTime), Colors.Orange, 0.2, new AgentConnector(target)), endTime);
                     }
                     // Ground Slam - AoE that knocks out
                     var groundSlam = casts.Where(x => x.SkillId == ZhaitansReachGroundSlam || x.SkillId == ZhaitansReachGroundSlamHT).ToList();
@@ -1264,7 +1361,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     // Nightmare Epoch - AoEs
                     if (log.CombatData.TryGetEffectEventsBySrcWithGUID(target.AgentItem, EffectGUIDs.HarvestTempleVoidTimecasterNightmareEpoch, out IReadOnlyList<EffectEvent> nightmareEpoch))
                     {
-                        foreach(EffectEvent effect in nightmareEpoch)
+                        foreach (EffectEvent effect in nightmareEpoch)
                         {
                             (long start, long end) lifespan = effect.ComputeLifespan(log, 10000);
                             var positionConnector = new PositionConnector(effect.Position);
@@ -1287,7 +1384,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         uint radius = 500;
                         long castDuration = 1680;
                         long supposedEndCast = c.Time + castDuration;
-                        long actualEndCast = ComputeEndCastTimeByStun(log, target, c.Time, castDuration);
+                        long actualEndCast = ComputeEndCastTimeByBuffApplication(log, target, Stun, c.Time, castDuration);
                         (long start, long end) lifespan = (c.Time, actualEndCast);
                         var agentConnector = new AgentConnector(c.Caster);
                         var circle = new CircleDecoration(radius, lifespan, Colors.Orange, 0.2, agentConnector);
@@ -1366,7 +1463,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                     {
                         foreach (EffectEvent effect in frozenFuryCone)
                         {
-                            uint radius = 690;
+                            uint radius = 710;
                             int angle = 60;
                             (long start, long end) lifespan = effect.ComputeLifespan(log, 1350);
                             var positionConnector = new PositionConnector(effect.Position);
@@ -1384,7 +1481,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                             uint width = 200;
                             uint height = 800;
                             (long start, long end) lifespan = effect.ComputeLifespan(log, 1600);
-                            var positionConnector = (PositionConnector)new PositionConnector(effect.Position).WithOffset(new Point3D(0, -30), true);
+                            var positionConnector = new PositionConnector(effect.Position);
                             var rotationConnector = new AngleConnector(effect.Rotation.Z + 90);
                             var rectangle = (RectangleDecoration)new RectangleDecoration(width, height, lifespan, Colors.LightOrange, 0.2, positionConnector).UsingRotationConnector(rotationConnector);
                             replay.AddDecorationWithGrowing(rectangle, lifespan.end);
@@ -1425,13 +1522,13 @@ namespace GW2EIEvtcParser.EncounterLogic
                                 case 2:
                                 case 3:
                                     innerRadius = 120;
-                                    outerRadius = 180;
+                                    outerRadius = 200;
                                     break;
                                 case 4:
                                 case 5:
                                 case 6:
                                     innerRadius = 100;
-                                    outerRadius = 150;
+                                    outerRadius = 140;
                                     break;
                                 default:
                                     break;
@@ -1467,7 +1564,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         uint width = target.HitboxWidth;
                         long castDuration = 1000;
                         long supposedEndCast = c.Time + castDuration;
-                        long actualEndCast = ComputeEndCastTimeByStun(log, target, c.Time, castDuration);
+                        long actualEndCast = ComputeEndCastTimeByBuffApplication(log, target, Stun, c.Time, castDuration);
                         Point3D facing = target.GetCurrentRotation(log, c.Time + castDuration);
                         if (facing != null)
                         {
@@ -1487,7 +1584,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         int openingAngle = 60;
                         long castDuration = 3400;
                         long supposedEndCast = c.Time + castDuration;
-                        long actualEndCast = ComputeEndCastTimeByStun(log, target, c.Time, castDuration);
+                        long actualEndCast = ComputeEndCastTimeByBuffApplication(log, target, Stun, c.Time, castDuration);
                         Point3D facing = target.GetCurrentRotation(log, c.Time + castDuration);
                         if (facing != null)
                         {
@@ -1528,8 +1625,8 @@ namespace GW2EIEvtcParser.EncounterLogic
                             uint radius = 1000; // Assumed radius
                             (long start, long end) lifespan = effect.ComputeLifespan(log, 2500); // Assumed duration
                             var positionConnector = new PositionConnector(effect.Position);
-                            var shockwave = (CircleDecoration)new CircleDecoration(radius, lifespan, Colors.LightGrey, 0.5, positionConnector).UsingFilled(false).UsingGrowingEnd(lifespan.end);
-                            replay.Decorations.Add(shockwave);
+                            GeographicalConnector connector = new PositionConnector(effect.Position);
+                            replay.AddShockwave(connector, lifespan, Colors.LightGrey, 0.6, radius);
                         }
                     }
 
@@ -1567,7 +1664,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                         uint radius = 600;
                         long castDuration = 1880;
                         long supposedEndCast = c.Time + castDuration;
-                        long actualEndCast = ComputeEndCastTimeByStun(log, target, c.Time, castDuration);
+                        long actualEndCast = ComputeEndCastTimeByBuffApplication(log, target, Stun, c.Time, castDuration);
                         (long start, long end) lifespan = (c.Time, actualEndCast);
                         var agentConnector = new AgentConnector(c.Caster);
                         var circle = new CircleDecoration(radius, lifespan, Colors.Orange, 0.2, agentConnector);
@@ -1707,26 +1804,41 @@ namespace GW2EIEvtcParser.EncounterLogic
                     continue;
                 }
                 int puddleEnd = Math.Min((int)dragonVoid.LastAware, start + duration);
-                EnvironmentDecorations.Add(new CircleDecoration( radius, (start, puddleEnd), "rgba(250, 0, 0, 0.3)", new PositionConnector(effect.Position)).UsingGrowingEnd(start + inactiveDuration));
-                EnvironmentDecorations.Add(new CircleDecoration( radius, (start, puddleEnd), "rgba(250, 0, 0, 0.3)", new PositionConnector(effect.Position)));
+                EnvironmentDecorations.Add(new CircleDecoration(radius, (start, puddleEnd), "rgba(250, 0, 0, 0.3)", new PositionConnector(effect.Position)).UsingGrowingEnd(start + inactiveDuration));
+                EnvironmentDecorations.Add(new CircleDecoration(radius, (start, puddleEnd), "rgba(250, 0, 0, 0.3)", new PositionConnector(effect.Position)));
             }
         }
 
         /// <summary>
-        /// Share the Void - Greens in CM.
+        /// Share the Void - Greens in CM, area effect.
         /// </summary>
         /// <param name="greenEffects">Effects List.</param>
-        /// <param name="isSuccessful">Wether the mechanic was successful or not.</param>
-        private void AddShareTheVoidDecoration(IReadOnlyList<EffectEvent> greenEffects, bool isSuccessful)
+        private void AddBaseShareTheVoidDecoration(IReadOnlyList<EffectEvent> greenEffects)
         {
             foreach (EffectEvent green in greenEffects)
             {
-                int duration = 5000;
+                int duration = 6250;
+                int start = (int)green.Time;
+                int end = (int)green.Time + duration;
+                EnvironmentDecorations.Add(new CircleDecoration(180, (start, end), Colors.DarkGreen, 0.4, new PositionConnector(green.Position)));
+                EnvironmentDecorations.Add(new CircleDecoration(180, (start, end), Colors.DarkGreen, 0.4, new PositionConnector(green.Position)).UsingGrowingEnd(end));
+            }
+        }
+
+        /// <summary>
+        /// Share the Void - Greens in CM, trigger effect.
+        /// </summary>
+        /// <param name="greenEffects">Effects List.</param>
+        /// <param name="isSuccessful">Wether the mechanic was successful or not.</param>
+        private void AddResultShareTheVoidDecoration(IReadOnlyList<EffectEvent> greenEffects, bool isSuccessful)
+        {
+            foreach (EffectEvent green in greenEffects)
+            {
+                int duration = 250;
                 int start = (int)green.Time - duration;
                 int end = (int)green.Time;
                 Color color = isSuccessful ? Colors.DarkGreen : Colors.DarkRed;
-                EnvironmentDecorations.Add(new CircleDecoration( 180, (start, end), Colors.DarkGreen, 0.4, new PositionConnector(green.Position)).UsingGrowingEnd(end));
-                EnvironmentDecorations.Add(new CircleDecoration( 180, (start, end), color, 0.4, new PositionConnector(green.Position)));
+                EnvironmentDecorations.Add(new CircleDecoration(180, (start, end), color, 0.6, new PositionConnector(green.Position)));
             }
         }
 
@@ -1754,7 +1866,7 @@ namespace GW2EIEvtcParser.EncounterLogic
                 }
             }
             // fallback for late logs
-            if (combatData.GetEffectGUIDEvent(EffectGUIDs.HarvestTempleGreen) != null || agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidGoliath).Any() || combatData.GetBuffData(VoidEmpowerment).Any())
+            if (combatData.GetEffectGUIDEvent(EffectGUIDs.HarvestTempleSuccessGreen) != null || agentData.GetNPCsByID(ArcDPSEnums.TrashID.VoidGoliath).Any() || combatData.GetBuffData(VoidEmpowerment).Any())
             {
                 return FightData.EncounterMode.CM;
             }

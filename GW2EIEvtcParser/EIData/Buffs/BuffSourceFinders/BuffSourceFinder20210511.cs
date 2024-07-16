@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using GW2EIEvtcParser.ParsedData;
 
 namespace GW2EIEvtcParser.EIData.BuffSourceFinders
@@ -21,7 +19,7 @@ namespace GW2EIEvtcParser.EIData.BuffSourceFinders
             }
             if (dst.Spec == ParserHelper.Spec.Soulbeast && extension <= EssenceOfSpeed + ParserHelper.BuffSimulatorStackActiveDelayConstant)
             {
-                if (GetIDs(log, buffID, extension).Any())
+                if (GetIDs(log, buffID, extension).Count != 0)
                 {
                     // uncertain, needs to check more
                     return 0;
