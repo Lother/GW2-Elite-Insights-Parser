@@ -15,6 +15,7 @@ using GW2EIWingman;
 using GW2EIEvtcParser;
 using GW2EIGW2API;
 using GW2EIParser.Exceptions;
+using GW2EIEvtcParser.EIData;
 
 namespace GW2EIParser
 {
