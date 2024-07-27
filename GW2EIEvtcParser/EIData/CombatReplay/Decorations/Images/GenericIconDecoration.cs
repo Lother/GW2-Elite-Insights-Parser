@@ -12,8 +12,12 @@ namespace GW2EIEvtcParser.EIData
             protected GenericIconDecorationMetadata(string icon, uint pixelSize, uint worldSize) : base()
             {
                 Image = icon;
-                PixelSize = Math.Max(pixelSize, 1);
-                WorldSize = Math.Max(worldSize, 1);
+                PixelSize = pixelSize;
+                WorldSize = worldSize;
+                if (PixelSize == WorldSize && PixelSize == 0)
+                {
+                    throw new InvalidOperationException("Icons must have at least one non zero size");
+                }
             }
         }
         internal abstract class GenericIconDecorationRenderingData : GenericAttachedDecorationRenderingData
